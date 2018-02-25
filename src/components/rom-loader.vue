@@ -56,6 +56,12 @@ function getStringFromDataView(view, offset = 0, length = view.byteLength - offs
     return value;
 }
 
+function copyToMemory(source, offset, length, target, address) {
+    for(let count = 0; count < length; count++) {
+        target.set(address + count, source[offset + count]);
+    }
+}
+
 export default {
 
     data: function() {
@@ -137,11 +143,30 @@ export default {
                 }
                 // Now assign to our data
                 this.data = new Uint8Array(response.data);
+                this.transfer();
                 this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {
                 this.loadError = error.response.status + ": " + error.response.statusText;
             });
+        },
+        // Transfer copies contents into memory to be accessed by CPU
+        transfer() {
+            // Right now, we're only handling mapping 0 aka NROM
+            // Copy over trainer, if it exists
+            if(this.trainerExists) {
+                // Copy the source data to the target address in memory
+                copyToMemory(this.data, 16, 512, this.$parent.$refs.memory, 0x7000);
+                copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$parent.$refs.memory, 0x8000);
+            } else {
+                // Copy to 0x8000 prgRomSize * 16384 from offset 16
+                console.log("Copying to memory");
+                copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$parent.$refs.memory, 0x8000);
+                if(this.prgRomSize == 1 && this.mappingNumber == 0) {
+                    // Mirror the prg rom to 0xc000
+                    copyToMemory(this.data, 16, 16384, this.$parent.$refs.memory, 0xC000);
+                }
+            }
         }
     }
   

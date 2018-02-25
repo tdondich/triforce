@@ -102,6 +102,9 @@ export default {
         fill(value = 0x00, start = 0, end = this.memory.length) {
             this.memory.fill(value, start, end);
         },
+        set(address, value) {
+            this.memory[address] = value;
+        },
         inspectFill() {
             this.inspectFillError = this.inspectFillSuccess = false;
             let start = parseInt(this.inspectFillStart, 16);
