@@ -14,8 +14,9 @@
        <table class="table table-dark table-sm" v-if="loadSuccess">
             <thead>
                 <tr>
-                    <th>PRG Rom Size</th>
-                    <th>CHR Rom Size</th>
+                    <th>PRG ROM Size</th>
+                    <th>CHR ROM Size</th>
+                    <th>PRG RAM Size</th>
                     <th>Mirroring</th>
                     <th>Battery Backed</th>
                     <th>Trainer Exists</th>
@@ -27,6 +28,7 @@
                 <tr>
                     <td>{{prgRomSize}}</td>
                     <td>{{chrRomSize}}</td>
+                    <td>{{prgRamSize}}</td>
                     <td>{{mirroring}}</td>
                     <td>{{batteryBacked}}</td>
                     <td>{{trainerExists}}</td>
@@ -73,6 +75,10 @@ export default {
         chrRomSize() {
             return this.data[5];
         },
+        prgRamSize() {
+            // Default to 1 if value is 0 for backwards compatibility
+            return this.data[8] == 0 ? 1 : this.data[8];
+        },
         mirroring() {
             return ((this.data[6] & 0b00000001) == 0b00000001) ? 'vertical' : 'horizontal';
         },
@@ -106,6 +112,9 @@ export default {
         },
         nes2Format() {
             return (this.data[8] & 0b00000100) == 0b00000100;
+        },
+        tvFormat() {
+            return (this.data[9] & 0b00000001) == 0b00000001 ? 'pal' : 'ntsc';
         }
     },
     methods: {
@@ -128,10 +137,10 @@ export default {
                 }
                 // Now assign to our data
                 this.data = new Uint8Array(response.data);
-                this.loadSuccess = "Loaded ROM";
+                this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {
-                this.loadError = error.status + ": " + error.statusText;
+                this.loadError = error.response.status + ": " + error.response.statusText;
             });
         }
     }
