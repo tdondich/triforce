@@ -149,6 +149,7 @@ export default {
                 this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {
+                console.log(error);
                 this.loadError = error.response.status + ": " + error.response.statusText;
             });
         },

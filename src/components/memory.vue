@@ -9,7 +9,12 @@
                 <tr v-for="(index, count) in inspectMemorySlice.length / 16" :key="count">
                     <th>0x{{(inspectStartCalculated + (16 * count)).toString(16).padStart(4, '0')}}</th>
                     <td v-bind:data-address="(inspectStartCalculated + (16 * count) + parseInt(idx))" v-bind:class="{target: (inspectStartCalculated + (16 * count) + parseInt(idx)) == inspectAddressCalculated }" v-for="(value, idx) in inspectMemorySlice.slice(16 * count, (16 * count) + 16)" :key="idx">
-                        {{value.toString(16).padStart(2, '0)').toUpperCase()}}
+                        <span v-if="inspectCharCodeEnabled">
+                            {{String.fromCharCode(value)}}
+                        </span>
+                        <span v-else>
+                            {{value.toString(16).padStart(2, '0)').toUpperCase()}}
+                        </span>
                     </td>
                 </tr>
             </tbody>
@@ -22,6 +27,9 @@
                 <label>Memory Location:</label>
                 <input class="form-control" v-model="inspectAddress">
             </div>
+            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-if="inspectCharCodeEnabled">Switch To Hex View</button>
+            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To Char Code View</button>
+
             <hr>
             <h4>Memory Fill</h4>
             <div class="alert alert-danger" v-if="inspectFillError">
@@ -66,6 +74,7 @@ export default {
             inspectFillValue: '0x00',
             inspectFillError: false,
             inspectFillSuccess: false,
+            inspectCharCodeEnabled: false
         }
     },
     computed: {
@@ -117,7 +126,11 @@ export default {
         },
         getAddressValue(address) {
             // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location
-            return 0;
+            let first = this.memory[address];
+            let second = this.memory[address + 1];
+            // Now, we need to return the number that is second + first
+            let value = (second << 8) | first;
+            return value;
             
         },
         inspectFill() {
@@ -134,7 +147,7 @@ export default {
             if(isNaN(value) || value < 0 || value > 0xff) {
                 this.inspectFillError = "Invalid Fill Value or out of range";
             }
-            this.memory.fill(value, start, end);
+            this.fill(value, start, end);
             this.inspectFillSuccess = `Filled ${this.inspectFillStart} to ${this.inspectFillEnd} with ${this.inspectFillValue}`;
             // Going to force updating the value
             let old = this.inspectAddress;

@@ -2,6 +2,12 @@
 <div class="row">
     <div class="col-sm-12">
         <h2>RP2A03 CPU</h2>
+        <div class="form-group">
+            <label>Force Reset Vector</label>
+            <input v-model="forceResetVector" class="form-control col-sm-1">
+        </div>
+        <button @click="step = !step" v-if="step">Turn off step debugging</button>
+        <button @click="step = !step" v-else>Turn on step debugging</button>
     </div>
     <div class="col-sm-6">
     <h4>Registers</h4>
@@ -33,13 +39,18 @@
         </tbody>
     </table>
     </div>
+    <div class="col-sm-12 debug" v-if="debug">
+        {{debug}}
+    </div>
 </div>
 
 </template>
 
 <script>
+import InstructionsMixin from '../mixins/InstructionsMixin'
 
 export default {
+    mixins: [InstructionsMixin],
     data: function() {
         // Our data represents our internal registers and processor flag
         return {
@@ -63,6 +74,8 @@ export default {
             // How the CPU should operate
             // Stepping means that the CPU should step through each operation instead of continuous run
             step: true,
+            forceResetVector: '',
+            debug: ''
         }
     },
     computed: {
@@ -96,11 +109,35 @@ export default {
             this.s = 0xfd;
             this.p = 0x34;
             this.a = this.x = this.y = 0;
+            this.pc = this.getResetVector();
+            // Begin to execute
+            this.tick();
         },
+        // Vectors
+        // See: https://en.wikibooks.org/wiki/NES_Programming/Initializing_the_NES#Interrupt_Vectors
         // Reset address value is located at 0xfffc and 0xfffd (reversed)
         getResetVector() {
+            if(this.forceResetVector) {
+                return parseInt(this.forceResetVector);
+            }
+            return this.$parent.$refs.memory.getAddressValue(0xfffc);
+        },
+        getIRQVector() {
+            return this.$parent.$refs.memory.getAddressValue(0xfffe);
+        },
+        getNMIVector() {
+            return this.$parent.$refs.memory.getAddressValue(0xfffa);
+        },
+        // Performs a CPU tick, going through an operation
+        tick() {
+            // Evaluate instruction code at pc
+            console.log(this.pc.toString(16));
+            let instr = this.$parent.$refs.memory.get(this.pc);
+            console.log(instr);
+            console.log("Instruction:" + instr.toString(16));
+            this[instr]();
+        },
 
-        }
     },
     // This is the initial power on state
     // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#At_power-up
