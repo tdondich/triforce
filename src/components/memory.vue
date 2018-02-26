@@ -35,7 +35,7 @@
                 <input class="form-control" v-model="inspectFillStart">
             </div>
             <div class="form-group">
-                <label>Fill End (Exclusive)</label>
+                <label>Fill End</label>
                 <input v-model="inspectFillEnd" class="form-control">
             </div>
             <div class="form-group">
@@ -87,10 +87,17 @@ export default {
             if(lower <= 16) {
                return 0; 
             }
-            return Math.floor(lower / 16) * 16;
+            let val = Math.floor(lower / 16);
+            let value = val * 16;
+            if(value >= 65280) {
+                // This is to ensure we always stick to a lower page;
+                value = 65280;
+            }
+            return value;
         },
         inspectMemorySlice() {
-            return this.memory.slice(this.inspectStartCalculated, this.inspectStartCalculated + 0xf0);
+            let slice = this.memory.slice(this.inspectStartCalculated, this.inspectStartCalculated + 256);
+            return slice;
         }
 
     },
@@ -100,10 +107,18 @@ export default {
         },
         // Fill a memory range with a specific value
         fill(value = 0x00, start = 0, end = this.memory.length) {
-            this.memory.fill(value, start, end);
+            this.memory.fill(value, start, end + 1);
         },
         set(address, value) {
             this.memory[address] = value;
+        },
+        get(address) {
+            return this.memory[address];
+        },
+        getAddressValue(address) {
+            // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location
+            return 0;
+            
         },
         inspectFill() {
             this.inspectFillError = this.inspectFillSuccess = false;

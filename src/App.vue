@@ -4,7 +4,7 @@
     <h1>NES Emulator in Vue.js</h1>
     <cpu-2a03 ref="cpu" />
     <!-- Bring in our memory component -->
-    <memory size="0xffff" ref="memory" />
+    <memory size="65536" ref="memory" />
     <!-- Bring in our rom loader -->
     <rom-loader  ref="loader" />
 

@@ -2,7 +2,6 @@
 <div class="row">
     <div class="col-sm-12">
         <h2>RP2A03 CPU</h2>
-        <button @click="reset">Power Reset</button>
     </div>
     <div class="col-sm-6">
     <h4>Registers</h4>
@@ -59,7 +58,11 @@ export default {
             // bitwise operation checks
             // See: http://wiki.nesdev.com/w/index.php/Status_flags
             // See: http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
-            p: 0
+            p: 0,
+            
+            // How the CPU should operate
+            // Stepping means that the CPU should step through each operation instead of continuous run
+            step: true,
         }
     },
     computed: {
@@ -90,7 +93,13 @@ export default {
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
             // Do not touch the A,X,Y registers
-            this.s = this.s - 3;
+            this.s = 0xfd;
+            this.p = 0x34;
+            this.a = this.x = this.y = 0;
+        },
+        // Reset address value is located at 0xfffc and 0xfffd (reversed)
+        getResetVector() {
+
         }
     },
     // This is the initial power on state
