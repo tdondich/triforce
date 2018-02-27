@@ -81,7 +81,7 @@ export default {
             
             // How the CPU should operate
             // Stepping means that the CPU should step through each operation instead of continuous run
-            step: true,
+            step: false,
             forceResetVector: '',
             debug: '',
             // If the CPU encountered a critical error
@@ -178,10 +178,9 @@ export default {
             return (this.getZeroPageAddress(address) + this.y) & 0x00FF;
         },
         getRelativeAddress(address) {
-            // First, let's get a signed 8 bit integer data view into address
-            let signedDataView = new Int8Array(this.mem.slice(address, address+1));
-            // Now, let's return
-            return this.pc + signedDataView[0];
+            // Get the signed integer value
+            // See: http://blog.vjeux.com/2013/javascript/conversion-from-uint8-to-int8-x-24.html
+            return this.pc + (this.mem.get(address) << 24 >> 24 );
         },
         getAbsoluteAddress(address) {
             // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location

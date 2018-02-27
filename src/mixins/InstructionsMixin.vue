@@ -61,6 +61,22 @@ export default {
         this.stackPush(target & 0xFF);
         // Now, let's head to the address
         this.pc = this.getAbsoluteAddress(this.pc + 1);
+    },
+    // NOP, no operation, just increment the pc
+    0xEA: function() {
+        this.debugger(1, 'NOP');
+        this.pc = this.pc + 1;
+    },
+    // SEC Set carry 
+    0x38: function() {
+        this.debugger(1, 'SEC');
+        this.p = this.p | 0b0001;
+        this.pc = this.pc + 1;
+    },
+    // BCS - branch if carry set
+    0xb0: function() {
+        this.debugger(2, `BCS $${fh(this.getRelativeAddress(this.pc + 1))}`);
+        this.pc = this.getRelativeAddress(this.pc + 1) + 2;
     }
   }
 }
