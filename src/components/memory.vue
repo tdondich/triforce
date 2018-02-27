@@ -124,15 +124,6 @@ export default {
         get(address) {
             return this.memory[address];
         },
-        getAddressValue(address) {
-            // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location
-            let first = this.memory[address];
-            let second = this.memory[address + 1];
-            // Now, we need to return the number that is second + first
-            let value = (second << 8) | first;
-            return value;
-            
-        },
         inspectFill() {
             this.inspectFillError = this.inspectFillSuccess = false;
             let start = parseInt(this.inspectFillStart, 16);

@@ -100,13 +100,16 @@ export default {
         },
         isNegative() {
             return (this.p & 0b10000000) == 0b10000000;
+        },
+        mem() {
+            return this.$parent.$refs.memory;
         }
     },
     methods: {
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
             // Do not touch the A,X,Y registers
-            this.s = 0xfd;
+            this.sp = 0xfd;
             this.p = 0x34;
             this.a = this.x = this.y = 0;
             this.pc = this.getResetVector();
@@ -120,22 +123,65 @@ export default {
             if(this.forceResetVector) {
                 return parseInt(this.forceResetVector);
             }
-            return this.$parent.$refs.memory.getAddressValue(0xfffc);
+            return this.getAbsoluteAddress(0xfffc);
         },
         getIRQVector() {
-            return this.$parent.$refs.memory.getAddressValue(0xfffe);
+            return this.getAbsoluteAddress(0xfffe);
         },
         getNMIVector() {
-            return this.$parent.$refs.memory.getAddressValue(0xfffa);
+            return this.getAbsoluteAddress(0xfffa);
+        },
+        // Handling various addressing modes the cpu supports
+        getZeroPageAddress(address) {
+            return this.mem.get(address);
+        },
+        getZeroPageXAddress(address) {
+            return (this.getZeroPageAddress(address) + this.x) & 0x00FF;
+        },
+        getZeroPageYAddress(address) {
+            return (this.getZeroPageAddress(address) + this.y) & 0x00FF;
+        },
+        getRelativeAddress(address) {
+            // First, let's get a signed 8 bit integer data view into address
+            let signedDataView = new Int8Array(this.mem.slice(address, address+1));
+            // Now, let's return
+            return this.pc + signedDataView[0];
+        },
+        getAbsoluteAddress(address) {
+            // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location
+            let first = this.mem.get(address);
+            let second = this.mem.get(address + 1);
+            // Now, we need to return the number that is second + first
+            return (second << 8) | first;
+        },
+        getAbsoluteXAddress(address) {
+            return this.getAbsoluteAddress(address) + this.x;
+        },
+        getAbsoluteYAddress(address) {
+            return this.getAbsoluteAddress(address) + this.y;
+        },
+        getIndirectAddress(address) {
+            return this.mem.getAbsoluteAddress(this.getAbsoluteAddress(address));
+        },
+        getIndexedIndirectAddress(address) {
+            let first = this.mem.getZeroPageXAddress(address);
+            return this.mem.getAbsoluteAddress(first);
+        },
+        getIndirectIndexedAddress(address) {
+            let first = this.mem.getZeroPageAddress(address);
+            let second = this.mem.getAbsoluteAddress(first);
+            return second + this.y;
         },
         // Performs a CPU tick, going through an operation
         tick() {
             // Evaluate instruction code at pc
-            console.log(this.pc.toString(16));
             let instr = this.$parent.$refs.memory.get(this.pc);
-            console.log(instr);
-            console.log("Instruction:" + instr.toString(16));
-            this[instr]();
+            if(typeof this[instr] == 'undefined') {
+                console.log("Failed to find instruction handler for " + instr.toString(16));
+            } else {
+                this[instr]();
+            }
+            setTimeout(this.tick, 250);
         },
 
     },

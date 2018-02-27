@@ -99,15 +99,9 @@ export default {
         },
         mappingNumber() {
             // Combine the nibbles of byte 6 and 7
-            console.log("Original 6:" + this.data[6].toString(2).padStart(8, '0'));
-            console.log("Original 8:" + this.data[6].toString(2).padStart(8, '0'));
-
             let lower = this.data[6] >>> 4;
             let upper = this.data[7] & 0b11110000;
-            console.log("Lower: " + lower.toString(2));
-            console.log("Upper: " + upper.toString(2));
             let mapping = upper | lower;
-            console.log("Mapping: " + mapping.toString(2) + " or " + mapping);
             return mapping;
         },
         vsSystem() {
@@ -163,7 +157,6 @@ export default {
                 copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$parent.$refs.memory, 0x8000);
             } else {
                 // Copy to 0x8000 prgRomSize * 16384 from offset 16
-                console.log("Copying to memory");
                 copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$parent.$refs.memory, 0x8000);
                 if(this.prgRomSize == 1 && this.mappingNumber == 0) {
                     // Mirror the prg rom to 0xc000
