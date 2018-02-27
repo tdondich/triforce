@@ -75,8 +75,46 @@ export default {
     },
     // BCS - branch if carry set
     0xb0: function() {
-        this.debugger(2, `BCS $${fh(this.getRelativeAddress(this.pc + 1))}`);
-        this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        if(this.isCarry) {
+            this.debugger(2, `BCS $${fh(this.getRelativeAddress(this.pc + 1))}`);
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.debugger(2, `BCS $${fh(this.pc + 2)}`);
+            this.pc = this.pc + 2;
+        }
+    },
+    // CLC - Clear carry flag
+    0x18: function() {
+        this.debugger(1, 'CLC');
+        this.p = this.p & 0b11111110;
+        this.pc = this.pc + 1;
+    },
+    // BCC - Branch if carry clear
+    0x90: function() {
+        this.debugger(1, `BCC $${fh(this.getRelativeAddress(this.pc + 1))}`);
+        if(!this.isCarry) {
+            this.debugger(1, `BCC $${fh(this.getRelativeAddress(this.pc + 1))}`);
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.debugger(2, `BCS $${fh(this.pc + 2)}`);
+            this.pc = this.pc + 2;
+        }
+    },
+    // Load Accumulator with direct value
+    0xA9: function() {
+        this.debugger(2, `LDA #$${fh(this.mem.get(this.pc + 1))}`);
+        this.a = this.mem.get(this.pc + 1);
+        this.pc = this.pc + 2;
+    },
+    // BEQ - Branch if equal, checks zero flag, and if so relative branch
+    0xF0: function() {
+        if(this.isZero) {
+            this.debugger(1, `BEQ $${fh(this.getRelativeAddress(this.pc + 1))}`);
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.debugger(2, `BCS $${fh(this.pc + 2)}`);
+            this.pc = this.pc + 2;
+        }
     }
   }
 }
