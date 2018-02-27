@@ -49,9 +49,18 @@ export default {
         this.mem.set(this.getZeroPageAddress(this.pc + 1), this.x);
         this.pc  = this.pc + 2;
     },
-    // JSR
+    // JSR, note, the target return is the PC address + 2, not three.
+    // See: http://obelisk.me.uk/6502/reference.html#JSR
     0x20: function() {
+        this.debugger(3, `JSR $${fh(this.getAbsoluteAddress(this.pc + 1))}`);
 
+        let target = this.pc + 2;
+        // First pass the first half of target
+        this.stackPush(target >> 8);
+        // Now pass the second half
+        this.stackPush(target & 0xFF);
+        // Now, let's head to the address
+        this.pc = this.getAbsoluteAddress(this.pc + 1);
     }
   }
 }

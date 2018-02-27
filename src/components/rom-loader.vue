@@ -139,7 +139,7 @@ export default {
                 this.data = new Uint8Array(response.data);
                 this.transfer();
                 // Tell the cpu to reset and execute
-                this.$parent.$refs.cpu.reset();
+                this.$parent.$refs.cpu.power();
                 this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {

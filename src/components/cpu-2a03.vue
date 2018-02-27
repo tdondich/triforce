@@ -6,8 +6,13 @@
             <label>Force Reset Vector</label>
             <input v-model="forceResetVector" class="form-control col-sm-1">
         </div>
-        <button @click="step = !step" v-if="step">Turn off step debugging</button>
-        <button @click="step = !step" v-else>Turn on step debugging</button>
+        <div v-if="step">
+            <button @click="step = !step; tick">Turn off step debugging</button>
+            <button v-if="powered" @click="tick">Step Forward</button>
+        </div>
+        <div v-else>
+            <button @click="step = !step">Turn on step debugging</button>
+        </div>
     </div>
     <div class="col-sm-6">
     <h4>Registers</h4>
@@ -38,6 +43,9 @@
             </tr>
         </tbody>
     </table>
+    </div>
+    <div class="alert alert-danger" v-if="error">
+        {{error}}
     </div>
     <div class="col-sm-12 debug" v-if="debug">
         {{debug}}
@@ -75,7 +83,10 @@ export default {
             // Stepping means that the CPU should step through each operation instead of continuous run
             step: true,
             forceResetVector: '',
-            debug: ''
+            debug: '',
+            // If the CPU encountered a critical error
+            error: '',
+            powered: false
         }
     },
     computed: {
@@ -108,12 +119,37 @@ export default {
     methods: {
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
+            this.error = '';
             // Do not touch the A,X,Y registers
-            this.sp = 0xfd;
+            // subtract 3 from sp, wrapping if necessary
+            for(let count = 0; count < 3; count++) {
+                if(this.sp == 0x00) {
+                    this.sp = 0xFF;
+                } else {
+                    this.sp--;
+                }
+            }
             this.p = 0x34;
             this.a = this.x = this.y = 0;
             this.pc = this.getResetVector();
             // Begin to execute
+            this.tick();
+        },
+        // This is the initial power on state
+        // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#At_power-up
+        power() {
+            this.powered = true;
+            // P i set to interrupt disable
+            this.p = 0x34;
+            this.a = this.x = this.y = 0;
+            this.sp = 0xfd;
+            // Frame IRQ enabled
+            this.mem.set(0x4017, 0x00);
+            // All channels enabled
+            this.mem.set(0x4015, 0x00);
+            this.mem.fill(0x00, 0x4000, 0x400f);
+            // Begin to execute
+            this.pc = this.getResetVector();
             this.tick();
         },
         // Vectors
@@ -154,6 +190,11 @@ export default {
             // Now, we need to return the number that is second + first
             return (second << 8) | first;
         },
+        // Sets an absolute address at memory location
+        setAbsoluteAddress(address, value) {
+            this.mem.set(address, value & 0xff);
+            this.mem.set(address + 1, value >> 8);
+        },
         getAbsoluteXAddress(address) {
             return this.getAbsoluteAddress(address) + this.x;
         },
@@ -175,31 +216,36 @@ export default {
         // Performs a CPU tick, going through an operation
         tick() {
             // Evaluate instruction code at pc
-            let instr = this.$parent.$refs.memory.get(this.pc);
+            let instr = this.mem.get(this.pc);
             if(typeof this[instr] == 'undefined') {
-                console.log("Failed to find instruction handler for " + instr.toString(16));
+                this.error = "Failed to find instruction handler for " + instr.toString(16);
             } else {
                 this[instr]();
             }
-            setTimeout(this.tick, 250);
+            if(!this.error && !this.step) {
+                // As long as the opcode did not result in a fatal error
+                setTimeout(this.tick(), 250);
+            }
         },
-
-    },
-    // This is the initial power on state
-    // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#At_power-up
-    mounted() {
-        // Let's do a reliable fill of 0x00 to memory
-        this.$parent.$refs.memory.fill(0x00);
-        // P i set to interrupt disable
-        this.p = 0x34;
-        this.a = this.x = this.y = 0;
-        this.s = 0xfd;
+        // Pushes to the top of the stack then modified the stack pointer
+        stackPush(val) {
+            this.mem.set(0x0100 | this.sp, val);
+            // Go 'up' a stack
+            this.sp = (this.sp - 1) & 0xFF;
+            return true;
+        },
+        // Pops off the stack, returning the address
+        stackPop() {
+            this.sp = (this.sp + 1) & 0xFF;
+            return this.mem.get(0x0100 | this.sp);
+        }
     }
-  
 }
 </script>
 
 <style lang="css" scoped>
-
+.debug {
+    font-family: 'Courier New', Courier, monospace;
+}
 </style>
 
