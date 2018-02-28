@@ -201,7 +201,39 @@ export default {
         } else {
             this.pc = this.pc + 2;
         }
-
+    },
+    // SEI - Set Interrupt Flag
+    0x78: function() {
+        this.debugger(1, 'SEI');
+        this.p = this.p | 0b0100;
+        this.pc = this.pc + 1;
+    },
+    // SED - Set Decimal Flag
+    0xF8: function() {
+        this.debugger(1, 'SEI');
+        this.p = this.p | 0b1000;
+        this.pc = this.pc + 1;
+    },
+    // PHP - Push P onto Stack
+    0x08: function() {
+        this.debugger(1, 'PHP');
+        this.stackPush(this.p);
+        this.pc = this.pc + 1;
+    },
+    // PLA - Pop stack into Accumulator
+    // Set Zero and Negative flag appropriately
+    0x68: function() {
+        this.debugger(1, 'PLA');
+        this.a = this.stackPop();
+        // Now set the zero flag if A is 0
+        if(this.a == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 2;
     }
   }
 }

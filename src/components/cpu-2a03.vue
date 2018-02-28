@@ -48,7 +48,7 @@
         {{error}}
     </div>
     <div class="col-sm-12 debug" v-if="debug">
-        <textarea v-model="debug" class="form-control"></textarea>
+        <textarea rows="12" v-model="debug" class="form-control"></textarea>
     </div>
 </div>
 
