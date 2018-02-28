@@ -269,7 +269,27 @@ export default {
         // @todo: Check if this is calculated correct. It says if bit 7 is set.
         this.p = (this.p & 0b01111111) | (value & 0b10000000);
         this.pc = this.pc + 2;
+    },
+    // CLD Clear decimal mode
+    0xD8: function() {
+        this.debugger(1, 'CLD');
+        this.p = this.p & 0b11110111;
+        this.pc = this.pc + 1;
+    },
+    // PHA - Push to stack the accumulator value
+    0x48: function() {
+        this.debugger(1, 'PHA');
+        this.stackPush(this.a);
+        this.pc = this.pc + 1;
+    },
+    // PLP - Pop from stack and store in flags
+    0x28: function() {
+        this.debugger(1, 'PHA');
+        this.p = this.stackPop();
+        this.pc = this.pc + 1;
+
     }
+
   }
 }
 </script>
