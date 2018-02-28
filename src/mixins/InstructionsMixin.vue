@@ -18,8 +18,11 @@ export default {
             data[data.length] = fh(this.mem.get(this.pc + count));
         }
         debug = (debug + data.join(" ")).padEnd(16, " ");
-        debug = debug + (operation.padEnd(16, ' '));
-        console.log(this.debug = debug);
+        debug = debug + (operation.padEnd(32, ' '));
+        // Now add register info
+        debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)}`;
+        this.debug = this.debug + debug + "\n";
+        console.log(debug);
     },
     // These are now the opcodes we handle
     // JMP with absoute addressing
@@ -36,6 +39,14 @@ export default {
     0xA2: function() {
         this.debugger(2, `LDX #$${fh(this.mem.get(this.pc +1))}`);
         this.x = this.mem.get(this.pc + 1);
+        // Now set the zero flag if X is 0
+        if(this.x == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
         this.pc = this.pc + 2;
     },
     // LDX with Zero Page
@@ -62,6 +73,16 @@ export default {
         // Now, let's head to the address
         this.pc = this.getAbsoluteAddress(this.pc + 1);
     },
+    // RTS - Return to stack
+    0x60: function() {
+        this.debugger(1, `RTS`);
+        // First pop the second half
+        let second = this.stackPop();
+        // Now the first part
+        let first = this.stackPop();
+        this.pc = ((first << 8) | second) + 1;
+    },
+
     // NOP, no operation, just increment the pc
     0xEA: function() {
         this.debugger(1, 'NOP');
@@ -75,11 +96,10 @@ export default {
     },
     // BCS - branch if carry set
     0xb0: function() {
+        this.debugger(2, `BCS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
         if(this.isCarry) {
-            this.debugger(2, `BCS $${fh(this.getRelativeAddress(this.pc + 1))}`);
             this.pc = this.getRelativeAddress(this.pc + 1) + 2;
         } else {
-            this.debugger(2, `BCS $${fh(this.pc + 2)}`);
             this.pc = this.pc + 2;
         }
     },
@@ -91,12 +111,10 @@ export default {
     },
     // BCC - Branch if carry clear
     0x90: function() {
-        this.debugger(1, `BCC $${fh(this.getRelativeAddress(this.pc + 1))}`);
+        this.debugger(2, `BCC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
         if(!this.isCarry) {
-            this.debugger(1, `BCC $${fh(this.getRelativeAddress(this.pc + 1))}`);
             this.pc = this.getRelativeAddress(this.pc + 1) + 2;
         } else {
-            this.debugger(2, `BCC $${fh(this.pc + 2)}`);
             this.pc = this.pc + 2;
         }
     },
@@ -104,26 +122,31 @@ export default {
     0xA9: function() {
         this.debugger(2, `LDA #$${fh(this.mem.get(this.pc + 1))}`);
         this.a = this.mem.get(this.pc + 1);
+        // Now set the zero flag if A is 0
+        if(this.a == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         this.pc = this.pc + 2;
     },
     // BEQ - Branch if equal, checks zero flag, and if so relative branch
     0xF0: function() {
+        this.debugger(2, `BEQ $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
         if(this.isZero) {
-            console.log("Totally zero");
-            this.debugger(1, `BEQ $${fh(this.getRelativeAddress(this.pc + 1))}`);
             this.pc = this.getRelativeAddress(this.pc + 1) + 2;
         } else {
-            this.debugger(2, `BEQ $${fh(this.pc + 1)}`);
             this.pc = this.pc + 2;
         }
     },
     // Branch if not equal, if zero flag is not set, relative branch
     0xD0: function() {
+        this.debugger(2, `BNE $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
         if(!this.isZero) {
-            this.debugger(1, `BEQ $${fh(this.getRelativeAddress(this.pc + 1))}`);
             this.pc = this.getRelativeAddress(this.pc + 1) + 2;
         } else {
-            this.debugger(2, `BEQ $${fh(this.pc + 1)}`);
             this.pc = this.pc + 2;
         }
     },
@@ -151,6 +174,34 @@ export default {
         // Now the V flag
         this.p = (this.p & 0b10111111) | (value & 0b01000000);
         this.pc = this.pc + 2;
+    },
+    // BVS - Branch if Overflow set
+    0x70: function() {
+        this.debugger(2, `BVS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+        if(this.isOverflow) {
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.pc = this.pc + 2;
+        }
+    },
+    // BVC - Branch if Overflow clear
+    0x50: function() {
+        this.debugger(2, `BVC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+        if(!this.isOverflow) {
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.pc = this.pc + 2;
+        }
+    },
+    // BPL - Branch if positive
+    0x10: function() {
+        this.debugger(2, `BPL $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+        if(!this.isNegative) {
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.pc = this.pc + 2;
+        }
+
     }
   }
 }
