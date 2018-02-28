@@ -233,6 +233,41 @@ export default {
         }
         // Now set negative
         this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 1;
+    },
+    // AND - Logical AND with accumulator
+    0x29: function() {
+        this.debugger(2, `AND $#${fh(this.mem.get(this.pc + 1))}`);
+        let result = this.a & this.mem.get(this.pc + 1);
+        // Now set the zero flag if A is 0
+        if(result == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (result & 0b10000000);
+        this.pc = this.pc + 2;
+    },
+    // CMP - Compare contents of accumulator with immediate memory value
+    0xc9: function() {
+        this.debugger(2, `CMP $#${fh(this.mem.get(this.pc + 1))}`);
+        let value = this.mem.get(this.pc + 1);
+        // Set the carry flag
+        if(this.a >= value) {
+            this.p = this.p | 0b1;
+        } else {
+            this.p = this.p & 0b11111110;
+        }
+        // Set zero
+        if(this.a == value) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Set Negative
+        // @todo: Check if this is calculated correct. It says if bit 7 is set.
+        this.p = (this.p & 0b01111111) | (value & 0b10000000);
         this.pc = this.pc + 2;
     }
   }
