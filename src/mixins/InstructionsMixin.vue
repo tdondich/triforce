@@ -96,7 +96,7 @@ export default {
             this.debugger(1, `BCC $${fh(this.getRelativeAddress(this.pc + 1))}`);
             this.pc = this.getRelativeAddress(this.pc + 1) + 2;
         } else {
-            this.debugger(2, `BCS $${fh(this.pc + 2)}`);
+            this.debugger(2, `BCC $${fh(this.pc + 2)}`);
             this.pc = this.pc + 2;
         }
     },
@@ -109,13 +109,35 @@ export default {
     // BEQ - Branch if equal, checks zero flag, and if so relative branch
     0xF0: function() {
         if(this.isZero) {
+            console.log("Totally zero");
             this.debugger(1, `BEQ $${fh(this.getRelativeAddress(this.pc + 1))}`);
             this.pc = this.getRelativeAddress(this.pc + 1) + 2;
         } else {
-            this.debugger(2, `BCS $${fh(this.pc + 2)}`);
+            this.debugger(2, `BEQ $${fh(this.pc + 1)}`);
             this.pc = this.pc + 2;
         }
+    },
+    // Branch if not equal, if zero flag is not set, relative branch
+    0xD0: function() {
+        if(!this.isZero) {
+            this.debugger(1, `BEQ $${fh(this.getRelativeAddress(this.pc + 1))}`);
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.debugger(2, `BEQ $${fh(this.pc + 1)}`);
+            this.pc = this.pc + 2;
+        }
+    },
+    // STA - Zero Page Addressing
+    0x85: function() {
+        this.debugger(2, `STA $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+        this.mem.set(this.getZeroPageAddress(this.pc + 1), this.a);
+        this.pc = this.pc + 2;
     }
+    /*
+    0x24: function() {
+
+    }
+    */
   }
 }
 </script>

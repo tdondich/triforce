@@ -129,7 +129,7 @@ export default {
                     this.sp--;
                 }
             }
-            this.p = 0x34;
+            this.p = 0x24;
             this.a = this.x = this.y = 0;
             this.pc = this.getResetVector();
             // Begin to execute
@@ -140,7 +140,7 @@ export default {
         power() {
             this.powered = true;
             // P i set to interrupt disable
-            this.p = 0x34;
+            this.p = 0x24;
             this.a = this.x = this.y = 0;
             this.sp = 0xfd;
             // Frame IRQ enabled
