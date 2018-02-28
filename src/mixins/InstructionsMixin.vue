@@ -132,12 +132,26 @@ export default {
         this.debugger(2, `STA $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
         this.mem.set(this.getZeroPageAddress(this.pc + 1), this.a);
         this.pc = this.pc + 2;
-    }
-    /*
+    },
+    // BIT - Bit Test with zero page addressing
+    // This instructions is used to test if one or more bits are set in a target memory location. 
+    // The mask pattern in A is ANDed with the value in memory to set or clear the zero flag, but 
+    // the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
     0x24: function() {
-
+        this.debugger(2, `BIT $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+        let value = this.mem.get(this.getZeroPageAddress(this.pc + 1));
+        // First, let's AND with the accumulator
+        if((this.a & value) == 0x00) {
+            this.p = this.p | 0b0010;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now, let's copy to the N flag
+        this.p = (this.p & 0b01111111) | (value & 0b10000000);
+        // Now the V flag
+        this.p = (this.p & 0b10111111) | (value & 0b01000000);
+        this.pc = this.pc + 2;
     }
-    */
   }
 }
 </script>
