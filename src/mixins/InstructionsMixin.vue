@@ -22,7 +22,6 @@ export default {
         // Now add register info
         debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)}`;
         this.debug = this.debug + debug + "\n";
-        console.log(debug);
     },
     // These are now the opcodes we handle
     // JMP with absoute addressing
@@ -210,14 +209,17 @@ export default {
     },
     // SED - Set Decimal Flag
     0xF8: function() {
-        this.debugger(1, 'SEI');
+        this.debugger(1, 'SED');
         this.p = this.p | 0b1000;
         this.pc = this.pc + 1;
     },
     // PHP - Push P onto Stack
+    // Note, bit 4 and 5 changes.
+    // See: https://wiki.nesdev.com/w/index.php/Status_flags
     0x08: function() {
         this.debugger(1, 'PHP');
-        this.stackPush(this.p);
+        // Always make sure that bit 5 and 4 is set
+        this.stackPush(this.p | 0b00110000);
         this.pc = this.pc + 1;
     },
     // PLA - Pop stack into Accumulator
@@ -237,22 +239,22 @@ export default {
     },
     // AND - Logical AND with accumulator
     0x29: function() {
-        this.debugger(2, `AND $#${fh(this.mem.get(this.pc + 1))}`);
-        let result = this.a & this.mem.get(this.pc + 1);
+        this.debugger(2, `AND #$${fh(this.mem.get(this.pc + 1))}`);
+        this.a = this.a & this.mem.get(this.pc + 1);
         // Now set the zero flag if A is 0
-        if(result == 0x00) {
+        if(this.a == 0x00) {
             this.p = this.p | 0b10;
         } else {
             this.p = this.p & 0b11111101;
         }
         // Now set negative
-        this.p = (this.p & 0b01111111) | (result & 0b10000000);
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         this.pc = this.pc + 2;
     },
     // CMP - Compare contents of accumulator with immediate memory value
     0xc9: function() {
-        this.debugger(2, `CMP $#${fh(this.mem.get(this.pc + 1))}`);
-        let value = this.mem.get(this.pc + 1);
+        this.debugger(2, `CMP #$${fh(this.mem.get(this.pc + 1))}`);
+        let value = this.a - this.mem.get(this.pc + 1);
         // Set the carry flag
         if(this.a >= value) {
             this.p = this.p | 0b1;
@@ -260,7 +262,7 @@ export default {
             this.p = this.p & 0b11111110;
         }
         // Set zero
-        if(this.a == value) {
+        if(value == 0x00) {
             this.p = this.p | 0b10;
         } else {
             this.p = this.p & 0b11111101;
@@ -284,9 +286,56 @@ export default {
     },
     // PLP - Pop from stack and store in flags
     0x28: function() {
-        this.debugger(1, 'PHA');
-        this.p = this.stackPop();
+        this.debugger(1, 'PLP');
+        // Be sure to ignore bits 4 and always set 5 
+        this.p =  (this.stackPop() & 0b11101111) | 0b00100000;
         this.pc = this.pc + 1;
+    },
+    // BMI - Branch if minus flag is set with relative address
+    0x30: function() {
+         this.debugger(2, `BMI $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+        if(this.isNegative) {
+            this.pc = this.getRelativeAddress(this.pc + 1) + 2;
+        } else {
+            this.pc = this.pc + 2;
+        }
+    },
+    // ORA - Logical OR operation on accumulator against memory contents - immediate addressing
+    0x09: function() {
+         this.debugger(2, `ORA #$${fh(this.mem.get(this.pc +1))}`);
+         this.a = this.a | this.mem.get(this.pc + 1);
+        // Set zero
+        if(this.a == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Set Negative
+        // @todo: Check if this is calculated correct. It says if bit 7 is set.
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 2;
+    },
+    // CLV - Clear Overflow flag
+    0xb8: function() {
+        this.debugger(1, 'CLV');
+        this.p = this.p & 0b10111111;
+        this.pc = this.pc + 1;
+    },
+    // EOR - Exclusive OR on accumulator using immediate addressing
+    0x49: function() {
+        this.debugger(2, `EOR #$${fh(this.mem.get(this.pc + 1))}`);
+        this.a = this.a ^ this.mem.get(this.pc + 1);
+        // Now set the zero flag if A is 0
+        if(this.a == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 2;
+    },
+    0x69: function() {
 
     }
 
