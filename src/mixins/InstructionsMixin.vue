@@ -335,10 +335,38 @@ export default {
         this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         this.pc = this.pc + 2;
     },
+    // ADC - Add Memory to accumulator with carry bit - immediate address mode
     0x69: function() {
-
+        // Add memory to accumulator and 1 to represent carry bit
+        this.debugger(2, `ADC #$${fh(this.mem.get(this.pc + 1))}`);
+        let result = this.a + this.mem.get(this.pc + 1);
+        if(this.isCarry) {
+            result = result + 1;
+        }
+        if(result > 0xFF) {
+            // Set carry flag
+            this.p = this.p |  0b0001;
+        } else {
+            // Reset carry flag
+            this.p = this.p & 0b11111110;
+        }
+        // Evaluate to see if the 7th bit of result is different than bit 7 in accumulator
+        if((this.a & 0b10000000) != (result & 0b10000000)) {
+            // Set overflow
+            this.p = this.p | 0b01000000;
+        } else {
+            this.p = this.p & 0b10111111;
+        }
+        // Evaluate zero
+        if(result == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set to accumulator, but be sure to mask
+        this.a = result & 0xFF;
+        this.pc = this.pc + 2;
     }
-
   }
 }
 </script>
