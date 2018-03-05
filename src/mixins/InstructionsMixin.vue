@@ -48,9 +48,18 @@ export default {
         this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
         this.pc = this.pc + 2;
     },
-    // LDX with Zero Page
-    0xA6: function() {
-        this.x = this.mem.get(this.mem.getAddressValue(this.pc + 1 >>> 4));
+    // LDY with Immediate Addressing
+    0xA0: function() {
+        this.debugger(2, `LDY #$${fh(this.mem.get(this.pc +1))}`);
+        this.y = this.mem.get(this.pc + 1);
+        // Now set the zero flag if X is 0
+        if(this.x == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
         this.pc = this.pc + 2;
     },
     // STX with Zero Page
@@ -337,9 +346,10 @@ export default {
     },
     // ADC - Add Memory to accumulator with carry bit - immediate address mode
     0x69: function() {
-        // Add memory to accumulator and 1 to represent carry bit
+        // Add memory to accumulator to represent carry bit
         this.debugger(2, `ADC #$${fh(this.mem.get(this.pc + 1))}`);
-        let result = this.a + this.mem.get(this.pc + 1);
+        let value = this.mem.get(this.pc + 1);
+        let result = this.a + value;
         if(this.isCarry) {
             result = result + 1;
         }
@@ -350,10 +360,13 @@ export default {
             // Reset carry flag
             this.p = this.p & 0b11111110;
         }
-        // Evaluate to see if the 7th bit of result is different than bit 7 in accumulator
-        if((this.a & 0b10000000) != (result & 0b10000000)) {
+        // Determine a 2's complement overflow
+        let intVal = parseInt(result.toString(2), 2);
+        console.log(fh(this.pc) + ": " + intVal);
+        if(intVal > 127 || intVal < -128) {
             // Set overflow
             this.p = this.p | 0b01000000;
+            console.log(`${this.p.toString(2)}`);
         } else {
             this.p = this.p & 0b10111111;
         }
@@ -365,6 +378,50 @@ export default {
         }
         // Now set to accumulator, but be sure to mask
         this.a = result & 0xFF;
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 2;
+    },
+    // CPY - Compare Y with Immediate
+    0xC0: function() {
+        this.debugger(2, `CPY #$${fh(this.mem.get(this.pc + 1))}`);
+        let value = this.y - this.mem.get(this.pc + 1);
+        // Set the carry flag
+        if(this.y >= value) {
+            this.p = this.p | 0b1;
+        } else {
+            this.p = this.p & 0b11111110;
+        }
+        // Set zero
+        if(value == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Set Negative
+        // @todo: Check if this is calculated correct. It says if bit 7 is set.
+        this.p = (this.p & 0b01111111) | (value & 0b10000000);
+        this.pc = this.pc + 2;
+    },
+    // CPX - Compare X with Immediate
+    0xE0: function() {
+        this.debugger(2, `CPX #$${fh(this.mem.get(this.pc + 1))}`);
+        let value = this.x - this.mem.get(this.pc + 1);
+        // Set the carry flag
+        if(this.x >= value) {
+            this.p = this.p | 0b1;
+        } else {
+            this.p = this.p & 0b11111110;
+        }
+        // Set zero
+        if(value == 0x00) {
+            this.p = this.p | 0b10;
+        } else {
+            this.p = this.p & 0b11111101;
+        }
+        // Set Negative
+        // @todo: Check if this is calculated correct. It says if bit 7 is set.
+        this.p = (this.p & 0b01111111) | (value & 0b10000000);
         this.pc = this.pc + 2;
     }
   }
