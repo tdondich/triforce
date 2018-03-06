@@ -487,6 +487,67 @@ export default {
         // Set Negative
         this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
         this.pc = this.pc + 1;
+    },
+    // TAY - Transfer Accumulator to Y
+    0xA8: function() {
+        this.debugger(1, 'TAY');
+
+        this.y = this.a;
+
+        this.setZero((this.y == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
+        this.pc = this.pc + 1;
+
+    },
+    // TAX - Transfer Accumulator to X
+    0xAA: function() {
+        this.debugger(1, 'TAX');
+
+        this.x = this.a;
+
+        this.setZero((this.x == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
+        this.pc = this.pc + 1;
+    },
+    // TYA - Transfer Y to Accumulator
+    0x98: function() {
+        this.debugger(1, 'TYA');
+
+        this.a = this.y;
+
+        this.setZero((this.a == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 1;
+    },
+    // TXA - Transfer X to Accumulator
+    0x8A: function() {
+        this.debugger(1, 'TXA');
+
+        this.a = this.x;
+
+        this.setZero((this.a == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+        this.pc = this.pc + 1;
+    },
+    // TSX - Transfer Stack Pointer to X
+    0xBA: function() {
+        this.debugger(1, 'TSX');
+
+        this.x = this.sp;
+
+        this.setZero((this.x == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
+        this.pc = this.pc + 1;
 
     }
 
