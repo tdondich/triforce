@@ -9,6 +9,12 @@ function fh(value) {
     return value.toString(16).padStart(2, '0').toUpperCase();
 }
 
+// Convert an unsigned byte integer to a signed integer
+function unsignedByteToSignedByte(b)   
+{
+    return b > 127 ? b - 256 : b;
+}
+
 export default {
   methods: {
     debugger(numberOfOperands, operation) {
@@ -360,8 +366,11 @@ export default {
             // Reset carry flag
             this.p = this.p & 0b11111110;
         }
+
         // Determine a 2's complement overflow
-        let intVal = parseInt(result.toString(2), 2);
+        // So let's get the signed values of both operands and add them
+        let intVal = unsignedByteToSignedByte(this.a) + unsignedByteToSignedByte(value);
+
         console.log(fh(this.pc) + ": " + intVal);
         if(intVal > 127 || intVal < -128) {
             // Set overflow
@@ -369,15 +378,20 @@ export default {
             console.log(`${this.p.toString(2)}`);
         } else {
             this.p = this.p & 0b10111111;
+            console.log(`NOT SIGNED OVERFLOW`);
         }
-        // Evaluate zero
-        if(result == 0x00) {
+
+
+        // Now set to accumulator, but be sure to mask
+        this.a = result & 0xFF;
+
+        // Evaluate to zero, only after the accumulator has been set
+        if(this.a == 0x00) {
             this.p = this.p | 0b10;
         } else {
             this.p = this.p & 0b11111101;
         }
-        // Now set to accumulator, but be sure to mask
-        this.a = result & 0xFF;
+
         // Now set negative
         this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         this.pc = this.pc + 2;
