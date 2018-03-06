@@ -432,7 +432,34 @@ export default {
         this.p = (this.p & 0b01111111) | (result & 0b10000000);
         this.pc = this.pc + 2;
 
+    },
+    // INY - Increment Y Register
+    0xC8: function() {
+        this.debugger(1, 'INY');
+
+        // Increment, but mask to a 8 bit value
+        this.y = (this.y + 1) & 0xFF;
+
+        this.setZero((this.y == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
+        this.pc = this.pc + 1;
+    },
+    // INY - Increment Y Register
+    0xE8: function() {
+        this.debugger(1, 'INX');
+
+        // Increment, but mask to a 8 bit value
+        this.x = (this.x + 1) & 0xFF;
+
+        this.setZero((this.x == 0));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
+        this.pc = this.pc + 1;
     }
+
   }
 }
 </script>
