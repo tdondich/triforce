@@ -370,6 +370,34 @@ export default {
 
         this.pc = this.pc + 2;
     },
+    // SBC - Subtract with Carry - immediate
+    0xE9: function() {
+        // Add memory to accumulator to represent carry bit
+        this.debugger(2, `SBC #$${fh(this.mem.get(this.pc + 1))}`);
+        let value = this.mem.get(this.pc + 1);
+        let result = this.a - value;
+        if(!this.isCarry) {
+            result = result - 1;
+        }
+
+        // Determine a 2's complement overflow
+        // So let's get the signed values of both operands and add them
+        let intVal = unsignedByteToSignedByte(this.a) - unsignedByteToSignedByte(value);
+        this.setOverflow((intVal > 127 || intVal < -128));
+        this.setCarry((intVal >= 0));
+
+        // Now set to accumulator, but be sure to mask
+        this.a = result & 0xFF;
+
+        // Evaluate to zero, only after the accumulator has been set
+        this.setZero((this.a == 0x00));
+
+        // Now set negative
+        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
+
+        this.pc = this.pc + 2;
+
+    },
     // CPY - Compare Y with Immediate
     0xC0: function() {
         this.debugger(2, `CPY #$${fh(this.mem.get(this.pc + 1))}`);
