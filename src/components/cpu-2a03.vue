@@ -55,10 +55,18 @@
 </template>
 
 <script>
-import InstructionsMixin from '../mixins/InstructionsMixin'
+import instructions from '../mixins/instructions';
+import stx from '../mixins/opcodes/stx';
+import ldx from '../mixins/opcodes/ldx';
+import lda from '../mixins/opcodes/lda';
 
 export default {
-    mixins: [InstructionsMixin],
+    mixins: [
+        instructions,
+        stx,
+        ldx,
+        lda
+    ],
     data: function() {
         // Our data represents our internal registers and processor flag
         return {

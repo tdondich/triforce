@@ -1,19 +1,4 @@
-<template>
- <div></div> 
-</template>
-
-<script>
-
-// Format a value as visual hex
-function fh(value) {
-    return value.toString(16).padStart(2, '0').toUpperCase();
-}
-
-// Convert an unsigned byte integer to a signed integer
-function unsignedByteToSignedByte(b)   
-{
-    return b > 127 ? b - 256 : b;
-}
+import {fh, unsignedByteToSignedByte} from "./helpers";
 
 export default {
   methods: {
@@ -40,20 +25,6 @@ export default {
     0x6c: function() {
         this.pc = this.getIndirectAddress(this.pc + 1);
     },
-    // LDX with Immediate Addressing
-    0xA2: function() {
-        this.debugger(2, `LDX #$${fh(this.mem.get(this.pc +1))}`);
-        this.x = this.mem.get(this.pc + 1);
-        // Now set the zero flag if X is 0
-        if(this.x == 0x00) {
-            this.p = this.p | 0b10;
-        } else {
-            this.p = this.p & 0b11111101;
-        }
-        // Now set negative
-        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
-        this.pc = this.pc + 2;
-    },
     // LDY with Immediate Addressing
     0xA0: function() {
         this.debugger(2, `LDY #$${fh(this.mem.get(this.pc +1))}`);
@@ -64,12 +35,6 @@ export default {
         // Now set negative
         this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
         this.pc = this.pc + 2;
-    },
-    // STX with Zero Page
-    0x86: function() {
-        this.debugger(2, `STX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.x)}`);
-        this.mem.set(this.getZeroPageAddress(this.pc + 1), this.x);
-        this.pc  = this.pc + 2;
     },
     // JSR, note, the target return is the PC address + 2, not three.
     // See: http://obelisk.me.uk/6502/reference.html#JSR
@@ -548,9 +513,15 @@ export default {
         // Set Negative
         this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
         this.pc = this.pc + 1;
+    },
+    // TXS - Transfer X to Stack Pointer
+    0x9A: function() {
+        this.debugger(1, 'TXS');
 
+        this.sp = this.x;
+
+        this.pc = this.pc + 1;
     }
 
   }
 }
-</script>
