@@ -117,6 +117,30 @@ export default {
         }
     },
     methods: {
+        setCarry(val) {
+            if(val) {
+                // Set carry flag
+                this.p = this.p | 0b00000001;
+            } else {
+                // Reset carry flag
+                this.p = this.p & 0b11111110;
+            }
+        },
+        setOverflow(val) {
+            if(val) {
+                // Set overflow
+                this.p = this.p | 0b01000000;
+            } else {
+                this.p = this.p & 0b10111111;
+            }
+        },
+        setZero(val) {
+            if(val) {
+                this.p = this.p | 0b00000010;
+            } else {
+                this.p = this.p & 0b11111101;
+            }
+        },
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
             this.error = '';
