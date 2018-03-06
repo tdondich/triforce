@@ -371,20 +371,23 @@ export default {
         this.pc = this.pc + 2;
     },
     // SBC - Subtract with Carry - immediate
+    // Note: This was was nuts. See: http://users.telenet.be/kim1-6502/6502/proman.html#222
     0xE9: function() {
-        // Add memory to accumulator to represent carry bit
         this.debugger(2, `SBC #$${fh(this.mem.get(this.pc + 1))}`);
+
         let value = this.mem.get(this.pc + 1);
-        let result = this.a - value;
-        if(!this.isCarry) {
-            result = result - 1;
+        value = value ^ 0xFF;
+
+        let result = this.a + value;
+        if(this.isCarry) {
+            result = result + 1;
         }
+        this.setCarry((result > 0xFF));
 
         // Determine a 2's complement overflow
         // So let's get the signed values of both operands and add them
-        let intVal = unsignedByteToSignedByte(this.a) - unsignedByteToSignedByte(value);
+        let intVal = unsignedByteToSignedByte(this.a) + unsignedByteToSignedByte(value);
         this.setOverflow((intVal > 127 || intVal < -128));
-        this.setCarry((intVal >= 0));
 
         // Now set to accumulator, but be sure to mask
         this.a = result & 0xFF;
@@ -396,7 +399,6 @@ export default {
         this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
 
         this.pc = this.pc + 2;
-
     },
     // CPY - Compare Y with Immediate
     0xC0: function() {
@@ -446,7 +448,7 @@ export default {
         this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
         this.pc = this.pc + 1;
     },
-    // INY - Increment Y Register
+    // INY - Increment X Register
     0xE8: function() {
         this.debugger(1, 'INX');
 
@@ -458,6 +460,34 @@ export default {
         // Set Negative
         this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
         this.pc = this.pc + 1;
+    },
+    // DEX - Decrement one from X register
+    0xCA: function() {
+        this.debugger(1, 'DEX');
+
+        // Increment, but mask to a 8 bit value
+        this.x = (this.x - 1) & 0xFF;
+
+        this.setZero((this.x == 0));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
+        this.pc = this.pc + 1;
+
+    },
+    // DEY - Decrement one from Y register
+    0x88: function() {
+        this.debugger(1, 'DEY');
+
+        // Increment, but mask to a 8 bit value
+        this.y = (this.y - 1) & 0xFF;
+
+        this.setZero((this.y == 0x00));
+
+        // Set Negative
+        this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
+        this.pc = this.pc + 1;
+
     }
 
   }
