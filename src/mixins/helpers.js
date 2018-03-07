@@ -1,6 +1,8 @@
 // Format a value as visual hex
 function fh(value) {
-    return value.toString(16).padStart(2, '0').toUpperCase();
+    let output =  value.toString(16);
+    output = output.padStart(output.length <= 2 ? 2 : 4, '0').toUpperCase();
+    return output;
 }
 
 // Convert an unsigned byte integer to a signed integer

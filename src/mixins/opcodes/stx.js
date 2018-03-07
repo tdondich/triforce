@@ -18,7 +18,7 @@ export default {
         // Absolute
         0x8E: function() {
             let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `STX $${fh(targetAddress)} = ${fh(this.x)}`);
+            this.debugger(3, `STX $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
             this.stx(targetAddress);
             this.pc = this.pc + 3;
         }

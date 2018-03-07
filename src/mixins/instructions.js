@@ -94,20 +94,6 @@ export default {
             this.pc = this.pc + 2;
         }
     },
-    // Load Accumulator with direct value
-    0xA9: function() {
-        this.debugger(2, `LDA #$${fh(this.mem.get(this.pc + 1))}`);
-        this.a = this.mem.get(this.pc + 1);
-        // Now set the zero flag if A is 0
-        if(this.a == 0x00) {
-            this.p = this.p | 0b10;
-        } else {
-            this.p = this.p & 0b11111101;
-        }
-        // Now set negative
-        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
-        this.pc = this.pc + 2;
-    },
     // BEQ - Branch if equal, checks zero flag, and if so relative branch
     0xF0: function() {
         this.debugger(2, `BEQ $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -521,7 +507,23 @@ export default {
         this.sp = this.x;
 
         this.pc = this.pc + 1;
+    },
+    // RTI - Return from Interrupt
+    0x40: function() {
+        this.debugger(1, 'RTI');
+
+        // Be sure to ignore bits 4 and 5
+        this.p =  (this.stackPop() & 0b11101111) | 0b00100000;
+
+
+        // First pop the second half
+        let second = this.stackPop();
+        // Now the first part
+        let first = this.stackPop();
+        this.pc = ((first << 8) | second);
+
     }
+
 
   }
 }
