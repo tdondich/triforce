@@ -61,6 +61,7 @@ import ldx from '../mixins/opcodes/ldx';
 import lda from '../mixins/opcodes/lda';
 import lsr from '../mixins/opcodes/lsr';
 import asl from '../mixins/opcodes/asl';
+import ror from '../mixins/opcodes/ror';
 
 export default {
     mixins: [
@@ -69,7 +70,8 @@ export default {
         ldx,
         lda,
         lsr,
-        asl
+        asl,
+        ror
     ],
     data: function() {
         // Our data represents our internal registers and processor flag
