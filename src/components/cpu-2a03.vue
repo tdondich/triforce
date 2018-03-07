@@ -59,13 +59,17 @@ import instructions from '../mixins/instructions';
 import stx from '../mixins/opcodes/stx';
 import ldx from '../mixins/opcodes/ldx';
 import lda from '../mixins/opcodes/lda';
+import lsr from '../mixins/opcodes/lsr';
+import asl from '../mixins/opcodes/asl';
 
 export default {
     mixins: [
         instructions,
         stx,
         ldx,
-        lda
+        lda,
+        lsr,
+        asl
     ],
     data: function() {
         // Our data represents our internal registers and processor flag
@@ -147,6 +151,13 @@ export default {
                 this.p = this.p | 0b00000010;
             } else {
                 this.p = this.p & 0b11111101;
+            }
+        },
+        setNegative(val) {
+            if(val) {
+                this.p = this.p | 0b10000000;
+            } else {
+                this.p = this.p & 0b01111111;
             }
         },
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
