@@ -20,6 +20,13 @@ export default {
             this.lda(this.pc + 1);
             this.pc = this.pc + 2;
         },
+        // Zero Page
+        0xA5: function() {
+            let targetAddress = this.getZeroPageAddress(this.pc + 1);
+            this.debugger(2, `LDA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.lda(targetAddress);
+            this.pc = this.pc + 2;
+        },
         // Absolute
         0xAD: function() {
             let targetAddress = this.getAbsoluteAddress(this.pc + 1);

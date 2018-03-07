@@ -112,12 +112,6 @@ export default {
             this.pc = this.pc + 2;
         }
     },
-    // STA - Zero Page Addressing
-    0x85: function() {
-        this.debugger(2, `STA $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-        this.mem.set(this.getZeroPageAddress(this.pc + 1), this.a);
-        this.pc = this.pc + 2;
-    },
     // BIT - Bit Test with zero page addressing
     // This instructions is used to test if one or more bits are set in a target memory location. 
     // The mask pattern in A is ANDed with the value in memory to set or clear the zero flag, but 
