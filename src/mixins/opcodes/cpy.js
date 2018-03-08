@@ -28,6 +28,14 @@ export default {
             this.debugger(2, `CPY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
             this.cpy(this.getZeroPageAddress(this.pc + 1));
             this.pc = this.pc + 2;
-        }
+        },
+        // Absolute
+        0xCC: function() {
+            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+            this.debugger(3, `CPY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.cpy(targetAddress);
+            this.pc = this.pc + 3;
+        },
+ 
     }
 }

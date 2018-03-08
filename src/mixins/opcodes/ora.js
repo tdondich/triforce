@@ -33,6 +33,14 @@ export default {
             this.debugger(2, `ORA ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
             this.ora(targetAddress);
             this.pc = this.pc + 2;
+        },
+        // Absolute
+        0x0D: function() {
+            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+            this.debugger(3, `ORA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.ora(targetAddress);
+            this.pc = this.pc + 3;
         }
+ 
     }
 }

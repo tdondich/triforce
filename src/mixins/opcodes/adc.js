@@ -38,6 +38,13 @@ export default {
             this.adc(this.getZeroPageAddress(this.pc + 1));
             this.pc = this.pc + 2;
         },
+        // Absolute
+        0x6D: function() {
+            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+            this.debugger(3, `ADC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.adc(targetAddress);
+            this.pc = this.pc + 3;
+        },
         // Indexed Indirect, X
         0x61: function() {
             let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);

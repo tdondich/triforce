@@ -31,7 +31,15 @@ export default {
             this.debugger(2, `CMP ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
             this.cmp(targetAddress);
             this.pc = this.pc + 2;
-        }
+        },
+        // Absolute
+        0xCD: function() {
+            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+            this.debugger(3, `CMP $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.cmp(targetAddress);
+            this.pc = this.pc + 3;
+        },
+ 
     }
 }
  

@@ -74,6 +74,9 @@ import ldy from '../mixins/opcodes/ldy';
 import sty from '../mixins/opcodes/sty';
 import cpx from '../mixins/opcodes/cpx';
 import cpy from '../mixins/opcodes/cpy';
+import inc from '../mixins/opcodes/inc';
+import dec from '../mixins/opcodes/dec';
+import bit from '../mixins/opcodes/bit';
 
 export default {
     mixins: [
@@ -95,7 +98,10 @@ export default {
         ldy,
         sty,
         cpx,
-        cpy
+        cpy,
+        inc,
+        dec,
+        bit
     ],
     data: function() {
         // Our data represents our internal registers and processor flag

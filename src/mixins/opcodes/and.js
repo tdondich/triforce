@@ -32,7 +32,15 @@ export default {
             this.debugger(2, `AND ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
             this.and(targetAddress);
             this.pc = this.pc + 2;
+        },
+        // Absolute
+        0x2D: function() {
+            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+            this.debugger(3, `AND $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.and(targetAddress);
+            this.pc = this.pc + 3;
         }
+ 
     }
 }
  
