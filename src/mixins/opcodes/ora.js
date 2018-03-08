@@ -21,6 +21,12 @@ export default {
             this.ora(this.pc + 1);
             this.pc = this.pc + 2;
         },
+        // Zero Page
+        0x05: function () {
+            this.debugger(2, `ORA $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+            this.ora(this.getZeroPageAddress(this.pc + 1));
+            this.pc = this.pc + 2;
+        },
         // Indirect X
         0x01: function() {
             let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);

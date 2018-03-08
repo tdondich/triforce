@@ -19,6 +19,12 @@ export default {
             this.cmp(this.pc + 1);
             this.pc = this.pc + 2;
         },
+        // Zero Page
+        0xC5: function () {
+            this.debugger(2, `CMP $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+            this.cmp(this.getZeroPageAddress(this.pc + 1));
+            this.pc = this.pc + 2;
+        },
         // Indexed Indirect, X
         0xC1: function() {
             let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);

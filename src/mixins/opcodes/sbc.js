@@ -28,11 +28,19 @@ export default {
             // Now set negative
             this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         },
+        // Immediate
         0xE9: function() {
             this.debugger(2, `SBC #$${fh(this.mem.get(this.pc + 1))}`);
             this.sbc(this.pc + 1);
             this.pc = this.pc + 2;
         },
+        // Zero Page
+        0xE5: function () {
+            this.debugger(2, `SBC $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+            this.sbc(this.getZeroPageAddress(this.pc + 1));
+            this.pc = this.pc + 2;
+        },
+        // Indexed Indirect, X 
         0xE1: function() {
             let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
             this.debugger(2, `SBC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);

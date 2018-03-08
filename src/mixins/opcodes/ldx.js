@@ -20,7 +20,12 @@ export default {
             this.ldx(this.pc + 1);
             this.pc = this.pc + 2;
         },
-
+        // Zero Page
+        0xA6: function () {
+            this.debugger(2, `LDX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+            this.ldx(this.getZeroPageAddress(this.pc + 1));
+            this.pc = this.pc + 2;
+        },
         // Absolute
         0xAE: function() {
             let targetAddress = this.getAbsoluteAddress(this.pc + 1);

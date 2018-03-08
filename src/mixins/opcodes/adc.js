@@ -32,6 +32,12 @@ export default {
             this.adc(this.pc + 1);
             this.pc = this.pc + 2;
         },
+        // Zero Page
+        0x65: function () {
+            this.debugger(2, `ADC $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+            this.adc(this.getZeroPageAddress(this.pc + 1));
+            this.pc = this.pc + 2;
+        },
         // Indexed Indirect, X
         0x61: function() {
             let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);

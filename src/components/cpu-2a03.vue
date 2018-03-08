@@ -70,6 +70,10 @@ import eor from '../mixins/opcodes/eor';
 import adc from '../mixins/opcodes/adc';
 import cmp from '../mixins/opcodes/cmp';
 import sbc from '../mixins/opcodes/sbc';
+import ldy from '../mixins/opcodes/ldy';
+import sty from '../mixins/opcodes/sty';
+import cpx from '../mixins/opcodes/cpx';
+import cpy from '../mixins/opcodes/cpy';
 
 export default {
     mixins: [
@@ -87,7 +91,11 @@ export default {
         eor,
         adc,
         cmp,
-        sbc
+        sbc,
+        ldy,
+        sty,
+        cpx,
+        cpy
     ],
     data: function() {
         // Our data represents our internal registers and processor flag

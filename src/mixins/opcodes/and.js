@@ -20,6 +20,12 @@ export default {
             this.and(this.pc + 1);
             this.pc = this.pc + 2;
         },
+        // Zero Page
+        0x25: function () {
+            this.debugger(2, `AND $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+            this.and(this.getZeroPageAddress(this.pc + 1));
+            this.pc = this.pc + 2;
+        },
         // Indexed Indirect, X
         0x21: function() {
             let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
