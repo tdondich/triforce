@@ -33,6 +33,14 @@ export default {
             this.debugger(3, `LDA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
             this.lda(targetAddress);
             this.pc = this.pc + 3;
+        },
+        // Indexed Indirect, X
+        0xA1: function() {
+            let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
+            this.debugger(2, `LDA ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.lda(targetAddress);
+            this.pc = this.pc + 2;
+
         }
     }
 }

@@ -64,6 +64,12 @@ import asl from '../mixins/opcodes/asl';
 import ror from '../mixins/opcodes/ror';
 import rol from '../mixins/opcodes/rol';
 import sta from '../mixins/opcodes/sta';
+import ora from '../mixins/opcodes/ora';
+import and from '../mixins/opcodes/and';
+import eor from '../mixins/opcodes/eor';
+import adc from '../mixins/opcodes/adc';
+import cmp from '../mixins/opcodes/cmp';
+import sbc from '../mixins/opcodes/sbc';
 
 export default {
     mixins: [
@@ -75,7 +81,13 @@ export default {
         asl,
         ror,
         rol,
-        sta
+        sta,
+        ora,
+        and,
+        eor,
+        adc,
+        cmp,
+        sbc
     ],
     data: function() {
         // Our data represents our internal registers and processor flag
@@ -231,10 +243,16 @@ export default {
             // See: http://blog.vjeux.com/2013/javascript/conversion-from-uint8-to-int8-x-24.html
             return this.pc + (this.mem.get(address) << 24 >> 24 );
         },
-        getAbsoluteAddress(address) {
+        getAbsoluteAddress(address, zeroPage = false) {
             // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location
             let first = this.mem.get(address);
-            let second = this.mem.get(address + 1);
+            let second = 0x00;
+            // Check to see if we're meant to be pulling from zero page.  If so, we need to wrap
+            if(zeroPage && address == 0xFF) {
+                    second = this.mem.get(0x00);
+            } else {
+                second = this.mem.get(address + 1);
+            }
             // Now, we need to return the number that is second + first
             return (second << 8) | first;
         },
@@ -252,9 +270,13 @@ export default {
         getIndirectAddress(address) {
             return this.mem.getAbsoluteAddress(this.getAbsoluteAddress(address));
         },
-        getIndexedIndirectAddress(address) {
-            let first = this.mem.getZeroPageXAddress(address);
-            return this.mem.getAbsoluteAddress(first);
+        getIndexedIndirectXAddress(address) {
+            let first = this.getZeroPageXAddress(address);
+            return this.getAbsoluteAddress(first, true);
+        },
+        getIndexedIndirectYAddress(address) {
+            let first = this.getZeroPageXAddress(address);
+            return this.getAbsoluteAddress(first, true);
         },
         getIndirectIndexedAddress(address) {
             let first = this.mem.getZeroPageAddress(address);

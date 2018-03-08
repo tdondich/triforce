@@ -19,7 +19,13 @@ export default {
             this.debugger(3, `STA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
             this.sta(targetAddress);
             this.pc = this.pc + 3;
-
+        },
+        // Indexed Indirect, X
+        0x81: function() {
+            let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
+            this.debugger(2, `STA ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+            this.sta(targetAddress);
+            this.pc = this.pc + 2;
         }
     }
 }

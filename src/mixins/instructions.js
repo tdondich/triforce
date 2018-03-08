@@ -1,4 +1,4 @@
-import {fh, unsignedByteToSignedByte} from "./helpers";
+import {fh} from "./helpers";
 
 export default {
   methods: {
@@ -194,38 +194,7 @@ export default {
         this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         this.pc = this.pc + 1;
     },
-    // AND - Logical AND with accumulator
-    0x29: function() {
-        this.debugger(2, `AND #$${fh(this.mem.get(this.pc + 1))}`);
-        this.a = this.a & this.mem.get(this.pc + 1);
-        // Now set the zero flag if A is 0
-        if(this.a == 0x00) {
-            this.p = this.p | 0b10;
-        } else {
-            this.p = this.p & 0b11111101;
-        }
-        // Now set negative
-        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
-        this.pc = this.pc + 2;
-    },
-    // CMP - Compare contents of accumulator with immediate memory value
-    0xc9: function() {
-        this.debugger(2, `CMP #$${fh(this.mem.get(this.pc + 1))}`);
-
-        let value = this.mem.get(this.pc + 1);
-
-        let result = this.a - value;
-
-        this.setCarry((value <= this.a));
-
-        this.setZero((result == 0x00));
-
-        // Set Negative
-        // @todo: Check if this is calculated correct. It says if bit 7 is set.
-        this.p = (this.p & 0b01111111) | (result & 0b10000000);
-        this.pc = this.pc + 2;
-    },
-    // CLD Clear decimal mode
+   // CLD Clear decimal mode
     0xD8: function() {
         this.debugger(1, 'CLD');
         this.p = this.p & 0b11110111;
@@ -253,99 +222,13 @@ export default {
             this.pc = this.pc + 2;
         }
     },
-    // ORA - Logical OR operation on accumulator against memory contents - immediate addressing
-    0x09: function() {
-         this.debugger(2, `ORA #$${fh(this.mem.get(this.pc +1))}`);
-         this.a = this.a | this.mem.get(this.pc + 1);
-        // Set zero
-        if(this.a == 0x00) {
-            this.p = this.p | 0b10;
-        } else {
-            this.p = this.p & 0b11111101;
-        }
-        // Set Negative
-        // @todo: Check if this is calculated correct. It says if bit 7 is set.
-        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
-        this.pc = this.pc + 2;
-    },
     // CLV - Clear Overflow flag
     0xb8: function() {
         this.debugger(1, 'CLV');
         this.p = this.p & 0b10111111;
         this.pc = this.pc + 1;
     },
-    // EOR - Exclusive OR on accumulator using immediate addressing
-    0x49: function() {
-        this.debugger(2, `EOR #$${fh(this.mem.get(this.pc + 1))}`);
-        this.a = this.a ^ this.mem.get(this.pc + 1);
-        // Now set the zero flag if A is 0
-        if(this.a == 0x00) {
-            this.p = this.p | 0b10;
-        } else {
-            this.p = this.p & 0b11111101;
-        }
-        // Now set negative
-        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
-        this.pc = this.pc + 2;
-    },
-    // ADC - Add Memory to accumulator with carry bit - immediate address mode
-    0x69: function() {
-        // Add memory to accumulator to represent carry bit
-        this.debugger(2, `ADC #$${fh(this.mem.get(this.pc + 1))}`);
-        let value = this.mem.get(this.pc + 1);
-        let result = this.a + value;
-        if(this.isCarry) {
-            result = result + 1;
-        }
-        this.setCarry((result > 0xFF));
-
-        // Determine a 2's complement overflow
-        // So let's get the signed values of both operands and add them
-        let intVal = unsignedByteToSignedByte(this.a) + unsignedByteToSignedByte(value);
-        this.setOverflow((intVal > 127 || intVal < -128));
-
-        // Now set to accumulator, but be sure to mask
-        this.a = result & 0xFF;
-
-        // Evaluate to zero, only after the accumulator has been set
-        this.setZero((this.a == 0x00));
-
-        // Now set negative
-        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
-
-        this.pc = this.pc + 2;
-    },
-    // SBC - Subtract with Carry - immediate
-    // Note: This was was nuts. See: http://users.telenet.be/kim1-6502/6502/proman.html#222
-    0xE9: function() {
-        this.debugger(2, `SBC #$${fh(this.mem.get(this.pc + 1))}`);
-
-        let value = this.mem.get(this.pc + 1);
-        value = value ^ 0xFF;
-
-        let result = this.a + value;
-        if(this.isCarry) {
-            result = result + 1;
-        }
-        this.setCarry((result > 0xFF));
-
-        // Determine a 2's complement overflow
-        // So let's get the signed values of both operands and add them
-        let intVal = unsignedByteToSignedByte(this.a) + unsignedByteToSignedByte(value);
-        this.setOverflow((intVal > 127 || intVal < -128));
-
-        // Now set to accumulator, but be sure to mask
-        this.a = result & 0xFF;
-
-        // Evaluate to zero, only after the accumulator has been set
-        this.setZero((this.a == 0x00));
-
-        // Now set negative
-        this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
-
-        this.pc = this.pc + 2;
-    },
-    // CPY - Compare Y with Immediate
+   // CPY - Compare Y with Immediate
     0xC0: function() {
         this.debugger(2, `CPY #$${fh(this.mem.get(this.pc + 1))}`);
         let value = this.mem.get(this.pc + 1);
