@@ -316,7 +316,7 @@ export default {
             }
             if(!this.error && !this.step) {
                 // As long as the opcode did not result in a fatal error
-                setTimeout(this.tick, 5);
+                setTimeout(this.tick, 0);
             }
         },
         // Pushes to the top of the stack then modified the stack pointer

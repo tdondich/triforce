@@ -134,10 +134,16 @@ export default {
             this.memory.fill(value, start, end + 1);
         },
         set(address, value) {
-           this.memory[address - this.mirrored] = value;
+            if(address >= this.size) {
+                address = address - this.mirrored;
+            }
+           this.memory[address] = value;
         },
         get(address) {
-           return this.memory[address - this.mirrored];
+            if(address >= this.size) {
+                address = address - this.mirrored;
+            }
+           return this.memory[address];
         },
         inspectFill() {
             this.inspectFillError = this.inspectFillSuccess = false;
