@@ -195,6 +195,10 @@ export default {
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
             this.error = '';
+            // Turn on PPU
+            this.$parent.$refs.ppu.reset();
+
+
             // Do not touch the A,X,Y registers
             // subtract 3 from sp, wrapping if necessary
             for(let count = 0; count < 3; count++) {
@@ -214,6 +218,10 @@ export default {
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#At_power-up
         power() {
             this.powered = true;
+
+            // Turn on ppu
+            this.$parent.$refs.ppu.reset();
+
             // P i set to interrupt disable
             this.p = 0x24;
             this.a = this.x = this.y = 0;

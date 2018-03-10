@@ -1,70 +1,82 @@
 <template>
     <div class="row memory">
         <div class="col-sm-12">
-            <h2>Memory</h2>
-        </div>
-        <div class="col-sm-8">
-        <table class="debugger table table-bordered table-dark">
-            <tbody>
-                <tr v-for="(index, count) in inspectMemorySlice.length / 16" :key="count">
-                    <th>0x{{(inspectStartCalculated + (16 * count)).toString(16).padStart(4, '0')}}</th>
-                    <td v-bind:data-address="(inspectStartCalculated + (16 * count) + parseInt(idx))" v-bind:class="{target: (inspectStartCalculated + (16 * count) + parseInt(idx)) == inspectAddressCalculated }" v-for="(value, idx) in inspectMemorySlice.slice(16 * count, (16 * count) + 16)" :key="idx">
-                        <span v-if="inspectCharCodeEnabled">
-                            {{String.fromCharCode(value)}}
-                        </span>
-                        <span v-else>
-                            {{value.toString(16).padStart(2, '0)').toUpperCase()}}
-                        </span>
-                    </td>
-                </tr>
-            </tbody>
+            <p>
+            <a class="btn btn-primary" data-toggle="collapse" :href="'#' + uid">{{title}}</a>
+            </p>
+            <div :id="uid" class="collapse">
+                <div class="row">
+            <div class="col-sm-8">
+            <table class="debugger table table-bordered table-dark">
+                <tbody>
+                    <tr v-for="(index, count) in inspectMemorySlice.length / 16" :key="count">
+                        <th>0x{{(inspectStartCalculated + (16 * count)).toString(16).padStart(4, '0')}}</th>
+                        <td v-bind:data-address="(inspectStartCalculated + (16 * count) + parseInt(idx))" v-bind:class="{target: (inspectStartCalculated + (16 * count) + parseInt(idx)) == inspectAddressCalculated }" v-for="(value, idx) in inspectMemorySlice.slice(16 * count, (16 * count) + 16)" :key="idx">
+                            <span v-if="inspectCharCodeEnabled">
+                                {{String.fromCharCode(value)}}
+                            </span>
+                            <span v-else>
+                                {{value.toString(16).padStart(2, '0)').toUpperCase()}}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
 
-        </table>
-        </div>
-        <div class="col-sm-4">
-            <h4>Browse Memory</h4>
-            <div class="form-group">
-                <label>Memory Location:</label>
-                <input class="form-control" v-model="inspectAddress">
+            </table>
             </div>
-            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-if="inspectCharCodeEnabled">Switch To Hex View</button>
-            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To Char Code View</button>
+            <div class="col-sm-4">
+                <h4>Browse Memory</h4>
+                <div class="form-group">
+                    <label>Memory Location:</label>
+                    <input class="form-control" v-model="inspectAddress">
+                </div>
+                <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-if="inspectCharCodeEnabled">Switch To Hex View</button>
+                <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To Char Code View</button>
 
-            <hr>
-            <h4>Memory Fill</h4>
-            <div class="alert alert-danger" v-if="inspectFillError">
-                {{inspectFillError}}
+                <hr>
+                <h4>Memory Fill</h4>
+                <div class="alert alert-danger" v-if="inspectFillError">
+                    {{inspectFillError}}
+                </div>
+                <div class="alert alert-success" v-if="inspectFillSuccess">
+                    {{inspectFillSuccess}}
+                </div>
+                <div class="form-group">
+                    <label>Fill Start</label>
+                    <input class="form-control" v-model="inspectFillStart">
+                </div>
+                <div class="form-group">
+                    <label>Fill End</label>
+                    <input v-model="inspectFillEnd" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Fill Value</label>
+                    <input class="form-control" v-model="inspectFillValue"> 
+                </div>
+                <button @click="inspectFill">Fill</button>
             </div>
-            <div class="alert alert-success" v-if="inspectFillSuccess">
-                {{inspectFillSuccess}}
             </div>
-            <div class="form-group">
-                <label>Fill Start</label>
-                <input class="form-control" v-model="inspectFillStart">
             </div>
-            <div class="form-group">
-                <label>Fill End</label>
-                <input v-model="inspectFillEnd" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>Fill Value</label>
-                <input class="form-control" v-model="inspectFillValue"> 
-            </div>
-            <button @click="inspectFill">Fill</button>
-
         </div>
     </div>
 </template>
 
 <script>
+// Our unique id
+let uid = 0;
 
 export default {
     props: [
-        'size'
+        'size',
+        'addressible',
+        'title'
     ],
     data: function() {
+        uid += 1;
+
         return {
             // Memory represents our memory sized by the size property
+            uid: `memorybus-${uid}`,
             memory: new Uint8Array(this.size),
             // Start at the very beginning
             inspectAddress: '0x0000',
@@ -78,6 +90,9 @@ export default {
         }
     },
     computed: {
+        mirrored() {
+            return (Math.floor(this.addressible / this.size) * this.size);
+        },
         // This returns the decimal representation of inspectAddress.  If it's not a number, reset to 0.
         // If we're greater than our length, set to length
         inspectAddressCalculated() {
@@ -119,10 +134,10 @@ export default {
             this.memory.fill(value, start, end + 1);
         },
         set(address, value) {
-            this.memory[address] = value;
+           this.memory[address - this.mirrored] = value;
         },
         get(address) {
-            return this.memory[address];
+           return this.memory[address - this.mirrored];
         },
         inspectFill() {
             this.inspectFillError = this.inspectFillSuccess = false;
