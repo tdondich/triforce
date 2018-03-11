@@ -50,7 +50,7 @@ export default {
             return this.mem.get(0x4014);
         },
         mem() {
-            return this.$parent.$refs.memory;
+            return this.$parent.$refs.mainbus;
         }
     },
     methods: {

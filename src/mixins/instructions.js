@@ -12,7 +12,7 @@ export default {
             debug = debug + (operation.padEnd(32, ' '));
             // Now add register info
             debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)}`;
-            this.debug = this.debug + debug + "\n";
+            this.debug = debug;
         },
         // These are now the opcodes we handle
         // JMP with absoute addressing

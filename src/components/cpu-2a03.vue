@@ -49,7 +49,7 @@
         {{error}}
     </div>
     <div class="col-sm-12 debug" v-if="debug">
-        <textarea rows="12" v-model="debug" class="form-control"></textarea>
+        {{this.debug}}
     </div>
 </div>
 
@@ -164,6 +164,9 @@ export default {
         },
         mem() {
             return this.$parent.$refs.mainbus;
+        },
+        debugOutput() {
+            return this.debug.join("\n");
         }
     },
     methods: {
@@ -217,8 +220,6 @@ export default {
             this.p = 0x24;
             this.a = this.x = this.y = 0;
             this.pc = this.getResetVector();
-            // Begin to execute
-            this.tick();
         },
         // This is the initial power on state
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#At_power-up
@@ -239,11 +240,6 @@ export default {
             this.mem.fill(0x00, 0x4000, 0x400f);
             // Begin to execute
             this.pc = this.getResetVector();
-
-            do {
-                this.tick();
-            } while(!this.error && !this.step);
-
         },
         // Determines if two addresses would be crossing memory pages.
         // A page from our CPU perspective is a 256 byte region.
@@ -327,6 +323,7 @@ export default {
                 let instr = this.mem.get(this.pc);
                 if(typeof this[instr] == 'undefined') {
                     this.error = "Failed to find instruction handler for " + instr.toString(16);
+                    throw this.error;
                 } else {
                     // Run the opcode. This will set the cycles counter and the instruction handler
                     this[instr]();

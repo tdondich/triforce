@@ -4,6 +4,9 @@
     <h1>NES Emulator in Vue.js</h1>
 
     <cpu-2a03 ref="cpu" />
+
+    <ppu ref="ppu" />
+
     <!-- 2KB internal RAM -->
     <memory ref="internal" size="2048" />
 
@@ -94,6 +97,12 @@ require('bootstrap');
 
 export default {
   name: 'app',
+  data: function() {
+    return {
+      error: null,
+      cpuTicks: 0
+    }
+  },
   components: {
     'cpu-2a03': cpu2a03,
     'memory': memory,
@@ -102,9 +111,27 @@ export default {
     'databus': databus
   },
   methods: {
-
+    power() {
+      this.$refs.cpu.power();
+      this.$refs.ppu.reset();
+      this.tick();
+   },
+    reset() {
+      this.$refs.cpu.reset();
+      this.$refs.ppu.reset();
+      this.tick();
+   },
     tick() {
-
+      // Calc each frame, at 60 frames per second
+      // This means the cpu can do 30,000 cycles per frame,
+      // And that means we need to set a timeout to 1000 / 60. ~16ms
+      // @todo, we should make it more accurate, doing a diff of time
+      do {
+        this.$refs.cpu.tick();
+        this.cpuTicks = this.cpuTicks + 1;
+      } while(this.cpuTicks < 30000);
+      this.cpuTicks = 0;
+      setTimeout(this.tick, 16);
     }
   }
 }

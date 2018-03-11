@@ -138,8 +138,8 @@ export default {
                 // Now assign to our data
                 this.data = new Uint8Array(response.data);
                 this.transfer();
-                // Tell the cpu to reset and execute
-                this.$parent.$refs.cpu.power();
+                // Tell the console to turn on
+                this.$parent.power();
                 this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {
