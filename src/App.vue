@@ -2,7 +2,7 @@
   <div id="app" class="container">
 
     <h1>NES Emulator in Vue.js</h1>
-    <ppu ref="ppu" />
+    <!-- <ppu ref="ppu" /> -->
     <cpu-2a03 ref="cpu" />
     <!-- Bring in our memory components -->
     <memorybus title="Main RAM" size="65536" addressible="65536" ref="memory" />
@@ -36,7 +36,13 @@ export default {
     'cpu-2a03': cpu2a03,
     'memorybus': memorybus,
     'rom-loader': romLoader,
-    'ppu': ppu
+    'ppu': ppu,
+  },
+  methods: {
+
+    tick() {
+
+    }
   }
 }
 </script>

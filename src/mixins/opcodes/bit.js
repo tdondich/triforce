@@ -21,17 +21,23 @@ export default {
             this.p = (this.p & 0b10111111) | (value & 0b01000000);
         },
         // Zero Page
-        0x24: function() {
-            this.debugger(2, `BIT $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-            this.bit(this.getZeroPageAddress(this.pc + 1));
-            this.pc = this.pc + 2;
+        0x24: function () {
+            this.cycles = 3;
+            this.instruction = () => {
+                this.debugger(2, `BIT $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.bit(this.getZeroPageAddress(this.pc + 1));
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0x2C: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `BIT $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.bit(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `BIT $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.bit(targetAddress);
+                this.pc = this.pc + 3;
+            }
         }
  
     }

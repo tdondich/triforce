@@ -52,22 +52,31 @@ export default {
         },
         // Accumulator
         0x6A: function() {
-            this.debugger(1, `ROR A`);
-            this.ror();
-            this.pc = this.pc + 1;
+            this.cycles = 2;
+            this.instruction = () => {
+                this.debugger(1, `ROR A`);
+                this.ror();
+                this.pc = this.pc + 1;
+            }
         },
          // Zero Page
         0x66: function () {
-            this.debugger(2, `ROR $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-            this.ror(this.getZeroPageAddress(this.pc + 1));
-            this.pc = this.pc + 2;
+            this.cycles = 5;
+            this.instruction = () => {
+                this.debugger(2, `ROR $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.ror(this.getZeroPageAddress(this.pc + 1));
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0x6E: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `ROR $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.ror(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `ROR $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ror(targetAddress);
+                this.pc = this.pc + 3;
+            }
         },
  
  

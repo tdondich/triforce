@@ -13,23 +13,32 @@ export default {
         },
         // Immediate
         0xA0: function() {
-            this.debugger(2, `LDY #$${fh(this.mem.get(this.pc + 1))}`);
-            this.ldy(this.pc + 1);
-            this.pc = this.pc + 2;
+            this.cycles = 2;
+            this.instruction = () => {
+                this.debugger(2, `LDY #$${fh(this.mem.get(this.pc + 1))}`);
+                this.ldy(this.pc + 1);
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0xAC: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `LDY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.ldy(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `LDY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ldy(targetAddress);
+                this.pc = this.pc + 3;
+            }
         },
         // Zero Page
         0xA4: function () {
-            let targetAddress = this.getZeroPageAddress(this.pc + 1);
-            this.debugger(2, `LDY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(targetAddress))}`);
-            this.ldy(targetAddress);
-            this.pc = this.pc + 2;
+            this.cycles = 3;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageAddress(this.pc + 1);
+                this.debugger(2, `LDY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(targetAddress))}`);
+                this.ldy(targetAddress);
+                this.pc = this.pc + 2;
+            }
         }
     }
 }

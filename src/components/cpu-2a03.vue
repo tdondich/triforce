@@ -13,6 +13,7 @@
         <div v-else>
             <button @click="step = !step">Turn on step debugging</button>
         </div>
+        Cycle Counter: {{this.cycles}}
     </div>
     <div class="col-sm-6">
     <h4>Registers</h4>
@@ -130,7 +131,12 @@ export default {
             debug: '',
             // If the CPU encountered a critical error
             error: '',
-            powered: false
+            powered: false,
+
+            // Cycle count.  When the cycle count hits 0, apply the actual operation
+            cycles: 0,
+            // This holds the actual instruction callback when cycle hits 0
+            instruction: null
         }
     },
     computed: {
@@ -196,7 +202,7 @@ export default {
         reset() {
             this.error = '';
             // Turn on PPU
-            this.$parent.$refs.ppu.reset();
+            //this.$parent.$refs.ppu.reset();
 
 
             // Do not touch the A,X,Y registers
@@ -220,7 +226,7 @@ export default {
             this.powered = true;
 
             // Turn on ppu
-            this.$parent.$refs.ppu.reset();
+            //this.$parent.$refs.ppu.reset();
 
             // P i set to interrupt disable
             this.p = 0x24;
@@ -233,7 +239,11 @@ export default {
             this.mem.fill(0x00, 0x4000, 0x400f);
             // Begin to execute
             this.pc = this.getResetVector();
-            this.tick();
+
+            do {
+                this.tick();
+            } while(!this.error && !this.step);
+
         },
         // Vectors
         // See: https://en.wikibooks.org/wiki/NES_Programming/Initializing_the_NES#Interrupt_Vectors
@@ -307,18 +317,27 @@ export default {
         },
         // Performs a CPU tick, going through an operation
         tick() {
-            // Evaluate instruction code at pc
-            let instr = this.mem.get(this.pc);
-            if(typeof this[instr] == 'undefined') {
-                this.error = "Failed to find instruction handler for " + instr.toString(16);
-            } else {
-                this[instr]();
+            // Check to see if we actually need to perform an operation
+            if(this.cycles == 0 && this.instruction == null) {
+                let instr = this.mem.get(this.pc);
+                if(typeof this[instr] == 'undefined') {
+                    this.error = "Failed to find instruction handler for " + instr.toString(16);
+                } else {
+                    // Run the opcode. This will set the cycles counter and the instruction handler
+                    this[instr]();
+                }
             }
-            if(!this.error && !this.step) {
-                // As long as the opcode did not result in a fatal error
-                setTimeout(this.tick, 0);
+            if(this.cycles > 0) {
+                // consume a cycle
+                this.cycles = this.cycles - 1;
             }
-        },
+            // Now check to see if we really need to run the instruction because all the cycles have been met
+            if(this.cycles == 0 && this.instruction != null) {
+                // Run the instruction
+                this.instruction();
+                this.instruction = null;
+            }
+      },
         // Pushes to the top of the stack then modified the stack pointer
         stackPush(val) {
             this.mem.set(0x0100 | this.sp, val);

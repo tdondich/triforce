@@ -15,30 +15,42 @@ export default {
             this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
         },
         // Immediate
-        0x29: function() {
-            this.debugger(2, `AND #$${fh(this.mem.get(this.pc + 1))}`);
-            this.and(this.pc + 1);
-            this.pc = this.pc + 2;
+        0x29: function () {
+            this.cycles = 2;
+            this.instruction = () => {
+                this.debugger(2, `AND #$${fh(this.mem.get(this.pc + 1))}`);
+                this.and(this.pc + 1);
+                this.pc = this.pc + 2;
+            }
         },
         // Zero Page
         0x25: function () {
-            this.debugger(2, `AND $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-            this.and(this.getZeroPageAddress(this.pc + 1));
-            this.pc = this.pc + 2;
+            this.cycles = 3;
+            this.instruction = () => {
+                this.debugger(2, `AND $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.and(this.getZeroPageAddress(this.pc + 1));
+                this.pc = this.pc + 2;
+            }
         },
         // Indexed Indirect, X
-        0x21: function() {
-            let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
-            this.debugger(2, `AND ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.and(targetAddress);
-            this.pc = this.pc + 2;
+        0x21: function () {
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
+                this.debugger(2, `AND ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.and(targetAddress);
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0x2D: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `AND $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.and(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `AND $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.and(targetAddress);
+                this.pc = this.pc + 3;
+            }
         }
  
     }

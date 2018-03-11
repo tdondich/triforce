@@ -16,17 +16,23 @@ export default {
         },
         // Zero Page
         0xE6: function() {
-            let targetAddress = this.getZeroPageAddress(this.pc + 1);
-            this.debugger(2, `INC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.inc(targetAddress);
-            this.pc = this.pc + 2;
+            this.cycles = 5;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageAddress(this.pc + 1);
+                this.debugger(2, `INC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.inc(targetAddress);
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0xEE: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `INC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.inc(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `INC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.inc(targetAddress);
+                this.pc = this.pc + 3;
+            }
         },
  
     }

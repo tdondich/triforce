@@ -10,6 +10,15 @@ export default {
     components: {
         memory
     },
+    data: function() {
+        return {
+            // There are 341 cycles in each scanline
+            cycle: 0,
+            // There are 262 scanlines, starting with -1
+            // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
+            scanline: -1
+        }
+    },
 
     computed: {
         ppuctrl() {
@@ -77,6 +86,22 @@ export default {
            this.setPPUStatus(0x80);
            this.setOAMAddr(0x2F);
            this.setPPUAddress(0x0001);
+       },
+       tick() {
+           switch(this.cycle) {
+               // Determine what cycle we are at in scanline
+
+               default: {
+                   console.log("No found cycle.");
+               }
+
+           }
+           this.cycle = this.cycle + 1;
+           if(this.cycle == 341) {
+               // Reset to cycle 0 and increase scanline
+               this.cycle = 0;
+               this.scanline = (this.scanline == 260) ? -1 : this.scanline + 1;
+           }
        }
     },
     mounted: function() {

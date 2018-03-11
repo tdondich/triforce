@@ -8,16 +8,22 @@ export default {
         },
         // Zero Page
         0x84: function () {
-            this.debugger(2, `STY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-            this.sty(this.getZeroPageAddress(this.pc + 1));
-            this.pc = this.pc + 2;
+            this.cycles = 3;
+            this.instruction = () => {
+                this.debugger(2, `STY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.sty(this.getZeroPageAddress(this.pc + 1));
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0x8C: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `STY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.sty(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `STY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.sty(targetAddress);
+                this.pc = this.pc + 3;
+            }
         }
     }
 }

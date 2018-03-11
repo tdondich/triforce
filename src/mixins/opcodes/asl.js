@@ -39,22 +39,31 @@ export default {
         },
         // Accumulator
         0x0A: function() {
-            this.debugger(1, `ASL A`);
-            this.asl();
-            this.pc = this.pc + 1;
+            this.cycles = 2;
+            this.instruction = () => {
+                this.debugger(1, `ASL A`);
+                this.asl();
+                this.pc = this.pc + 1;
+            }
         },
          // Zero Page
         0x06: function () {
-            this.debugger(2, `ASL $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-            this.asl(this.getZeroPageAddress(this.pc + 1));
-            this.pc = this.pc + 2;
+            this.cycles = 5;
+            this.instruction = () => {
+                this.debugger(2, `ASL $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.asl(this.getZeroPageAddress(this.pc + 1));
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0x0E: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `ASL $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.asl(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `ASL $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.asl(targetAddress);
+                this.pc = this.pc + 3;
+            }
         },
  
  

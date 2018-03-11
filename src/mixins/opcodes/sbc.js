@@ -30,29 +30,41 @@ export default {
         },
         // Immediate
         0xE9: function() {
-            this.debugger(2, `SBC #$${fh(this.mem.get(this.pc + 1))}`);
-            this.sbc(this.pc + 1);
-            this.pc = this.pc + 2;
+            this.cycles = 2;
+            this.instruction = () => {
+                this.debugger(2, `SBC #$${fh(this.mem.get(this.pc + 1))}`);
+                this.sbc(this.pc + 1);
+                this.pc = this.pc + 2;
+            }
         },
         // Zero Page
         0xE5: function () {
-            this.debugger(2, `SBC $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
-            this.sbc(this.getZeroPageAddress(this.pc + 1));
-            this.pc = this.pc + 2;
+            this.cycles = 3;
+            this.instruction = () => {
+                this.debugger(2, `SBC $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.sbc(this.getZeroPageAddress(this.pc + 1));
+                this.pc = this.pc + 2;
+            }
         },
         // Indexed Indirect, X 
         0xE1: function() {
-            let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
-            this.debugger(2, `SBC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.sbc(targetAddress);
-            this.pc = this.pc + 2;
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
+                this.debugger(2, `SBC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.sbc(targetAddress);
+                this.pc = this.pc + 2;
+            }
         },
         // Absolute
         0xED: function() {
-            let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-            this.debugger(3, `SBC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
-            this.sbc(targetAddress);
-            this.pc = this.pc + 3;
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteAddress(this.pc + 1);
+                this.debugger(3, `SBC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.sbc(targetAddress);
+                this.pc = this.pc + 3;
+            }
         },
  
 
