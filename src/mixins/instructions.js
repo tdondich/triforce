@@ -1,4 +1,4 @@
-import { fh, unsignedByteToSignedByte } from "./helpers";
+import { fh } from "./helpers";
 
 export default {
     methods: {
@@ -71,12 +71,13 @@ export default {
             }
         },
         // BCS - branch if carry set
-        // @todo Calculate if the result would be going to a new page boundary
         0xb0: function () {
             this.cycles = 2;
             if (this.isCarry) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BCS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -101,7 +102,9 @@ export default {
             this.cycles = 2;
             if (!this.isCarry) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BCC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -117,7 +120,9 @@ export default {
             this.cycles = 2;
             if (this.isZero) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BEQ $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -133,7 +138,9 @@ export default {
             this.cycles = 2;
             if (!this.isZero) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BNE $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -149,7 +156,9 @@ export default {
             this.cycles = 2;
             if (this.isOverflow) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BVS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -165,7 +174,9 @@ export default {
             this.cycles = 2;
             if (!this.isOverflow) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BVC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -181,7 +192,9 @@ export default {
             this.cycles = 2;
             if (!this.isNegative) {
                 this.cycles = 3;
-                /// Add another if we go to a diff page @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BPL $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
@@ -273,7 +286,9 @@ export default {
             this.cycles = 2;
             if (this.isNegative) {
                 this.cycles = 3;
-                // Check for page boundry @todo
+                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                    this.cycles = 4;
+                }
             }
             this.instruction = () => {
                 this.debugger(2, `BMI $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);

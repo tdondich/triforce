@@ -245,6 +245,11 @@ export default {
             } while(!this.error && !this.step);
 
         },
+        // Determines if two addresses would be crossing memory pages.
+        // A page from our CPU perspective is a 256 byte region.
+        pageCrossed(source, target) {
+            return ((source & 0xFF00) != (target & 0xFF00));
+        },
         // Vectors
         // See: https://en.wikibooks.org/wiki/NES_Programming/Initializing_the_NES#Interrupt_Vectors
         // Reset address value is located at 0xfffc and 0xfffd (reversed)
