@@ -163,7 +163,7 @@ export default {
             return (this.p & 0b10000000) == 0b10000000;
         },
         mem() {
-            return this.$parent.$refs.memory;
+            return this.$parent.$refs.mainbus;
         }
     },
     methods: {

@@ -2,7 +2,7 @@
     <div class="row memory">
         <div class="col-sm-12">
             <p>
-            <a class="btn btn-primary" data-toggle="collapse" :href="'#' + uid">{{title}}</a>
+            <a class="btn btn-primary" data-toggle="collapse" :href="'#' + uid">{{name}}</a>
             </p>
             <div :id="uid" class="collapse">
                 <div class="row">
@@ -62,23 +62,20 @@
 </template>
 
 <script>
-// Our unique id
+import {fh} from '../mixins/helpers'
 let uid = 0;
-
 export default {
     props: [
+        'name',
         'size',
-        'addressible',
-        'title'
+        'sections'
     ],
     data: function() {
-        uid += 1;
-
+        uid++;
         return {
             // Memory represents our memory sized by the size property
             uid: `memorybus-${uid}`,
-            memory: new Uint8Array(this.size),
-            // Start at the very beginning
+             // Start at the very beginning
             inspectAddress: '0x0000',
             // Debugger fill values
             inspectFillStart: '0x0000',
@@ -87,12 +84,10 @@ export default {
             inspectFillError: false,
             inspectFillSuccess: false,
             inspectCharCodeEnabled: false
+ 
         }
     },
     computed: {
-        mirrored() {
-            return (Math.floor(this.addressible / this.size) * this.size);
-        },
         // This returns the decimal representation of inspectAddress.  If it's not a number, reset to 0.
         // If we're greater than our length, set to length
         inspectAddressCalculated() {
@@ -100,8 +95,8 @@ export default {
             if(!address) {
                 address = 0;
             }
-            if(address > this.memory.length) {
-                address = this.memory.length;
+            if(address >= this.size) {
+                address = this.size - 1;
             }
             return address;
         },
@@ -120,31 +115,16 @@ export default {
             return value;
         },
         inspectMemorySlice() {
-            let slice = this.memory.slice(this.inspectStartCalculated, this.inspectStartCalculated + 256);
-            return slice;
-        }
-
-    },
-    methods: {
-        reset: function() {
-            this.memory.fill(0);
-        },
-        // Fill a memory range with a specific value
-        fill(value = 0x00, start = 0, end = this.memory.length) {
-            this.memory.fill(value, start, end + 1);
-        },
-        set(address, value) {
-            if(address >= this.size) {
-                address = address - this.mirrored;
+            // Grab an array copy
+            let result = [];
+            let end = this.inspectStartCalculated + 256;
+            for(let idx = this.inspectStartCalculated; idx < end; idx++) {
+                result[result.length] = this.get(idx);
             }
-           this.memory[address] = value;
+            return result;
         },
-        get(address) {
-            if(address >= this.size) {
-                address = address - this.mirrored;
-            }
-           return this.memory[address];
-        },
+   },
+   methods: {
         inspectFill() {
             this.inspectFillError = this.inspectFillSuccess = false;
             let start = parseInt(this.inspectFillStart, 16);
@@ -165,8 +145,38 @@ export default {
             let old = this.inspectAddress;
             this.inspectAddress = 0;
             this.inspectAddress = old;
-        }
+        },
+        // Fill a memory range with a specific value
+        fill(value = 0x00, start = 0, end = this.memory.length) {
+            for(let idx = start; idx <= end; idx++) {
+                this.set(idx, value);
+            }
+        },
+        set(address, value) {
+            for(let count = 0; count < this.sections.length; count++) {
+                let node = this.sections[count];
+                if(address <= node.max) {
+                    // We found the memory module we need to reference, plus dealing with memory that repeats
+                    address = (address - node.min) % node.size;
+                    this.$parent.$refs[node.ref].set(address, value);
+                    return;
+                }
+            }
+            throw `Set: Address ${fh(address)} is not valid anywhere.`;
+        },
+        get(address) {
+            for(let count = 0; count < this.sections.length; count++) {
+                let node = this.sections[count];
+                if(address <= node.max) {
+                    // We found the memory module we need to reference, plus dealing with memory that repeats
+                    address = (address - node.min) % node.size;
+                    return this.$parent.$refs[node.ref].get(address);
+                }
+            }
+            throw `Get: Address ${fh(address)} is not valid anywhere.`;
+        },
     }
+ 
 }
 </script>
 
@@ -188,5 +198,6 @@ p.success {
 }
 
 </style>
+
 
 

@@ -153,14 +153,14 @@ export default {
             // Copy over trainer, if it exists
             if(this.trainerExists) {
                 // Copy the source data to the target address in memory
-                copyToMemory(this.data, 16, 512, this.$parent.$refs.memory, 0x7000);
-                copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$parent.$refs.memory, 0x8000);
+                copyToMemory(this.data, 16, 512, this.$parent.$refs.mainbus, 0x7000);
+                copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$parent.$refs.mainbus, 0x8000);
             } else {
                 // Copy to 0x8000 prgRomSize * 16384 from offset 16
-                copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$parent.$refs.memory, 0x8000);
+                copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$parent.$refs.mainbus, 0x8000);
                 if(this.prgRomSize == 1 && this.mappingNumber == 0) {
                     // Mirror the prg rom to 0xc000
-                    copyToMemory(this.data, 16, 16384, this.$parent.$refs.memory, 0xC000);
+                    copyToMemory(this.data, 16, 16384, this.$parent.$refs.mainbus, 0xC000);
                 }
             }
         }

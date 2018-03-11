@@ -5,10 +5,11 @@
 </template>
 
 <script>
-import memory from './memorybus.vue'
+import databus from './databus.vue'
+
 export default {
     components: {
-        memory
+        databus
     },
     data: function() {
         return {
