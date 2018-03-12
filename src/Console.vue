@@ -10,12 +10,6 @@
     <!-- 2KB internal RAM -->
     <memory ref="internal" size="2048" />
 
-    <!-- 8 bytes for NES PPU registers -->
-    <memory ref="ppuregisters" size="8" />
-
-    <!-- APU and I/O registers (24 active, 8 inactive) -->
-    <memory ref="apuio" size="32" />
-
     <!-- Expansion ROM -->
     <memory ref="expansion" size="8160" />
 
@@ -31,7 +25,7 @@
     <!-- Bring in our rom loader -->
     <rom-loader  ref="loader" />
 
-    <!-- Now, tie it all together with a databus -->
+    <!-- Now, tie it all together with an address bus for cpu -->
     <databus name="Main Databus" size="65536" ref="mainbus" :sections="[
       {
         ref: 'internal',
@@ -39,14 +33,15 @@
         max: 0x1FFF,
         size: 2048
       },
+      // Note, the ppu registers will continue to mirror every 8 bytes in this space
       {
-        ref: 'ppuregisters',
+        ref: 'ppu',
         min: 0x2000,
         max: 0x3FFF,
         size: 8
       },
       {
-        ref: 'apuio',
+        ref: 'cpu',
         min: 0x4000,
         max: 0x401F,
         size: 32

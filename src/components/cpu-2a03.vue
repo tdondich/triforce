@@ -49,8 +49,13 @@
         {{error}}
     </div>
     <div class="col-sm-12 debug" v-if="debug">
-        {{this.debug}}
+        {{this.cycles}}
     </div>
+
+    <!-- These are memory mapped registers -->
+    <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
+    <memory ref="registers" size="8" />
+
 </div>
 
 </template>
@@ -136,7 +141,13 @@ export default {
             // Cycle count.  When the cycle count hits 0, apply the actual operation
             cycles: 0,
             // This holds the actual instruction callback when cycle hits 0
-            instruction: null
+            instruction: null,
+            // Determines if we wrote to the OAMDMA Memory mapped register, if so, we need 
+            // to do a memory transfer, and this halts the cpu for a number of cycles
+            OAMDMAWritten: false,
+
+            // Even/odd CPU cycle
+            odd: false
         }
     },
     computed: {
@@ -170,6 +181,20 @@ export default {
         }
     },
     methods: {
+        // These are sets and gets for our memory mapped registers
+        set(address, value) {
+            this.$refs.registers.set(address, value);
+            // Check if we wrote to OAMDMA
+            // That would map to our 0x0014
+            if(address == 0x0014) {
+                console.log("OAM DMA Written.");
+                this.OAMDMAWritten = true;
+            }
+       },
+        get(address) {
+            return this.$refs.registers.get(address);
+        },
+ 
         setCarry(val) {
             if(val) {
                 // Set carry flag
@@ -318,6 +343,9 @@ export default {
         },
         // Performs a CPU tick, going through an operation
         tick() {
+            
+            this.odd = !this.odd;
+
             // Check to see if we actually need to perform an operation
             if(this.cycles == 0 && this.instruction == null) {
                 let instr = this.mem.get(this.pc);
@@ -338,6 +366,21 @@ export default {
                 // Run the instruction
                 this.instruction();
                 this.instruction = null;
+            }
+            // Check for OAMDMA being written to
+            if(this.OAMDMAWritten) {
+                this.cycles = this.odd ? 514 : 513;
+                this.instruction = () => {
+                    // Copy all data from $XX00-$XXFF to ppu OAM
+                    let base = this.mem.get(0x4014);
+                    // Now, let's create the base address
+                    let base = value << 8;
+                    for(let i = 0; i < 256; i++) {
+                        let value = this.mem.get(base + i);
+                        // Copy over to address
+                        this.$parent.$refs.ppu.copyToOAM(i, value);
+                    }
+                }
             }
       },
         // Pushes to the top of the stack then modified the stack pointer
