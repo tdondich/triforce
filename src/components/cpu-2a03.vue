@@ -54,13 +54,14 @@
 
     <!-- These are memory mapped registers -->
     <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
-    <memory ref="registers" size="8" />
+    <memory ref="registers" size="32" />
 
 </div>
 
 </template>
 
 <script>
+import memory from './memory.vue';
 import instructions from '../mixins/instructions';
 import stx from '../mixins/opcodes/stx';
 import ldx from '../mixins/opcodes/ldx';
@@ -85,6 +86,9 @@ import dec from '../mixins/opcodes/dec';
 import bit from '../mixins/opcodes/bit';
 
 export default {
+    components: {
+        memory
+    },
     mixins: [
         instructions,
         stx,
@@ -374,7 +378,7 @@ export default {
                     // Copy all data from $XX00-$XXFF to ppu OAM
                     let base = this.mem.get(0x4014);
                     // Now, let's create the base address
-                    let base = value << 8;
+                    base = base << 8;
                     for(let i = 0; i < 256; i++) {
                         let value = this.mem.get(base + i);
                         // Copy over to address

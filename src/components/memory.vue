@@ -7,7 +7,6 @@
 export default {
     props: [
         'size',
-        'addressible',
         'title'
     ],
     data: function() {
@@ -16,12 +15,7 @@ export default {
            memory: new Uint8Array(this.size),
        }
     },
-    computed: {
-        mirrored() {
-            return (Math.floor(this.addressible / this.size) * this.size);
-        },
-    },
-    methods: {
+   methods: {
         reset: function() {
             this.memory.fill(0);
         },
@@ -31,13 +25,17 @@ export default {
         },
         set(address, value) {
             if(address >= this.size) {
-                address = address - this.mirrored;
+                console.log(address + " : " + this.size + " : " + address.toString(16));
+                // Should never happen
+                throw "Address exceeds memory size";
             }
            this.memory[address] = value;
         },
         get(address) {
             if(address >= this.size) {
-                address = address - this.mirrored;
+                console.log(address + " : " + this.size);
+                // Should never happen
+                throw "Address exceeds memory size";
             }
            return this.memory[address];
         },

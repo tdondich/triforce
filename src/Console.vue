@@ -122,6 +122,10 @@ export default {
       // And that means we need to set a timeout to 1000 / 60. ~16ms
       // @todo, we should make it more accurate, doing a diff of time
       do {
+        // Our PPU runs 3x the cpu
+        this.$refs.ppu.tick();
+        this.$refs.ppu.tick();
+        this.$refs.ppu.tick();
         this.$refs.cpu.tick();
         this.cpuTicks = this.cpuTicks + 1;
       } while(this.cpuTicks < 30000);

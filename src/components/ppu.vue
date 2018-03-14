@@ -87,10 +87,12 @@
 
 <script>
 import databus from './databus.vue'
+import memory from './memory.vue'
 
 export default {
     components: {
-        databus
+        databus,
+        memory
     },
     data: function() {
         return {
@@ -110,37 +112,35 @@ export default {
 
     computed: {
         ppuctrl() {
-            return this.mem.get(0x0000);
+            return this.$refs.registers.get(0x0000);
         },
         ppumask() {
-            return this.mem.get(0x0001);
+            return this.$refs.registers.get(0x0001);
         },
         ppustatus() {
-            return this.mem.get(0x0002);
+            return this.$refs.registers.get(0x0002);
         },
         oamaddr() {
-            return this.mem.get(0x0003);
+            return this.$refs.registers.get(0x0003);
         },
         oamdata() {
-            return this.mem.get(0x0004);
+            return this.$refs.registers.get(0x0004);
         },
         ppuscroll() {
-            return this.mem.get(0x0005);
+            return this.$refs.registers.get(0x0005);
         },
         ppuaddr() {
-            return this.mem.get(0x0006);
+            return this.$refs.registers.get(0x0006);
         },
         ppudata() {
-            return this.mem.get(0x0007);
+            return this.$refs.registers.get(0x0007);
         },
-        oamdma() {
-            return this.mem.get(0x4014);
-        },
-        mem() {
-            return this.$refs.registers;
+       mem() {
+            return this.$refs.ppumainbus;
         }
     },
     methods: {
+        // The following fill/set/get is for our registers, accessed by memory
         // Fill a memory range with a specific value
         fill(value = 0x00, start = 0, end = this.memory.length) {
             this.$refs.registers.fill(value, start, end);
@@ -151,41 +151,41 @@ export default {
         get(address) {
             return this.$refs.registers.get(address);
         },
- 
         setPPUCtrl(val) {
-            this.mem.set(0x2000, val & 0xFF);
+            this.$refs.registers.set(0x0000, val & 0xFF);
         },
         setPPUMask(val) {
-            this.mem.set(0x2001, val & 0xFF);
+            this.$refs.registers.set(0x0001, val & 0xFF);
         },
        setPPUStatus(val) {
-           this.mem.set(0x2002, val & 0xFF);
+           this.$refs.registers.set(0x0002, val & 0xFF);
        },
        setOAMAddr(val) {
-           this.mem.set(0x2003, val & 0xFF);
+           this.$refs.registers.set(0x0003, val & 0xFF);
        },
        setOAMData(val) {
-           this.mem.set(0x2004, val & 0xFF);
+           this.$refs.registers.set(0x0004, val & 0xFF);
        },
        setPPUScroll(val) {
-           this.mem.set(0x2005, val & 0xFF);
+           this.$refs.registers.set(0x0005, val & 0xFF);
        },
        setPPUAddress(val) {
-           this.mem.set(0x2006, val & 0xFF);
+           this.$refs.registers.set(0x0006, val & 0xFF);
        },
        setPPUData(val) {
-           this.mem.set(0x2007, val & 0xFF);
+           this.$refs.registers.set(0x0007, val & 0xFF);
        },
-       setOAMDMA(val) {
-           this.mem.set(0x4014, val & 0xFF);
-       },
-       // See: http://wiki.nesdev.com/w/index.php/PPU_power_up_state
+      // See: http://wiki.nesdev.com/w/index.php/PPU_power_up_state
        reset() {
+           // We set our registers after ~29658 cpu clicks (which we run 3x faster)
            // Set VBlank flag
-           this.setPPUStatus(0x80);
-           this.setOAMAddr(0x2F);
-           this.setPPUAddress(0x0001);
-       },
+           this.ticks = 88974;
+           this.instruction = () => {
+                this.setPPUStatus(0x80);
+                this.setOAMAddr(0x2F);
+                this.setPPUAddress(0x0001);
+           }
+      },
        tick() {
            // This handles performing an actual operation 
             if(this.ticks > 0) {
