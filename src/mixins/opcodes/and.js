@@ -32,6 +32,17 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
+        // Zero Page, X
+        0x35: function () {
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageXAddress(this.pc + 1);
+                this.debugger(2, `AND $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.and(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
         // Indexed Indirect, X
         0x21: function () {
             this.cycles = 6;

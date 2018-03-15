@@ -21,7 +21,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, `STA $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(2, `STA $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sta(targetAddress);
                 this.pc = this.pc + 2;
             }

@@ -33,6 +33,17 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
+        // Zero Page, X
+        0x15: function () {
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageXAddress(this.pc + 1);
+                this.debugger(2, `ORA $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ora(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
         // Indirect X
         0x01: function() {
             this.cycles = 6;

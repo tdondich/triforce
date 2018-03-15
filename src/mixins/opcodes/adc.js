@@ -44,6 +44,17 @@ export default {
                 this.pc = this.pc + 2;
             }
        },
+        // Zero Page, X
+        0x75: function () {
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageXAddress(this.pc + 1);
+                this.debugger(2, `ADC $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.adc(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
         // Absolute
         0x6D: function() {
             this.cycles = 4;

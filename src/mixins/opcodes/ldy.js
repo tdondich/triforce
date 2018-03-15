@@ -39,7 +39,18 @@ export default {
                 this.ldy(targetAddress);
                 this.pc = this.pc + 2;
             }
-        }
+        },
+        // Zero Page, X
+        0xB4: function () {
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageXAddress(this.pc + 1);
+                this.debugger(2, `LDY $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ldy(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
     }
 }
  
