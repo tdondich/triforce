@@ -48,7 +48,7 @@
     <div class="alert alert-danger" v-if="error">
         {{error}}
     </div>
-    <div class="col-sm-12 debug" v-if="debug">
+    <div class="col-sm-12 debug">
         {{this.cycles}}<br>
         <textarea rows="20" class="form-control" v-model="debug"></textarea>
     </div>
@@ -349,10 +349,6 @@ export default {
         },
         // Performs a CPU tick, going through an operation
         tick() {
-            if(this.pc == 0xd959) {
-                return;
-            }
- 
             this.odd = !this.odd;
 
             // Check to see if we actually need to perform an operation
