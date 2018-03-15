@@ -68,12 +68,33 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
+        // Zero Page, X
+        0x36: function () {
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageXAddress(this.pc + 1);
+                this.debugger(2, `ROL $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.rol(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
         // Absolute
         0x2E: function() {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
                 this.debugger(3, `ROL $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.rol(targetAddress);
+                this.pc = this.pc + 3;
+            }
+        },
+           // Absolute, X
+        0x3E: function () {
+            this.cycles = 7;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
+                this.debugger(3, `ROL $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.rol(targetAddress);
                 this.pc = this.pc + 3;
             }

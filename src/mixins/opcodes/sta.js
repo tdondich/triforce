@@ -36,12 +36,12 @@ export default {
                 this.pc = this.pc + 3;
             }
         },
-        // Absolute, X
-        0x9D: function() {
+          // Absolute, X
+        0x9D: function () {
             this.cycles = 5;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, `STA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `STA $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sta(targetAddress);
                 this.pc = this.pc + 3;
             }

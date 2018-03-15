@@ -77,6 +77,16 @@ export default {
                 this.pc = this.pc + 3;
             }
         },
+           // Absolute, X
+        0x1E: function () {
+            this.cycles = 7;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
+                this.debugger(3, `ASL $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.asl(targetAddress);
+                this.pc = this.pc + 3;
+            }
+        },
  
  
     }

@@ -30,6 +30,21 @@ export default {
                 this.pc = this.pc + 3;
             }
         },
+        // Absolute, X
+        0xBC: function() {
+            this.cycles = 4;
+            let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
+            if(this.pageCrossed(this.pc + 1), targetAddress) {
+                this.cycles = 5;
+            }
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
+                this.debugger(3, `LDY $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ldy(targetAddress);
+                this.pc = this.pc + 3;
+            }
+        },
+ 
         // Zero Page
         0xA4: function () {
             this.cycles = 3;

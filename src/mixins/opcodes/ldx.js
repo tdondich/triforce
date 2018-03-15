@@ -32,6 +32,17 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
+        // Zero Page, Y
+        0xB6: function () {
+            this.cycles = 4;
+            this.instruction = () => {
+                let targetAddress = this.getZeroPageYAddress(this.pc + 1);
+                this.debugger(2, `LDX $${fh(this.mem.get(this.pc + 1))},Y @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ldx(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
         // Absolute
         0xAE: function() {
             this.cycles = 4;
@@ -41,6 +52,21 @@ export default {
                 this.ldx(targetAddress);
                 this.pc = this.pc + 3;
             }
-        }
+        },
+        // Absolute, Y
+        0xBE: function() {
+            this.cycles = 4;
+            let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+            if(this.pageCrossed(this.pc + 1), targetAddress) {
+                this.cycles = 5;
+            }
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+                this.debugger(3, `LDX $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.ldx(targetAddress);
+                this.pc = this.pc + 3;
+            }
+        },
+ 
     }
 }

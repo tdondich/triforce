@@ -79,8 +79,8 @@ export default {
             }
         },
  
-        // Absolute, X
-        0xBD: function() {
+          // Absolute, X
+        0xBD: function () {
             this.cycles = 4;
             let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
             if(this.pageCrossed(this.pc + 1), targetAddress) {
@@ -88,7 +88,7 @@ export default {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, `LDA ($${fh(this.mem.get(this.pc + 1))},X) ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `LDA $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.lda(targetAddress);
                 this.pc = this.pc + 3;
             }
