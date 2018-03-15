@@ -50,7 +50,7 @@
     </div>
     <div class="col-sm-12 debug">
         {{this.cycles}}<br>
-        <textarea rows="20" class="form-control" v-model="debug"></textarea>
+        <textarea rows="5" class="form-control" v-model="debug"></textarea>
     </div>
 
 
@@ -326,13 +326,13 @@ export default {
             this.mem.set(address + 1, value >> 8);
         },
         getAbsoluteXAddress(address) {
-            return this.getAbsoluteAddress(address) + this.x;
+            return (this.getAbsoluteAddress(address) + this.x) & 0xFFFF;
         },
         getAbsoluteYAddress(address) {
-            return this.getAbsoluteAddress(address) + this.y;
+            return (this.getAbsoluteAddress(address) + this.y) & 0xFFFF;
         },
         getIndirectAddress(address) {
-            return this.mem.getAbsoluteAddress(this.getAbsoluteAddress(address));
+            return this.getAbsoluteAddress(this.getAbsoluteAddress(address));
         },
         getIndexedIndirectXAddress(address) {
             let first = this.getZeroPageXAddress(address);

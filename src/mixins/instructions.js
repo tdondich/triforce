@@ -3,7 +3,7 @@ import { fh } from "./helpers";
 export default {
     methods: {
         debugger(numberOfOperands, operation) {
-            let debug = [fh(this.pc)] + "  ";
+            let debug = [fh(this.pc, 4)] + "  ";
             let data = [];
             for (let count = 0; count < numberOfOperands; count++) {
                 data[data.length] = fh(this.mem.get(this.pc + count));
@@ -16,14 +16,38 @@ export default {
         },
         // These are now the opcodes we handle
         // JMP with absoute addressing
-        0x4c: function () {
+        0x4C: function () {
             this.cycles = 3;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `JMP $${fh(targetAddress)}`);
+                this.debugger(3, `JMP $${fh(targetAddress, 4)}`);
                 this.pc = targetAddress;
             }
         },
+        // JMP with indirect 
+        0x6C: function () {
+            this.cycles = 3;
+            this.instruction = () => {
+                let sourceAddress = this.getAbsoluteAddress(this.pc + 1);
+                let targetAddress = null;
+                /**
+                 * @bug The following emulates the early 6502 revision JMP bug found in the nes
+                 */
+                if(sourceAddress & 0xFF == 0xFF) {
+                    console.log("PAGE BOUNDRY BUG");
+                    // This is falling on a page boundry!
+                    let lsb = this.mem.get(sourceAddress);
+                    let msb = this.mem.get(sourceAddress & 0xFF00);
+                    targetAddress = (msb << 8) + lsb;
+                } else {
+                    // Doesn't fall on a page boundry, so let's go ahead and get the address normally
+                    targetAddress = this.getIndirectAddress(this.pc + 1);
+                }
+                this.debugger(3, `JMP ($${fh(this.getAbsoluteAddress(this.pc + 1), 4)}) = ${fh(targetAddress, 4)}`);
+                this.pc = targetAddress;
+            }
+        },
+ 
         // JSR, note, the target return is the PC address + 2, not three.
         // See: http://obelisk.me.uk/6502/reference.html#JSR
         0x20: function () {

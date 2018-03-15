@@ -42,6 +42,21 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
+        // Indirect Indexed, Y
+        0x51: function () {
+            this.cycles = 5;
+            let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
+            if(this.pageCrossed(this.pc + 1), targetAddress) {
+                this.cycles = 6;
+            }
+            this.instruction = () => {
+               let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
+                this.debugger(2, `EOR ($${fh(this.mem.get(this.pc + 1))}),Y = ${fh(this.getAbsoluteAddress(this.mem.get(this.pc + 1), true),4)} @ ${fh(targetAddress,4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.eor(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+ 
         // Absolute
         0x4D: function() {
             this.cycles = 4;
@@ -51,6 +66,21 @@ export default {
                 this.eor(targetAddress);
                 this.pc = this.pc + 3;
             }
+        },
+        // Absolute, Y
+        0x59: function() {
+            this.cycles = 4;
+            let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+            if(this.pageCrossed(this.pc + 1), targetAddress) {
+                this.cycles = 5;
+            }
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+                this.debugger(3, `EOR $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.eor(targetAddress);
+                this.pc = this.pc + 3;
+            }
         }
+ 
     }
 }

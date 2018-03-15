@@ -51,7 +51,7 @@ export default {
             this.cycles = 5;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
-                this.debugger(3, `STA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `STA $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sta(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -66,16 +66,20 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
-        // Indexed Indirect, Y
-        0x91: function() {
-            this.cycles = 6;
+       // Indirect Indexed, Y
+        0x91: function () {
+            this.cycles = 5;
+            let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
+            if(this.pageCrossed(this.pc + 1), targetAddress) {
+                this.cycles = 6;
+            }
             this.instruction = () => {
-                let targetAddress = this.getIndexedIndirectYAddress(this.pc + 1);
-                this.debugger(2, `STA ($${fh(this.mem.get(this.pc + 1))},Y) @ ${fh((this.mem.get(this.pc + 1) + this.y) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+               let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
+                this.debugger(2, `STA ($${fh(this.mem.get(this.pc + 1))}),Y = ${fh(this.getAbsoluteAddress(this.mem.get(this.pc + 1), true),4)} @ ${fh(targetAddress,4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sta(targetAddress);
                 this.pc = this.pc + 2;
             }
-        }
+        },
  
     }
 }

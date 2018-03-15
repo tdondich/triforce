@@ -53,7 +53,7 @@ export default {
                 this.pc = this.pc + 2;
             }
         },
-        // Indexed Indirect, Y
+        // Indirect Indexed, Y
         0xB1: function () {
             this.cycles = 5;
             let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
@@ -75,9 +75,27 @@ export default {
             if(this.pageCrossed(this.pc + 1), targetAddress) {
                 this.cycles = 5;
             }
-            this.debugger(2, `LDA ($${fh(this.mem.get(this.pc + 1))},X) ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
-            this.lda(targetAddress);
-            this.pc = this.pc + 3;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
+                this.debugger(3, `LDA ($${fh(this.mem.get(this.pc + 1))},X) ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.lda(targetAddress);
+                this.pc = this.pc + 3;
+            }
+        },
+        // Absolute, Y
+        0xB9: function() {
+            this.cycles = 4;
+            let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+            if(this.pageCrossed(this.pc + 1), targetAddress) {
+                this.cycles = 5;
+            }
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+                this.debugger(3, `LDA $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.lda(targetAddress);
+                this.pc = this.pc + 3;
+            }
         }
+ 
     }
 }
