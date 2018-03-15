@@ -175,6 +175,17 @@ export default {
        setPPUData(val) {
            this.$refs.registers.set(0x0007, val & 0xFF);
        },
+       setVBlank(val) {
+           if(val) {
+               this.setPPUStatus(this.ppustatus | 0b10000000);
+           } else {
+               this.setPPUStatus(this.ppustatus & 0b01111111);
+           }
+       },
+       copyToOAM(address, value) {
+           // Copy the info to the requested OAM address
+           this.$refs.oam.set(address, value);
+       },
       // See: http://wiki.nesdev.com/w/index.php/PPU_power_up_state
        reset() {
            // We set our registers after ~29658 cpu clicks (which we run 3x faster)
@@ -204,7 +215,9 @@ export default {
                    this.ticks == 2;
                    this.instruction = () => {
                        // Set VBLank
+                       this.setVBlank(true);
                        // And fire VBlank NMI
+                       this.$parent.$refs.cpu.fireNMI();
                    }
                }
            }

@@ -153,7 +153,13 @@ export default {
             OAMDMAWritten: false,
 
             // Even/odd CPU cycle
-            odd: false
+            odd: false,
+
+            // Interrupt flags
+            // Non-Maskable Interrupt.  Since it's edge, it'll be a simple boolean
+            nmi: false,
+            // Normal Interrupt.  If this happens, since it's line based, it'll be a counter
+            irq: 0,
         }
     },
     computed: {
@@ -193,7 +199,6 @@ export default {
             // Check if we wrote to OAMDMA
             // That would map to our 0x0014
             if(address == 0x0014) {
-                console.log("OAM DMA Written.");
                 this.OAMDMAWritten = true;
             }
        },
@@ -232,6 +237,16 @@ export default {
                 this.p = this.p & 0b01111111;
             }
         },
+        // Our Interrupt Handling
+        fireNMI() {
+            this.nmi = true;
+        },
+        fireIRQ() {
+            if(!this.isInterruptDisabled) {
+                this.irq = this.irq + 1;
+            }
+        },
+
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
             this.error = '';
@@ -284,13 +299,13 @@ export default {
             if(this.forceResetVector) {
                 return parseInt(this.forceResetVector);
             }
-            return this.getAbsoluteAddress(0xfffc);
+            return this.getAbsoluteAddress(0xFFFC);
         },
-        getIRQVector() {
-            return this.getAbsoluteAddress(0xfffe);
+       getIRQVector() {
+            return this.getAbsoluteAddress(0xFFFE);
         },
         getNMIVector() {
-            return this.getAbsoluteAddress(0xfffa);
+            return this.getAbsoluteAddress(0xFFFA);
         },
         // Handling various addressing modes the cpu supports
         getZeroPageAddress(address) {
@@ -352,7 +367,7 @@ export default {
             this.odd = !this.odd;
 
             // Check to see if we actually need to perform an operation
-            if(this.cycles == 0 && this.instruction == null) {
+            if(!this.nmi && this.cycles == 0 && this.instruction == null) {
                 let instr = this.mem.get(this.pc);
                 if(typeof this[instr] == 'undefined') {
                     this.error = "Failed to find instruction handler for " + instr.toString(16);
@@ -371,20 +386,54 @@ export default {
                 // Run the instruction
                 this.instruction();
                 this.instruction = null;
-            }
-            // Check for OAMDMA being written to
-            if(this.OAMDMAWritten) {
-                this.cycles = this.odd ? 514 : 513;
-                this.instruction = () => {
-                    // Copy all data from $XX00-$XXFF to ppu OAM
-                    let base = this.mem.get(0x4014);
-                    // Now, let's create the base address
-                    base = base << 8;
-                    for(let i = 0; i < 256; i++) {
-                        let value = this.mem.get(base + i);
-                        // Copy over to address
-                        this.$parent.$refs.ppu.copyToOAM(i, value);
+                // Check for OAMDMA being written to
+                if(this.OAMDMAWritten) {
+                    this.cycles = this.odd ? 514 : 513;
+                    this.instruction = () => {
+                        // Copy all data from $XX00-$XXFF to ppu OAM
+                        let base = this.mem.get(0x4014);
+                        // Now, let's create the base address
+                        base = base << 8;
+                        for(let i = 0; i < 256; i++) {
+                            let value = this.mem.get(base + i);
+                            // Copy over to address
+                            this.$parent.$refs.ppu.copyToOAM(i, value);
+                        }
+                        this.OAMDMAWritten = false;
                     }
+                }
+            }
+           // Check for NMI (this takes priority over regular IRQs)
+            if(this.nmi && this.cycles == 0) {
+                this.cycles = 7;
+                this.instruction = () => {
+                    // First push return address high byte onto stack
+                    this.stackPush(this.pc >> 8);
+                    // Now push return address low byte onto stack
+                    this.stackPush(this.pc & 0xFF);
+                    // Finally, push status register onto stack
+                    this.stackPush(this.p);
+                    // Get NMI vector and place it into this.pc
+                    this.pc = this.getNMIVector();
+                    // We set nmi to false here to ensure nothing else takes priority over this
+                    this.nmi = false;
+                }
+            }
+            // Check to determine if we need to handle IRQ
+            // If cycles is greater than 0, then we need to allow the current opcode to complete
+            if(!this.nmi && this.cycles == 0 && this.irq > 0) {
+                this.cycles = 7;
+                this.instruction = () => {
+                    // First push return address high byte onto stack
+                    this.stackPush(this.pc >> 8);
+                    // Now push return address low byte onto stack
+                    this.stackPush(this.pc & 0xFF);
+                    // Finally, push status register onto stack
+                    this.stackPush(this.p);
+                    // Get NMI vector and place it into this.pc
+                    this.pc = this.getIRQVector();
+                    // Decrement IRQ by one.  We've handled the Interrupt
+                    this.irq = this.irq - 1;
                 }
             }
       },
