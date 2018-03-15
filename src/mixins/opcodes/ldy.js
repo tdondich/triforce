@@ -25,7 +25,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `LDY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `LDY $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldy(targetAddress);
                 this.pc = this.pc + 3;
             }

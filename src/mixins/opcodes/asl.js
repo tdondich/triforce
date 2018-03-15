@@ -60,7 +60,7 @@ export default {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `ASL $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `ASL $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.asl(targetAddress);
                 this.pc = this.pc + 3;
             }

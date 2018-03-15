@@ -20,7 +20,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `STY $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `STY $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sty(targetAddress);
                 this.pc = this.pc + 3;
             }

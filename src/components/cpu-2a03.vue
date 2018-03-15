@@ -49,8 +49,10 @@
         {{error}}
     </div>
     <div class="col-sm-12 debug" v-if="debug">
-        {{this.cycles}}
+        {{this.cycles}}<br>
+        <textarea rows="20" class="form-control" v-model="debug"></textarea>
     </div>
+
 
     <!-- These are memory mapped registers -->
     <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
@@ -337,17 +339,20 @@ export default {
             return this.getAbsoluteAddress(first, true);
         },
         getIndexedIndirectYAddress(address) {
-            let first = this.getZeroPageXAddress(address);
+            let first = this.getZeroPageYAddress(address);
             return this.getAbsoluteAddress(first, true);
         },
         getIndirectIndexedAddress(address) {
-            let first = this.mem.getZeroPageAddress(address);
-            let second = this.mem.getAbsoluteAddress(first);
-            return second + this.y;
+            // First, get the absolute address
+            let first = this.getAbsoluteAddress(this.mem.get(address), true);
+            return (first + this.y) & 0xFFFF;
         },
         // Performs a CPU tick, going through an operation
         tick() {
-            
+            if(this.pc == 0xd959) {
+                return;
+            }
+ 
             this.odd = !this.odd;
 
             // Check to see if we actually need to perform an operation

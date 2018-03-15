@@ -1,7 +1,7 @@
 // Format a value as visual hex
-function fh(value) {
+function fh(value, precision = 2) {
     let output =  value.toString(16);
-    output = output.padStart(output.length <= 2 ? 2 : 4, '0').toUpperCase();
+    output = output.padStart(precision, '0').toUpperCase();
     return output;
 }
 

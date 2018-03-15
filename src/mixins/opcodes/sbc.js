@@ -51,7 +51,7 @@ export default {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
-                this.debugger(2, `SBC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(2, `SBC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sbc(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -61,7 +61,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `SBC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `SBC $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sbc(targetAddress);
                 this.pc = this.pc + 3;
             }

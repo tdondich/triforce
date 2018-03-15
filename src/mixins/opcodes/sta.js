@@ -31,7 +31,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `STA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, `STA $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sta(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -46,15 +46,36 @@ export default {
                 this.pc = this.pc + 3;
             }
         },
+        // Absolute, Y
+        0x99: function() {
+            this.cycles = 5;
+            this.instruction = () => {
+                let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
+                this.debugger(3, `STA $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.sta(targetAddress);
+                this.pc = this.pc + 3;
+            }
+        },
         // Indexed Indirect, X
         0x81: function() {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
-                this.debugger(2, `STA ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(2, `STA ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.sta(targetAddress);
+                this.pc = this.pc + 2;
+            }
+        },
+        // Indexed Indirect, Y
+        0x91: function() {
+            this.cycles = 6;
+            this.instruction = () => {
+                let targetAddress = this.getIndexedIndirectYAddress(this.pc + 1);
+                this.debugger(2, `STA ($${fh(this.mem.get(this.pc + 1))},Y) @ ${fh((this.mem.get(this.pc + 1) + this.y) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.sta(targetAddress);
                 this.pc = this.pc + 2;
             }
         }
+ 
     }
 }
