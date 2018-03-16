@@ -16,7 +16,9 @@
                                 {{String.fromCharCode(value)}}
                             </span>
                             <span v-else>
+                                <span v-if="typeof value != 'undefined'">
                                 {{value.toString(16).padStart(2, '0)').toUpperCase()}}
+                                </span>
                             </span>
                         </td>
                     </tr>
@@ -158,7 +160,11 @@ export default {
                 if(address <= node.max) {
                     // We found the memory module we need to reference, plus dealing with memory that repeats
                     address = (address - node.min) % node.size;
-                    this.$parent.$refs[node.ref].set(address, value);
+                    if(node.bus) {
+                        this.$parent.$refs[node.ref].set(address, value, node.bus);
+                    } else {
+                        this.$parent.$refs[node.ref].set(address, value);
+                    }
                     return;
                 }
             }
@@ -170,7 +176,11 @@ export default {
                 if(address <= node.max) {
                     // We found the memory module we need to reference, plus dealing with memory that repeats
                     address = (address - node.min) % node.size;
-                    return this.$parent.$refs[node.ref].get(address);
+                    if(node.bus) {
+                        return this.$parent.$refs[node.ref].get(address, node.bus);
+                    } else {
+                        return this.$parent.$refs[node.ref].get(address);
+                    }
                 }
             }
             throw `Get: Address ${fh(address)} is not valid anywhere.`;

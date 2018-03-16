@@ -1,7 +1,6 @@
 <template>
 <div class="row">
     <div class="col-sm-12">
-        <h2>RP2A03 CPU</h2>
         <div class="form-group">
             <label>Force Reset Vector</label>
             <input v-model="forceResetVector" class="form-control col-sm-1">

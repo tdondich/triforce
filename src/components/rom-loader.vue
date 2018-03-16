@@ -37,6 +37,9 @@
                 </tr>
             </tbody>
         </table>
+
+        <mapper ref="mapper" />
+
     </div>
 </div>
   
@@ -44,6 +47,7 @@
 
 <script>
 import axios from 'axios';
+import mapper from './mappers/mapper-0.vue'
 
 /**
 Builds a String from a DataView (backed by an ArrayBuffer)
@@ -56,13 +60,16 @@ function getStringFromDataView(view, offset = 0, length = view.byteLength - offs
     return value;
 }
 
-function copyToMemory(source, offset, length, target, address) {
+function copyToMemory(source, offset, length, target, address, bus = 'prg') {
     for(let count = 0; count < length; count++) {
-        target.set(address + count, source[offset + count]);
+        target.set(address + count, source[offset + count], bus);
     }
 }
 
 export default {
+    components: {
+        mapper
+    },
 
     data: function() {
         return {
@@ -118,6 +125,13 @@ export default {
         }
     },
     methods: {
+        // Our getters and setters will pass through to our mapper
+        get(address, bus = 'prg') {
+            return this.$refs.mapper.get(address, bus);
+        },
+        set(address, value, bus = 'prg') {
+            return this.$refs.mapper.set(address, value, bus);
+        },
         load() {
             this.loadError = this.loadSuccess = false;
             axios.get('/roms/' + this.romName + '.nes', {
@@ -147,20 +161,20 @@ export default {
                 this.loadError = error.response.status + ": " + error.response.statusText;
             });
         },
-        // Transfer copies contents into memory to be accessed by CPU
+        // Transfer copies contents into the mapper
         transfer() {
             // Right now, we're only handling mapping 0 aka NROM
             // Copy over trainer, if it exists
             if(this.trainerExists) {
                 // Copy the source data to the target address in memory
-                copyToMemory(this.data, 16, 512, this.$parent.$refs.mainbus, 0x7000);
-                copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$parent.$refs.mainbus, 0x8000);
+                copyToMemory(this.data, 16, 512, this.$refs.mapper, 0x7000, 'prg');
+                copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$refs.mapper, 0x3FE0, 'prg');
             } else {
                 // Copy to 0x8000 prgRomSize * 16384 from offset 16
-                copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$parent.$refs.mainbus, 0x8000);
+                copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$refs.mapper, 0x3FE0, 'prg');
                 if(this.prgRomSize == 1 && this.mappingNumber == 0) {
                     // Mirror the prg rom to 0xc000
-                    copyToMemory(this.data, 16, 16384, this.$parent.$refs.mainbus, 0xC000);
+                    copyToMemory(this.data, 16, 16384, this.$refs.mapper, 0x7FE0, 'prg');
                 }
             }
         }

@@ -3,27 +3,25 @@
 
     <h1>NES Emulator in Vue.js</h1>
 
+    <!-- Bring in our rom loader -->
+    <rom-loader  ref="loader" />
+    <hr>
+
     <cpu-2a03 ref="cpu" />
 
     <ppu ref="ppu" />
 
+
     <!-- 2KB internal RAM -->
     <memory ref="internal" size="2048" />
 
-    <!-- Expansion ROM -->
-    <memory ref="expansion" size="8160" />
-
-    <!-- SRAM -->
-    <memory ref="sram" size="8192" />
-
-    <!-- PRG-ROM Lower -->
-    <memory ref="prglow" size="16384" />
-
-    <!-- PRG-ROM Higher -->
-    <memory ref="prghigh" size="16384" />
-
-    <!-- Bring in our rom loader -->
-    <rom-loader  ref="loader" />
+    <!-- Our nametables -->
+    <memory ref="nametable0" size="1024" />
+    <memory ref="nametable1" size="1024" />
+    <memory ref="nametable2" size="1024" />
+    <memory ref="nametable3" size="1024" />
+    <!-- Our palettes -->
+    <memory ref="palette" size="32" />
 
     <!-- Now, tie it all together with an address bus for cpu -->
     <databus name="Main Databus" size="65536" ref="mainbus" :sections="[
@@ -47,32 +45,78 @@
         size: 32
       },
       {
-        ref: 'expansion',
-        min: '0x4020',
-        max: '0x5FFF',
-        size: 8160
-      },
-      {
-        ref: 'sram',
-        min: 0x6000,
-        max: 0x7FFF,
-        size: 8192
-      },
-      {
-        ref: 'prglow',
-        min: 0x8000,
-        max: 0xBFFF,
-        size: 16384
-      },
-      {
-        ref: 'prghigh',
-        min: 0xC000,
+        ref: 'loader',
+        min: 0x4020,
         max: 0xFFFF,
-        size: 16384
+        size: 49120,
+        bus: 'prg'
+      }
+   ]" />
+
+
+
+
+    <databus name="Nametable Databus" ref="nametablebus" size="4096" :sections="[
+      {
+          ref: 'nametable0',
+          min: 0x0000,
+          max: 0x03FF,
+          size: 1024
+      },
+      {
+          ref: 'nametable1',
+          min: 0x0400,
+          max: 0x07FF,
+          size: 1024
+      },
+      {
+          ref: 'nametable2',
+          min: 0x0800,
+          max: 0x0BFF,
+          size: 1024,
+      },
+      {
+          ref: 'nametable3',
+          min: 0x0C00,
+          max: 0x0FFF,
+          size: 1024
       }
     ]" />
 
-    
+  <databus name="PPU Sub Databus" size="16384" ref="ppusubbus" :sections="[
+      {
+          ref: 'loader',
+          min: 0x0000,
+          max: 0x1FFF,
+          bus: 'chr',
+          size: 8192
+      },
+      // The following repeats the nametables twice
+      {
+          ref: 'nametablebus',
+          min: 0x2000,
+          max: 0x3EFF,
+          size: 4096
+      },
+      {
+          ref: 'palette',
+          min: 0x3F00,
+          max: 0x3FFF,
+          size: 32
+      }
+  ]" />
+
+  <!-- Now, our main data bus for the ppu, providing for the full 64K address space -->
+  <databus name="PPU Main Databus" size="65536" ref="ppumainbus" :sections="[
+      {
+          ref: 'ppusubbus',
+          min: 0x0000,
+          max: 0xFFFF,
+          size: 16384
+      }
+  ]" />
+
+  
   </div>
 </template>
 
