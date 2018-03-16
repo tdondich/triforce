@@ -169,6 +169,9 @@ export default {
                 // Copy the source data to the target address in memory
                 copyToMemory(this.data, 16, 512, this.$refs.mapper, 0x7000, 'prg');
                 copyToMemory(this.data, 16 + 512, this.prgRomSize * 16384, this.$refs.mapper, 0x3FE0, 'prg');
+                // Now copy over CHR data
+                copyToMemory(this.data, 16 + 512 + this.prgRomSize * 16384, this.chrRomSize * 8192, this.$refs.mapper, 0x0000, 'chr');
+
             } else {
                 // Copy to 0x8000 prgRomSize * 16384 from offset 16
                 copyToMemory(this.data, 16, this.prgRomSize * 16384, this.$refs.mapper, 0x3FE0, 'prg');
@@ -176,6 +179,8 @@ export default {
                     // Mirror the prg rom to 0xc000
                     copyToMemory(this.data, 16, 16384, this.$refs.mapper, 0x7FE0, 'prg');
                 }
+                // Now copy over CHR data
+                copyToMemory(this.data, 16 + this.prgRomSize * 16384, this.chrRomSize * 8192, this.$refs.mapper, 0x0000, 'chr');
             }
         }
     }
