@@ -11,7 +11,7 @@
         <memory size="8160" ref="expansion" title="EXPANSION" />
 
         <!-- Our CHR doesn't need a data bus because it's just one entity and not bank swapped -->
-        <memory size="8192" ref="chrmem" title="CHR" />
+        <chr size="8192" ref="chrmem" title="CHR" />
 
         <!-- Our data bus which resides in the CPU memory space -->
         <databus ref="prg" name="Mapper 0 Expansion + SRAM + ROM" size="49120" :sections="[
@@ -55,10 +55,12 @@
 <script>
 import memory from '../memory.vue'
 import databus from '../databus.vue'
+import chr from '../chr.vue'
 
 export default {
     components: {
         memory,
+        chr,
         databus
     },
 

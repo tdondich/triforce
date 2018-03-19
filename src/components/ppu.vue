@@ -8,6 +8,9 @@
     <!-- Our OAM memory -->
     <memory ref="oam" size="256" />
 
+    <!-- Secondary OAM Buffer -->
+    <memory ref="secondaryoam" size="32" />
+
  </div>
 </template>
 
@@ -190,6 +193,12 @@ export default {
           let address = this.baseAttributeTableAddress();
           this.attributeTableByte = this.ppumainbus.get(address);
       },
+      // See: https://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
+      spriteEvaluate() {
+          // First secondary OAM
+          this.$refs.secondaryoam.fill(0xFF, 0, 31);
+
+      },
       renderPixel(x,y) {
           if(y <0 || y > 239) {
               // Not a visible coordinate
@@ -244,6 +253,11 @@ export default {
                 }
                 // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
                 this.renderPixel(this.cycle - 1, this.scanline);
+
+                if(this.cycle == 256) {
+                    // Do the sprite evaluation for the next line
+                    this.spriteEvaluate();
+                }
                }
            }
            else if(this.cycle <= 320) {
