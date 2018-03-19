@@ -84,6 +84,7 @@
     ]" />
 
   <databus name="PPU Sub Databus" size="16384" ref="ppusubbus" :sections="[
+      // This represents our pattern tables
       {
           ref: 'loader',
           min: 0x0000,

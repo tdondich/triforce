@@ -1,6 +1,6 @@
 <template>
   <div>
-    <canvas class="screen"></canvas>
+    <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
     <!-- Our registers -->
     <memory ref="registers" size="8" />
@@ -14,6 +14,7 @@
 <script>
 import databus from './databus.vue'
 import memory from './memory.vue'
+import colors from '../mixins/colors'
 
 export default {
     components: {
@@ -33,39 +34,76 @@ export default {
             scanline: -1,
             // Toggle even/odd frame
             odd: true,
+            // The nametable "latch"
+            nametableByte: null,
+            // The attribute "latch"
+            attributeTableByte: null,
+            // The tile bitmap low
+            tileBitmapLow: null,
+            // The tiel bitmap high
+            tileBitmapHigh: null,
+            // The current VRAM address
+            v: null,
+            // The address latch for PPUADDR
+            dataAddress: 0x0000,
         }
     },
 
     computed: {
+      ppumainbus() {
+            return this.$parent.$refs.ppumainbus;
+        },
+
+   },
+    methods: {
+        renderingEnabled() {
+            // Need to check to see if background and sprites is meant to be rendered
+            // Any of the bits for 3 and 4 should be set for rendering to be enabled
+            return !((this.ppumask() & 0b11100111) == 0b11100111);
+        },
         ppuctrl() {
-            return this.$refs.registers.get(0x0000);
+            return this.get(0x0000);
         },
         ppumask() {
-            return this.$refs.registers.get(0x0001);
+            return this.get(0x0001);
         },
         ppustatus() {
-            return this.$refs.registers.get(0x0002);
+            return this.get(0x0002);
         },
         oamaddr() {
-            return this.$refs.registers.get(0x0003);
+            return this.get(0x0003);
         },
         oamdata() {
-            return this.$refs.registers.get(0x0004);
+            return this.get(0x0004);
         },
         ppuscroll() {
-            return this.$refs.registers.get(0x0005);
+            return this.get(0x0005);
         },
         ppuaddr() {
-            return this.$refs.registers.get(0x0006);
+            return this.get(0x0006);
         },
         ppudata() {
-            return this.$refs.registers.get(0x0007);
+            return this.get(0x0007);
         },
-       mem() {
-            return this.$refs.ppumainbus;
-        }
-    },
-    methods: {
+        baseNameTableAddress() {
+            let base = this.ppuctrl() & 0b00000011;
+            return 0x2000 + (base * 0x400);
+        },
+        baseAttributeTableAddress() {
+            // Attribute table starts after the nametable
+            let base = this.baseNameTableAddress() + 0x3C0;
+            return base;
+        },
+        basePatternTableAddress() {
+            let base = this.ppuctrl() & 0b00010000;
+            return (base == 0b00010000 ? 0x0000 : 0x1000);
+        },
+        fetchTileBitmapLow() {
+            this.tileBitmapLow = null;
+        },
+        fetchTileBitmapHigh() {
+            this.tileBitmapHigh = null;
+        },
         // The following fill/set/get is for our registers, accessed by memory
         // Fill a memory range with a specific value
         fill(value = 0x00, start = 0, end = this.memory.length) {
@@ -73,33 +111,52 @@ export default {
         },
         set(address, value) {
             this.$refs.registers.set(address, value);
+            // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
+            if(address == 0x0006) {
+                this.dataAddress << 8;
+                // Now, bring in the value to the left and mask it to a 16-bit address
+                this.dataAddress = (this.dataAddress | value) & 0xFFFF;
+            } else if(address == 0x0007) {
+                // If this is the case, then we write to the address requested by this.dataAddress as well
+                // and then increment the address
+                this.ppumainbus.set(this.dataAddress, value);
+                let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
+                this.dataAddress = (this.DataAddress + increase) & 0xFFFF;
+            }
       },
         get(address) {
+            if(address == 0x0007) {
+                // Then we actually want to return from the VRAM address requested
+                let result = this.ppumainbus.get(this.dataAddress);
+                let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
+                this.dataAddress = (this.DataAddress + increase) & 0xFFFF;
+                return result;
+            }
             return this.$refs.registers.get(address);
         },
         setPPUCtrl(val) {
-            this.$refs.registers.set(0x0000, val & 0xFF);
+            this.set(0x0000, val & 0xFF);
         },
         setPPUMask(val) {
-            this.$refs.registers.set(0x0001, val & 0xFF);
+            this.set(0x0001, val & 0xFF);
         },
        setPPUStatus(val) {
-           this.$refs.registers.set(0x0002, val & 0xFF);
+           this.set(0x0002, val & 0xFF);
        },
        setOAMAddr(val) {
-           this.$refs.registers.set(0x0003, val & 0xFF);
+           this.set(0x0003, val & 0xFF);
        },
        setOAMData(val) {
-           this.$refs.registers.set(0x0004, val & 0xFF);
+           this.set(0x0004, val & 0xFF);
        },
        setPPUScroll(val) {
-           this.$refs.registers.set(0x0005, val & 0xFF);
+           this.set(0x0005, val & 0xFF);
        },
        setPPUAddress(val) {
-           this.$refs.registers.set(0x0006, val & 0xFF);
+           this.set(0x0006, val & 0xFF);
        },
        setPPUData(val) {
-           this.$refs.registers.set(0x0007, val & 0xFF);
+           this.set(0x0007, val & 0xFF);
        },
        setVBlank(val) {
            if(val) {
@@ -120,8 +177,31 @@ export default {
            this.instruction = () => {
                 this.setPPUStatus(0x80);
                 this.setOAMAddr(0x2F);
-                this.setPPUAddress(0x0001);
+                this.setPPUAddress(0x00);
            }
+      },
+      fetchNametableByte() {
+          // Get the base nametable address
+          // @todo Not sure about this one
+          let address = this.baseNameTableAddress() + Math.floor(this.cycle / 8);
+          this.nametableByte = this.ppumainbus.get(address);
+      },
+      fetchAttributeTableByte() {
+          let address = this.baseAttributeTableAddress();
+          this.attributeTableByte = this.ppumainbus.get(address);
+      },
+      renderPixel(x,y) {
+          if(y <0 || y > 239) {
+              // Not a visible coordinate
+              return;
+          }
+          // Okay, visible coordinate, get the universal background color
+          let universalBackgroundColor = this.ppumainbus.get(0x3F00);
+          // Let's just write the color to the canvas
+          let c = document.getElementById('screen');
+          let ctx = c.getContext("2d");
+          ctx.fillStyle = '#' + colors[universalBackgroundColor];
+          ctx.fillRect(x,y,1,1);
       },
        tick() {
            // This handles performing an actual operation 
@@ -151,33 +231,50 @@ export default {
                // Idle cycle...
            }
            else if(this.cycle <= 256) {
-               // Fetch the nametable byte (takes 2 cycles)
-               // Fetch the attribute table byte (takes 2 cycles)
-               // Fetch the tile bitmap low (takes 2 cycles)
-               // Fetch the tile bitmap high (+8 bytes from tile bitmap low)
-
-               // Place into internal latches, then feed into appropriate shift registers when it's time 
-               // to do so (every 8 cycles)
+               if(this.renderingEnabled()) {
+                // Every 8 cycles, feed the following into "shift registers"
+                if(this.ticks == 0) {
+                    this.ticks = 8;
+                    this.instruction = () => {
+                        this.fetchNametableByte();
+                        this.fetchAttributeTableByte();
+                        this.fetchTileBitmapLow();
+                        this.fetchTileBitmapHigh();
+                    }
+                }
+                // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
+                this.renderPixel(this.cycle - 1, this.scanline);
+               }
            }
            else if(this.cycle <= 320) {
                // Tile data for sprites on next scanline are fetched
-               // Garbage nametable byte
-               // Garbage nametable byte
-               // Tile bitmap low
-               // Tile bitmap high
+                if(this.ticks == 0) {
+                    this.ticks = 8;
+                    this.instruction = () => {
+                        this.fetchNametableByte();
+                        this.fetchAttributeTableByte();
+                        this.fetchTileBitmapLow();
+                        this.fetchTileBitmapHigh();
+                    }
+                }
            }
            else if(this.cycle <= 336) {
-               // First two tiles for next scanline are fetched and loaded into the shift registers.
-               // Each memory access takes 2 PPU cycles to complete
-               // Nametable byte
-               // Attribute table byte
-               // Tile bitmap low
-               // Tile bitmap high
+                if(this.ticks == 0) {
+                    this.ticks = 8;
+                    this.instruction = () => {
+                        this.fetchNametableByte();
+                        this.fetchAttributeTableByte();
+                        this.fetchTileBitmapLow();
+                        this.fetchTileBitmapHigh();
+                    }
+                }
            }
            else if(this.cycle <= 340) {
                // Two bytes are fetched, but the purpose for this is unknown. Fetches are 2 ppu cycles each
-               // Nametable byte
-               // Nametable byte
+               this.ticks = 2;
+               this.instruction = () => {
+                   // Do nothing. Normally nametable bytes would be fetched but it does nothing.
+               }
            }
 
            this.cycle = this.cycle + 1;
@@ -195,5 +292,11 @@ export default {
     }
 }
 </script>
+
+<style lang="scss" scoped>
+.screen {
+    border: 1px solid gray;
+}
+</style>
 
 

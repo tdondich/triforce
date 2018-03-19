@@ -155,7 +155,7 @@ export default {
             }
         },
         set(address, value) {
-            for(let count = 0; count < this.sections.length; count++) {
+           for(let count = 0; count < this.sections.length; count++) {
                 let node = this.sections[count];
                 if(address <= node.max) {
                     // We found the memory module we need to reference, plus dealing with memory that repeats
