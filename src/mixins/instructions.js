@@ -12,8 +12,8 @@ export default {
             debug = debug + (operation.padEnd(32, ' '));
             // Now add register info
             debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)}\n`;
-            //this.debug = this.debug + debug;
-            this.debug = debug;
+            this.debug = this.debug + debug;
+            //this.debug = debug;
         },
         // These are now the opcodes we handle
         // JMP with absoute addressing
@@ -76,16 +76,7 @@ export default {
                 this.pc = ((first << 8) | second) + 1;
             }
         },
-
-        // NOP, no operation, just increment the pc
-        0xEA: function () {
-            this.cycles = 2;
-            this.instruction = () => {
-                this.debugger(1, `NOP`);
-                this.pc = this.pc + 1;
-            }
-        },
-        // SEC Set carry 
+       // SEC Set carry 
         0x38: function () {
             this.cycles = 2;
             this.instruction = () => {
