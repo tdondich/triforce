@@ -130,8 +130,6 @@ import memory from './components/memory.vue';
 import romLoader from './components/rom-loader.vue';
 import databus from './components/databus.vue';
 
-//require('bootstrap');
-
 export default {
   name: 'app',
   data: function() {
