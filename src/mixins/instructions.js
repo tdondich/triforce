@@ -35,7 +35,6 @@ export default {
                  * @bug The following emulates the early 6502 revision JMP bug found in the nes
                  */
                 if(sourceAddress & 0xFF == 0xFF) {
-                    console.log("PAGE BOUNDRY BUG");
                     // This is falling on a page boundry!
                     let lsb = this.mem.get(sourceAddress);
                     let msb = this.mem.get(sourceAddress & 0xFF00);

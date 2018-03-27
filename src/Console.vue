@@ -130,10 +130,7 @@ import memory from './components/memory.vue';
 import romLoader from './components/rom-loader.vue';
 import databus from './components/databus.vue';
 
-window._ = require('lodash');
-window.Popper = require('popper.js').default;
-window.$ = window.jQuery = require('jquery');
-require('bootstrap');
+//require('bootstrap');
 
 export default {
   name: 'app',

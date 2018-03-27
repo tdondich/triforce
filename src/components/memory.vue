@@ -25,7 +25,6 @@ export default {
         },
         set(address, value) {
             if(address >= this.size) {
-                console.log(address + " : " + this.size + " : " + address.toString(16));
                 // Should never happen
                 throw "Address exceeds memory size";
             }
@@ -33,7 +32,6 @@ export default {
         },
         get(address) {
             if(address >= this.size) {
-                console.log(address + " : " + this.size);
                 // Should never happen
                 throw "Address exceeds memory size";
             }

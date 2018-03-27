@@ -139,7 +139,6 @@ export default {
             })
             .then((response) => {
                 // The response.data property is the arraybuffer of our binary data
-                console.log("Retrieved rom.");
                 // We assume this is a iNES file.
                 // See: http://wiki.nesdev.com/w/index.php/INES
 
@@ -157,7 +156,6 @@ export default {
                 this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {
-                console.log(error);
                 this.loadError = error.response.status + ": " + error.response.statusText;
             });
         },
