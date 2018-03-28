@@ -1,23 +1,39 @@
 <template>
-  <div>
-    <canvas id="screen" class="screen" width="256" height="240"></canvas>
+    <div>
+        <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
-    <!-- Our registers -->
-    <memory ref="registers" size="8" />
+        <!-- Our registers -->
+        <memory ref="registers" size="8" />
 
-    <!-- Our OAM memory -->
-    <memory ref="oam" size="256" />
+        <!-- Our OAM memory -->
+        <memory ref="oamdata" size="256" />
 
-    <!-- Secondary OAM Buffer -->
-    <memory ref="secondaryoam" size="32" />
+        <databus ref="oam" name="OAM" :sections="[
+            {
+                ref: 'oamdata',
+                min: 0x00,
+                max: 0xFF,
+                size: 256 
+            }
+        ]" />
 
- </div>
+        <!-- Secondary OAM Buffer -->
+        <memory ref="secondaryoam" size="32" />
+
+    </div>
 </template>
 
 <script>
 import databus from './databus.vue'
 import memory from './memory.vue'
 import colors from '../mixins/colors'
+
+function isBitSet(value, index) {
+  let mask = 1 << index;
+  return (value & mask) != 0;
+}
+
+
 
 export default {
     components: {
@@ -41,11 +57,7 @@ export default {
             nametableByte: null,
             // The attribute "latch"
             attributeTableByte: null,
-            // The tile bitmap low
-            tileBitmapLow: null,
-            // The tiel bitmap high
-            tileBitmapHigh: null,
-            // The current VRAM address
+           // The current VRAM address
             v: null,
             // The address latch for PPUADDR
             dataAddress: 0x0000,
@@ -89,6 +101,8 @@ export default {
             return this.get(0x0007);
         },
         baseNameTableAddress() {
+            // Base will be 0 - 3
+            // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
             let base = this.ppuctrl() & 0b00000011;
             return 0x2000 + (base * 0x400);
         },
@@ -101,13 +115,7 @@ export default {
             let base = this.ppuctrl() & 0b00010000;
             return (base == 0b00010000 ? 0x0000 : 0x1000);
         },
-        fetchTileBitmapLow() {
-            this.tileBitmapLow = null;
-        },
-        fetchTileBitmapHigh() {
-            this.tileBitmapHigh = null;
-        },
-        // The following fill/set/get is for our registers, accessed by memory
+       // The following fill/set/get is for our registers, accessed by memory
         // Fill a memory range with a specific value
         fill(value = 0x00, start = 0, end = this.memory.length) {
             this.$refs.registers.fill(value, start, end);
@@ -186,7 +194,8 @@ export default {
       fetchNametableByte() {
           // Get the base nametable address
           // @todo Not sure about this one
-          let address = this.baseNameTableAddress() + Math.floor(this.cycle / 8);
+          // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
+          let address = this.baseNameTableAddress() + (Math.floor(this.scanline / 8) * Math.floor(this.cycle / 8));
           this.nametableByte = this.ppumainbus.get(address);
       },
       fetchAttributeTableByte() {
@@ -199,17 +208,59 @@ export default {
           this.$refs.secondaryoam.fill(0xFF, 0, 31);
 
       },
+      // Index represents the tile number to fetch
+      // X is x coordinate of the tile
+      // Y is y coordinate
+      fetchTilePixelColor(index, x, y) {
+        let base = index << 4;
+        base = base | this.basePatternTableAddress();
+        // Get first plane
+        let first = this.ppumainbus.get(base + y);
+        // Get second plane
+        let second = this.ppumainbus.get(base + y + 8);
+
+        if (!isBitSet(first, x) && !isBitSet(second, x)) {
+            // Color value is 0
+            return 0;
+        } else if (isBitSet(first, x) && isBitSet(second, x)) {
+            // color value is 3
+            return 3;
+        } else if (isBitSet(first, x)) {
+            // Color value is 1
+            return 1;
+        } else {
+            // Color value is 2
+            return 2;
+        }
+      },
       renderPixel(x,y) {
           if(y <0 || y > 239) {
               // Not a visible coordinate
               return;
           }
-          // Okay, visible coordinate, get the universal background color
-          let universalBackgroundColor = this.ppumainbus.get(0x3F00);
-          // Let's just write the color to the canvas
           let c = document.getElementById('screen');
           let ctx = c.getContext("2d");
-          ctx.fillStyle = '#' + colors[universalBackgroundColor];
+ 
+          // Okay, visible coordinate, get the universal background color
+          //let universalBackgroundColor = this.ppumainbus.get(0x3F00);
+
+          let color = 0;
+
+          // Okay, fetch the tile pixel color for background
+          let tileX = x % 8;
+          let tileY = y % 8;
+          let pixelColor = this.fetchTilePixelColor(this.nametableByte, tileX, tileY);
+
+          if(pixelColor == 1) {
+              color = 1;
+          } else if(pixelColor == 2) {
+              color = 2;
+          } else if(pixelColor == 3) {
+              color = 3;
+          }
+
+          // Let's just write the color to the canvas
+         ctx.fillStyle = '#' + colors[color];
           ctx.fillRect(x,y,1,1);
       },
        tick() {
@@ -247,8 +298,10 @@ export default {
                     this.instruction = () => {
                         this.fetchNametableByte();
                         this.fetchAttributeTableByte();
-                        this.fetchTileBitmapLow();
-                        this.fetchTileBitmapHigh();
+                        // We won't do these documented steps as they'll simply be looked up
+                        // in fetchTilePixelColor during rendering
+                        //this.fetchTileBitmapLow();
+                        //this.fetchTileBitmapHigh();
                     }
                 }
                 // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
@@ -267,8 +320,6 @@ export default {
                     this.instruction = () => {
                         this.fetchNametableByte();
                         this.fetchAttributeTableByte();
-                        this.fetchTileBitmapLow();
-                        this.fetchTileBitmapHigh();
                     }
                 }
            }
@@ -278,8 +329,6 @@ export default {
                     this.instruction = () => {
                         this.fetchNametableByte();
                         this.fetchAttributeTableByte();
-                        this.fetchTileBitmapLow();
-                        this.fetchTileBitmapHigh();
                     }
                 }
            }
@@ -309,7 +358,7 @@ export default {
 
 <style lang="scss" scoped>
 .screen {
-    border: 1px solid gray;
+  border: 1px solid gray;
 }
 </style>
 
