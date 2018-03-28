@@ -86,6 +86,7 @@ import inc from '../mixins/opcodes/inc';
 import dec from '../mixins/opcodes/dec';
 import bit from '../mixins/opcodes/bit';
 import nop from '../mixins/opcodes/nop';
+import lax from '../mixins/opcodes/lax';
 
 export default {
     components: {
@@ -114,7 +115,8 @@ export default {
         inc,
         dec,
         bit,
-        nop
+        nop,
+        lax
     ],
     data: function() {
         // Our data represents our internal registers and processor flag
