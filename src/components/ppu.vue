@@ -77,28 +77,28 @@ export default {
             return !((this.ppumask() & 0b11100111) == 0b11100111);
         },
         ppuctrl() {
-            return this.get(0x0000);
+            return this.$refs.registers.get(0x0000);
         },
         ppumask() {
-            return this.get(0x0001);
+            return this.$refs.registers.get(0x0001);
         },
         ppustatus() {
-            return this.get(0x0002);
+            return this.$refs.registers.get(0x0002);
         },
         oamaddr() {
-            return this.get(0x0003);
+            return this.$refs.registers.get(0x0003);
         },
         oamdata() {
-            return this.get(0x0004);
+            return this.$refs.registers.get(0x0004);
         },
         ppuscroll() {
-            return this.get(0x0005);
+            return this.$refs.registers.get(0x0005);
         },
         ppuaddr() {
-            return this.get(0x0006);
+            return this.$refs.registers.get(0x0006);
         },
         ppudata() {
-            return this.get(0x0007);
+            return this.$refs.registers.get(0x0007);
         },
         baseNameTableAddress() {
             // Base will be 0 - 3
@@ -142,38 +142,43 @@ export default {
                 let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
                 this.dataAddress = (this.DataAddress + increase) & 0xFFFF;
                 return result;
+            } else if(address == 0x0002) {
+               let result = this.$refs.registers.get(address);
+                // This is reading the PPU status register so be sure to clear vblank.
+                this.setVBlank(false);
+                return result;
             }
             return this.$refs.registers.get(address);
         },
         setPPUCtrl(val) {
-            this.set(0x0000, val & 0xFF);
+            this.$refs.registers.set(0x0000, val & 0xFF);
         },
         setPPUMask(val) {
-            this.set(0x0001, val & 0xFF);
+            this.$refs.registers.set(0x0001, val & 0xFF);
         },
        setPPUStatus(val) {
-           this.set(0x0002, val & 0xFF);
+            this.$refs.registers.set(0x0002, val & 0xFF);
        },
        setOAMAddr(val) {
-           this.set(0x0003, val & 0xFF);
+            this.$refs.registers.set(0x0003, val & 0xFF);
        },
        setOAMData(val) {
-           this.set(0x0004, val & 0xFF);
+            this.$refs.registers.set(0x0004, val & 0xFF);
        },
        setPPUScroll(val) {
-           this.set(0x0005, val & 0xFF);
+            this.$refs.registers.set(0x0005, val & 0xFF);
        },
        setPPUAddress(val) {
-           this.set(0x0006, val & 0xFF);
+            this.$refs.registers.set(0x0006, val & 0xFF);
        },
        setPPUData(val) {
-           this.set(0x0007, val & 0xFF);
+            this.$refs.registers.set(0x0007, val & 0xFF);
        },
        setVBlank(val) {
            if(val) {
-               this.setPPUStatus(this.ppustatus | 0b10000000);
+               this.setPPUStatus(this.ppustatus() | 0b10000000);
            } else {
-               this.setPPUStatus(this.ppustatus & 0b01111111);
+               this.setPPUStatus(this.ppustatus() & 0b01111111);
            }
        },
        copyToOAM(address, value) {
@@ -286,6 +291,10 @@ export default {
                        this.$parent.$refs.cpu.fireNMI();
                    }
                }
+           }
+           else if(this.cycle == 1 && this.scanline == -1) {
+               // Clear VBlank
+               this.setVBlank(false);
            }
            else if(this.cycle == 0 || this.scanline == 240) {
                // Idle cycle...
