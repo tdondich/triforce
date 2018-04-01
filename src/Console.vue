@@ -149,11 +149,7 @@ export default {
   data: function() {
     return {
       error: null,
-      lastFrameTimestamp: 0,
-      maxFPS: 60,
       fps: 0,
-      lastFpsUpdate: 0,
-      framesThisSecond: 0,
       stepEnabled: false
     }
   },
@@ -163,6 +159,15 @@ export default {
     'rom-loader': romLoader,
     'ppu': ppu,
     'databus': databus
+  },
+  created() {
+    this.lastFrameTimestamp = null,
+    this.lastFpsUpdate = null;
+    this.framesThisSecond = 0;
+    this.maxFPS = 60;
+  },
+  mounted() {
+    this.cpu = this.$refs.cpu;
   },
   methods: {
     disableStep() {
@@ -191,8 +196,7 @@ export default {
 
       // Calculate FPS
       if (timestamp > this.lastFpsUpdate + 1000) { // update every second
-          this.fps = 0.25 * this.framesThisSecond + (1 - 0.25) * this.fps; // compute the new FPS
-  
+          this.fps = this.framesThisSecond; // compute the new FPS
           this.lastFpsUpdate = timestamp;
           this.framesThisSecond = 0;
       }
@@ -206,7 +210,7 @@ export default {
         this.$refs.ppu.tick();
         this.$refs.ppu.tick();
         this.$refs.ppu.tick();
-        this.$refs.cpu.tick();
+        this.cpu.tick();
         count++;
       } while(count < 30000 && !this.stepEnabled);
       if(!this.stepEnabled) {
