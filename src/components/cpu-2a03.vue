@@ -11,7 +11,7 @@
         </div>
     </div>
  
-    <div v-if="debugEnabled" class="col-sm-6">
+    <div v-if="debugEnabled" class="col-sm-12">
     <h4>Registers</h4>
     <table class="table table-dark table-sm table-bordered">
         <tbody>
@@ -26,22 +26,7 @@
         </tbody>
     </table>
     </div>
-    <div v-if="debugEnabled" class="col-sm-6">
-    <h4>Status Flags</h4>
-    <table class="table table-dark table-sm table-bordered">
-        <tbody>
-            <tr>
-                <th>carry</th><td>{{isCarry}}</td>
-                <th>zero</th><td>{{isZero}}</td>
-                <th>interrupt</th><td>{{isInterruptDisabled}}</td>
-                <th>decimal</th><td>{{isDecimal}}</td>
-                <th>overflow</th><td>{{isOverflow}}</td>
-                <th>negative</th><td>{{isNegative}}</td>
-            </tr>
-        </tbody>
-    </table>
-    </div>
-    <div class="alert alert-danger" v-if="error">
+   <div class="alert alert-danger" v-if="error">
         {{error}}
     </div>
     <div v-if="debugEnabled" class="col-sm-12 debug">
@@ -88,7 +73,7 @@ export default {
         memory
     },
     mixins: [
-        instructions,
+        //instructions,
         stx,
         ldx,
         lda,
@@ -116,23 +101,13 @@ export default {
     data: function() {
         // Our data represents our internal registers and processor flag
         return {
-            // For registers, see: http://wiki.nesdev.com/w/index.php/CPU_registers
-            // Accumulator (Single Byte Wide)
-            a: 0,
-            // Index registers X and Y. (Single Byte Wide)
-            x: 0,
-            y: 0,
-            // Program counter, supports 65536 adress locations, is 2 bytes wide)
-            pc: 0,
-            // The stack pointer (Single Byte Wide)
-            sp: 0,
-            // Status Register. Sets the status of various cpu flags (Single Byte Wide)
-            // Note, computed properties help gather certain flag states easily than constant 
-            // bitwise operation checks
-            // See: http://wiki.nesdev.com/w/index.php/Status_flags
-            // See: http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
-            p: 0,
-            
+            debugX: 0,
+            debugY: 0,
+            debugA: 0,
+            debugPC: 0,
+            debugSP: 0,
+            debugP: 0,
+           
             // How the CPU should operate
             // Stepping means that the CPU should step through each operation instead of continuous run
             // This flag will show the CPU and debugged instructions
@@ -144,6 +119,23 @@ export default {
        }
     },
     created() {
+        // For registers, see: http://wiki.nesdev.com/w/index.php/CPU_registers
+        // Accumulator (Single Byte Wide)
+        this.a = 0;
+        // Index registers X and Y. (Single Byte Wide)
+        this.x = 0;
+        this.y = 0;
+        // Program counter, supports 65536 adress locations, is 2 bytes wide)
+        this.pc = 0;
+        // The stack pointer (Single Byte Wide)
+        this.sp = 0;
+        // Status Register. Sets the status of various cpu flags (Single Byte Wide)
+        // Note, computed properties help gather certain flag states easily than constant 
+        // bitwise operation checks
+        // See: http://wiki.nesdev.com/w/index.php/Status_flags
+        // See: http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
+        this.p = 0;
+
         // Cycle count.  When the cycle count hits 0, apply the actual operation
         this.cycles = 0;
         // This instruction points to what code should run once cycles count is 0
@@ -161,6 +153,7 @@ export default {
         // Normal Interrupt.  If this happens, since it's line based, it'll be a counter
         this.irq = 0;
         this.inDebug = false;
+        Object.assign(this, instructions);
     },
     mounted() {
         this.mainbus = this.$parent.$refs.mainbus;

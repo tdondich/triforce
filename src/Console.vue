@@ -207,9 +207,9 @@ export default {
       let count = 0;
       do {
         // Our PPU runs 3x the cpu
-        this.$refs.ppu.tick();
-        this.$refs.ppu.tick();
-        this.$refs.ppu.tick();
+        //this.$refs.ppu.tick();
+        //this.$refs.ppu.tick();
+        //this.$refs.ppu.tick();
         this.cpu.tick();
         count++;
       } while(count < 30000 && !this.stepEnabled);
