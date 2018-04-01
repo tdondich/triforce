@@ -23,8 +23,8 @@ export default {
             debug = debug + (operation().padEnd(32, ' '));
             // Now add register info
             debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)}\n`;
-            //this.debug = this.debug + debug;
-            this.debug = debug;
+            this.debug = this.debug + debug;
+            //this.debug = debug;
             this.inDebug = false;
         },
         // These are now the opcodes we handle
@@ -101,7 +101,7 @@ export default {
         // BCS - branch if carry set
         0xb0: function () {
             this.cycles = 2;
-            if (this.isCarry) {
+            if (this.isCarry()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -109,7 +109,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BCS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (this.isCarry) {
+                if (this.isCarry()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -128,7 +128,7 @@ export default {
         // BCC - Branch if carry clear
         0x90: function () {
             this.cycles = 2;
-            if (!this.isCarry) {
+            if (!this.isCarry()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -136,7 +136,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BCC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (!this.isCarry) {
+                if (!this.isCarry()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -146,7 +146,7 @@ export default {
         // BEQ - Branch if equal, checks zero flag, and if so relative branch
         0xF0: function () {
             this.cycles = 2;
-            if (this.isZero) {
+            if (this.isZero()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -154,7 +154,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BEQ $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (this.isZero) {
+                if (this.isZero()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -164,7 +164,7 @@ export default {
         // Branch if not equal, if zero flag is not set, relative branch
         0xD0: function () {
             this.cycles = 2;
-            if (!this.isZero) {
+            if (!this.isZero()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -172,7 +172,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BNE $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (!this.isZero) {
+                if (!this.isZero()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -182,7 +182,7 @@ export default {
         // BVS - Branch if Overflow set
         0x70: function () {
             this.cycles = 2;
-            if (this.isOverflow) {
+            if (this.isOverflow()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -190,7 +190,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BVS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (this.isOverflow) {
+                if (this.isOverflow()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -200,7 +200,7 @@ export default {
         // BVC - Branch if Overflow clear
         0x50: function () {
             this.cycles = 2;
-            if (!this.isOverflow) {
+            if (!this.isOverflow()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -208,7 +208,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BVC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (!this.isOverflow) {
+                if (!this.isOverflow()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -218,7 +218,7 @@ export default {
         // BPL - Branch if positive
         0x10: function () {
             this.cycles = 2;
-            if (!this.isNegative) {
+            if (!this.isNegative()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -226,7 +226,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BPL $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (!this.isNegative) {
+                if (!this.isNegative()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;
@@ -312,7 +312,7 @@ export default {
         // BMI - Branch if minus flag is set with relative address
         0x30: function () {
             this.cycles = 2;
-            if (this.isNegative) {
+            if (this.isNegative()) {
                 this.cycles = 3;
                 if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
@@ -320,7 +320,7 @@ export default {
             }
             this.instruction = () => {
                 this.debugger(2, () => `BMI $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
-                if (this.isNegative) {
+                if (this.isNegative()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
                     this.pc = this.pc + 2;

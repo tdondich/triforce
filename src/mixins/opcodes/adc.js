@@ -7,7 +7,7 @@ export default {
             // Add memory to accumulator to represent carry bit
             let value = this.mem.get(location);
             let result = this.a + value;
-            if (this.isCarry) {
+            if (this.isCarry()) {
                 result = result + 1;
             }
             this.setCarry((result > 0xFF));

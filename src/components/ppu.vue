@@ -73,10 +73,20 @@ export default {
       // This feels so dirty, it's our frame cache, caching data for the existing frame
       this.frameCache = {};
       this.scanlineTileCache = [];
+
+      this.frameBuffer = null;
+
+      this.render = () => {
+        this.canvasCtx.putImageData(this.frameBuffer, 0 ,0);
+      }
   },
   mounted() {
       this.canvas = document.getElementById("screen");
       this.canvasCtx = this.canvas.getContext("2d");
+      
+      //this.frameBuffer = this.canvasCtx.getImageData(0, 0, 256, 240);
+      this.frameBuffer = new ImageData(256, 240);
+
      // Ideally, this does not change.
       this.ppumainbus = this.$parent.$refs.ppumainbus;
   },
@@ -151,13 +161,13 @@ export default {
             || this.dataAddress == 0x3fb1
             || this.dataAddress == 0x3fd1
             || this.dataAddress == 0x3ff1) {
-            console.log(this.dataAddress.toString(16) + " : " + value.toString(16));
-            console.log("PC: " + this.$parent.$refs.cpu.pc.toString(16) + " : " + this.$parent.$refs.cpu.a.toString(16));
+            //console.log(this.dataAddress.toString(16) + " : " + value.toString(16));
+            //console.log("PC: " + this.$parent.$refs.cpu.pc.toString(16) + " : " + this.$parent.$refs.cpu.a.toString(16));
         }
         this.ppumainbus.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
         this.dataAddress = (this.dataAddress + increase) & 0xffff;
-        console.log("Increase in set");
+        //console.log("Increase in set");
       }
     },
     get(address) {
@@ -168,7 +178,7 @@ export default {
             let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
             // @todo Increase VRAM address
             this.dataAddress = (this.dataAddress + increase) & 0xffff;
-            console.log("Increase in get");
+            //console.log("Increase in get");
         }
         return result;
       } else if (address == 0x0002) {
@@ -339,9 +349,9 @@ export default {
     },
     // Fetch the color hex code for the requested palette and colorIndex combo
     // See: mixins/colors.js
-    fetchColorHex(palette, colorIndex) {
+    fetchColor(palette, colorIndex) {
         if(colorIndex == 0) {
-            throw "Invalid colorIndex for fetchColorHex";
+            throw "Invalid colorIndex for fetchColor";
         }
         // Base will point to our palette starting address
         // There are three bytes to a palette
@@ -354,8 +364,8 @@ export default {
         return;
       }
       // Okay, visible coordinate, get the universal background color
-      if(this.frameCache.universalBackgroundColorHex == null) {
-        this.frameCache.universalBackgroundColorHex = colors[this.ppumainbus.get(0x3F00)];
+      if(this.frameCache.universalBackgroundColor == null) {
+        this.frameCache.universalBackgroundColor = colors[this.ppumainbus.get(0x3F00)];
       }
 
       let backgroundColorIndex = 0;
@@ -386,10 +396,10 @@ export default {
       // Now do pixel evaluation
       let palette = null;
       let colorIndex = null;
-      let colorHex = null;
+      let color = null;
 
       if(backgroundColorIndex == 0 && (activeSpritePixelInformation == null || activeSpritePixelInformation.colorIndex == 0)) {
-          colorHex = this.frameCache.universalBackgroundColorHex;
+          color = this.frameCache.universalBackgroundColor;
       } else {
         if(activeSpritePixelInformation && activeSpritePixelInformation.colorIndex) {
             colorIndex = activeSpritePixelInformation.colorIndex;
@@ -399,12 +409,25 @@ export default {
             // @todo Find proper palette number for background attribute byte and x/y offset
             //palette = 0;
         }
-        colorHex = this.fetchColorHex(palette, colorIndex);
+        color = this.fetchColor(palette, colorIndex);
       }
 
+      // Write to our framebuffer
+      let base = (y * 256 + x) * 4;
+      //R
+      this.frameBuffer.data[base] = color[0];
+      //G
+      this.frameBuffer.data[base + 1] = color[1];
+      // B
+      this.frameBuffer.data[base + 2] = color[2];
+      // A
+      this.frameBuffer.data[base + 3] = 255;
+
       // Let's just write the backgroundColorIndex to the canvas
+      /*
       this.canvasCtx.fillStyle = colorHex;
       this.canvasCtx.fillRect(x, y, 1, 1);
+      */
     },
     tick() {
       // This handles performing an actual operation

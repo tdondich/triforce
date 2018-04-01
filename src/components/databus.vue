@@ -84,6 +84,21 @@ export default {
       inspectCharCodeEnabled: false
     };
   },
+  created() {
+    this.configuration = this.sections;
+    for (let count = 0; count < this.configuration.length; count++) {
+      let node = this.configuration[count];
+      this.configuration[count].target = this.$parent.$refs[node.ref];
+    }
+
+
+  },
+
+  mounted() {
+    // Copy sections prop to a property of this object, avoiding proxyGet cost
+    //this.configuration = this.sections;
+    // Populate the targets
+  },
   computed: {
     // This returns the decimal representation of inspectAddress.  If it's not a number, reset to 0.
     // If we're greater than our length, set to length
@@ -152,8 +167,8 @@ export default {
       }
     },
     set(address, value) {
-      for (let count = 0; count < this.sections.length; count++) {
-        let node = this.sections[count];
+      for (let count = 0; count < this.configuration.length; count++) {
+        let node = this.configuration[count];
         if (address <= node.max) {
           // We found the memory module we need to reference, plus dealing with memory that repeats
           address = (address - node.min) % node.size;
@@ -167,16 +182,19 @@ export default {
       }
       throw `Set: Address ${fh(address)} is not valid anywhere.`;
     },
+    // Get's a value for a requested address, calling the target's get value, but translated from that target's
+    // base address range
     get(address) {
-      for (let count = 0; count < this.sections.length; count++) {
-        let node = this.sections[count];
+      for (let count = 0; count < this.configuration.length; count++) {
+        let node = this.configuration[count];
         if (address <= node.max) {
           // We found the memory module we need to reference, plus dealing with memory that repeats
           address = (address - node.min) % node.size;
           if (node.bus) {
-            return this.$parent.$refs[node.ref].get(address, node.bus);
+            // node.target.get
+            return node.target.get(address, node.bus);
           } else {
-            return this.$parent.$refs[node.ref].get(address);
+            return node.target.get(address);
           }
         }
       }

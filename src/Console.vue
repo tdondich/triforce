@@ -168,6 +168,7 @@ export default {
   },
   mounted() {
     this.cpu = this.$refs.cpu;
+    this.ppu = this.$refs.ppu;
   },
   methods: {
     disableStep() {
@@ -207,12 +208,13 @@ export default {
       let count = 0;
       do {
         // Our PPU runs 3x the cpu
-        //this.$refs.ppu.tick();
-        //this.$refs.ppu.tick();
-        //this.$refs.ppu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
         this.cpu.tick();
         count++;
       } while(count < 30000 && !this.stepEnabled);
+      this.ppu.render();
       if(!this.stepEnabled) {
         requestAnimationFrame(this.tick);
       }

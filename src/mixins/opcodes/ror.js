@@ -8,7 +8,7 @@ export default {
             if(!location) {
                 // Perform it on the accumulator
                 value = this.a;
-                let bit7 = this.isCarry ? 0x80 : 0x00;
+                let bit7 = this.isCarry() ? 0x80 : 0x00;
 
                 // First, set the carry
                 this.setCarry(((value & 0b00000001) == 0b00000001));
@@ -27,7 +27,7 @@ export default {
 
             } else {
                 value = this.mem.get(location);
-                let bit7 = this.isCarry ? 0x80 : 0x00;
+                let bit7 = this.isCarry() ? 0x80 : 0x00;
 
                 // First, set the carry
                 this.setCarry(((value & 0b00000001) == 0b00000001));

@@ -15,16 +15,17 @@ export default {
        }
     },
     created() {
+        this.realSize = this.size;
         this.$_memory = new Uint8Array(this.size)
         this.set = (address, value) => {
-            if(address >= this.size) {
+            if(address >= this.realSize) {
                 // Should never happen
                 throw "Address exceeds memory size";
             }
            this.$_memory[address] = value;
         }
         this.get = (address) => {
-            if(address >= this.size) {
+            if(address >= this.realSize) {
                 // Should never happen
                 throw "Address exceeds memory size";
             }

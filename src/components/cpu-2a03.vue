@@ -153,7 +153,29 @@ export default {
         // Normal Interrupt.  If this happens, since it's line based, it'll be a counter
         this.irq = 0;
         this.inDebug = false;
+
+        // @todo Move the rest of the opcodes into this component via assign instead of the mixins vue behavior
         Object.assign(this, instructions);
+
+        this.isCarry = () => {
+            return (this.p & 0b0001) == 0b0001;
+        };
+        this.isZero = () => {
+            return (this.p & 0b0010) == 0b0010;
+        };
+        this.isInterruptDisabled = () => {
+            return (this.p & 0b0100) == 0b0100;
+        };
+        this.isDecimal = () => {
+            return (this.p & 0b1000) == 0b1000;
+        };
+        this.isOverflow = () => {
+            return (this.p & 0b1000000) == 0b1000000;
+        };
+        this.isNegative = () => {
+            return (this.p & 0b10000000) == 0b10000000;
+        };
+ 
     },
     mounted() {
         this.mainbus = this.$parent.$refs.mainbus;
@@ -164,25 +186,7 @@ export default {
         // This uses bitwise comparisons to evaluate the value of the p register and return values
         // We're using the ES6 0b prefix for binary numbers
         // See http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior for what bits represent which flags
-        isCarry() {
-            return (this.p & 0b0001) == 0b0001;
-        },
-        isZero() {
-            return (this.p & 0b0010) == 0b0010;
-        },
-        isInterruptDisabled() {
-            return (this.p & 0b0100) == 0b0100;
-        },
-        isDecimal() {
-            return (this.p & 0b1000) == 0b1000;
-        },
-        isOverflow() {
-            return (this.p & 0b1000000) == 0b1000000;
-        },
-        isNegative() {
-            return (this.p & 0b10000000) == 0b10000000;
-        },
-        mem() {
+       mem() {
             return this.mainbus;
         },
         debugOutput() {
