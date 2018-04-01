@@ -7,8 +7,22 @@
     <rom-loader  ref="loader" />
     <hr>
 
+    <div class="btn-group">
+    <button class="btn btn-primary" v-if="!stepEnabled" @click="stepEnabled = !stepEnabled">Enable Step Debugging</button>
+    <div v-else>
+      <button class="btn btn-primary" @click="tick">Step Forward</button>
+      <button class="btn btn-primary" click="disableStep()">Stop Step Debugging</button>
+    </div>
+    </div>
+    <br>
+    <br>
+    
+
     <cpu-2a03 ref="cpu" />
 
+    <p>
+      <strong>Frames Per Second:</strong> {{this.fps}}
+    </p>
     <ppu ref="ppu" />
 
 
@@ -135,7 +149,12 @@ export default {
   data: function() {
     return {
       error: null,
-      cpuTicks: 0
+      lastFrameTimestamp: 0,
+      maxFPS: 60,
+      fps: 0,
+      lastFpsUpdate: 0,
+      framesThisSecond: 0,
+      stepEnabled: false
     }
   },
   components: {
@@ -146,6 +165,11 @@ export default {
     'databus': databus
   },
   methods: {
+    disableStep() {
+      this.stepEnabled = false;
+      // Restart game loop
+      setTimeout(this.tick, 10);
+    },
     power() {
       this.$refs.cpu.power();
       this.$refs.ppu.reset();
@@ -156,21 +180,38 @@ export default {
       this.$refs.ppu.reset();
       this.tick();
    },
-    tick() {
-      // Calc each frame, at 60 frames per second
-      // This means the cpu can do 30,000 cycles per frame,
-      // And that means we need to set a timeout to 1000 / 60. ~16ms
-      // @todo, we should make it more accurate, doing a diff of time
+    tick(timestamp) {
+      // Throttle FPS to our desired FPS
+
+      if (timestamp < this.lastFrameTimestamp + (1000 / this.maxFPS)) {
+        requestAnimationFrame(this.tick);
+        return;
+      }
+
+
+      // Calculate FPS
+      if (timestamp > this.lastFpsUpdate + 1000) { // update every second
+          this.fps = 0.25 * this.framesThisSecond + (1 - 0.25) * this.fps; // compute the new FPS
+  
+          this.lastFpsUpdate = timestamp;
+          this.framesThisSecond = 0;
+      }
+      this.framesThisSecond++;
+      this.lastFrameTimestamp = timestamp;
+
+      // Now run through 30,000 cpu cycles
+      let count = 0;
       do {
         // Our PPU runs 3x the cpu
         this.$refs.ppu.tick();
         this.$refs.ppu.tick();
         this.$refs.ppu.tick();
         this.$refs.cpu.tick();
-        this.cpuTicks = this.cpuTicks + 1;
-      } while(this.cpuTicks < 30000);
-      this.cpuTicks = 0;
-      setTimeout(this.tick, 16);
+        count++;
+      } while(count < 30000 && !this.stepEnabled);
+      if(!this.stepEnabled) {
+        requestAnimationFrame(this.tick);
+      }
     }
   }
 }

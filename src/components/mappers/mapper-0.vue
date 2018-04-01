@@ -1,7 +1,5 @@
 <template>
     <div>
-        <h2>Hi! I'm Mapper 0!</h2>
-
         <!-- Represent our banks -->
         <memory size="8192" ref="prgram" title="PRG-RAM" />
         <memory size="16384" ref="prgrom1" title="PRG-ROM-1" />
@@ -11,7 +9,7 @@
         <memory size="8160" ref="expansion" title="EXPANSION" />
 
         <!-- Our CHR doesn't need a data bus because it's just one entity and not bank swapped -->
-        <chr size="8192" ref="chrmem" title="CHR" />
+        <chr size="8192" ref="chrmem" title="Mapper 0 CHR" />
 
         <!-- Our data bus which resides in the CPU memory space -->
         <databus ref="prg" name="Mapper 0 Expansion + SRAM + ROM" size="49120" :sections="[

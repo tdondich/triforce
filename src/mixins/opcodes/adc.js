@@ -30,7 +30,7 @@ export default {
         0x69: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, `ADC #$${fh(this.mem.get(this.pc + 1))}`);
+                this.debugger(2, () => `ADC #$${fh(this.mem.get(this.pc + 1))}`);
                 this.adc(this.pc + 1);
                 this.pc = this.pc + 2;
             }
@@ -39,7 +39,7 @@ export default {
         0x65: function() {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, `ADC $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.debugger(2, () => `ADC $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.adc(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -49,7 +49,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, `ADC $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(2, () => `ADC $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.adc(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -60,7 +60,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `ADC $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, () => `ADC $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.adc(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -74,7 +74,7 @@ export default {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
-                this.debugger(3, `ADC $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, () => `ADC $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.adc(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -88,7 +88,7 @@ export default {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, `ADC $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, () => `ADC $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.adc(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -99,7 +99,7 @@ export default {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
-                this.debugger(2, `ADC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(2, () => `ADC ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.adc(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -113,7 +113,7 @@ export default {
             }
             this.instruction = () => {
                let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
-                this.debugger(2, `ADC ($${fh(this.mem.get(this.pc + 1))}),Y = ${fh(this.getAbsoluteAddress(this.mem.get(this.pc + 1), true),4)} @ ${fh(targetAddress,4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(2, () => `ADC ($${fh(this.mem.get(this.pc + 1))}),Y = ${fh(this.getAbsoluteAddress(this.mem.get(this.pc + 1), true),4)} @ ${fh(targetAddress,4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.adc(targetAddress);
                 this.pc = this.pc + 2;
             }

@@ -3,8 +3,10 @@
         <h2>CHR Data</h2>
         <canvas id="chr-left" width="128" height="128" />
         <canvas id="chr-right" width="128" height="128" />
-
-        <button @click="redraw('left'); redraw('right');">Redraw</button>
+        <br>
+        <p>
+        <button class="btn btn-primary" @click="redraw('left'); redraw('right');">Redraw</button>
+        </p>
 
     </div>
 
@@ -23,40 +25,34 @@ export default {
   props: ["size", "title"],
   data: function() {
     return {
-      memory: new Uint8Array(this.size),
-
-      // Inspection data
-      inspectTileNumber: 0
     };
+  },
+  created() {
+    this.$_memory = new Uint8Array(this.size);
   },
   methods: {
     reset: function() {
-      this.memory.fill(0);
+      this.$_memory.fill(0);
     },
     // Fill a memory range with a specific value
-    fill(value = 0x00, start = 0, end = this.memory.length) {
-      this.memory.fill(value, start, end + 1);
+    fill(value = 0x00, start = 0, end = this.$_memory.length) {
+      this.$_memory.fill(value, start, end + 1);
     },
     set(address, value) {
       if (address >= this.size) {
         // Should never happen
         throw "Address exceeds memory size";
       }
-      this.memory[address] = value;
+      this.$_memory[address] = value;
     },
     get(address) {
       if (address >= this.size) {
         // Should never happen
         throw "Address exceeds memory size";
       }
-      return this.memory[address];
+      return this.$_memory[address];
     },
-    /*
-        getTile(index, side = 0) {
-
-        },
-        */
-    redraw(pane = "left") {
+   redraw(pane = "left") {
       let c = document.getElementById("chr-" + pane);
       let ctx = c.getContext("2d");
       let r = 0;

@@ -152,7 +152,7 @@ export default {
                 this.data = new Uint8Array(response.data);
                 this.transfer();
                 // Tell the console to turn on
-                this.$parent.power();
+                setTimeout(this.$parent.power, 1000);
                 this.loadSuccess = "Loaded " + this.romName + " ROM";
             })
             .catch((error) => {

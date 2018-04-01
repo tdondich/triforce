@@ -21,7 +21,7 @@ export default {
         0xE0: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, `CPX #$${fh(this.mem.get(this.pc + 1))}`);
+                this.debugger(2, () => `CPX #$${fh(this.mem.get(this.pc + 1))}`);
                 this.cpx(this.pc + 1);
                 this.pc = this.pc + 2;
             }
@@ -30,7 +30,7 @@ export default {
         0xE4: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, `CPX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                this.debugger(2, () => `CPX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.cpx(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -40,7 +40,7 @@ export default {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, `CPX $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                this.debugger(3, () => `CPX $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cpx(targetAddress);
                 this.pc = this.pc + 3;
             }

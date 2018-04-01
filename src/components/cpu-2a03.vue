@@ -1,20 +1,17 @@
 <template>
 <div class="row">
     <div class="col-sm-12">
+        <button class="btn btn-primary" v-if="!debugEnabled" @click="debugEnabled = !debugEnabled">Enable CPU Debug View</button>
+        <button class="btn btn-primary" v-else @click="debugEnabled = !debugEnabled">Disable CPU Debug View</button>
+   </div>
+   <div v-if="debugEnabled" class="col-sm-12">
         <div class="form-group">
             <label>Force Reset Vector</label>
             <input v-model="forceResetVector" class="form-control col-sm-1">
         </div>
-        <div v-if="step">
-            <button @click="step = !step; tick">Turn off step debugging</button>
-            <button v-if="powered" @click="tick">Step Forward</button>
-        </div>
-        <div v-else>
-            <button @click="step = !step">Turn on step debugging</button>
-        </div>
-        Cycle Counter: {{this.cycles}}
     </div>
-    <div class="col-sm-6">
+ 
+    <div v-if="debugEnabled" class="col-sm-6">
     <h4>Registers</h4>
     <table class="table table-dark table-sm table-bordered">
         <tbody>
@@ -29,7 +26,7 @@
         </tbody>
     </table>
     </div>
-    <div class="col-sm-6">
+    <div v-if="debugEnabled" class="col-sm-6">
     <h4>Status Flags</h4>
     <table class="table table-dark table-sm table-bordered">
         <tbody>
@@ -47,11 +44,9 @@
     <div class="alert alert-danger" v-if="error">
         {{error}}
     </div>
-    <div class="col-sm-12 debug">
-        {{this.cycles}}<br>
+    <div v-if="debugEnabled" class="col-sm-12 debug">
         <textarea rows="5" class="form-control" v-model="debug"></textarea>
     </div>
-
 
     <!-- These are memory mapped registers -->
     <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
@@ -140,30 +135,36 @@ export default {
             
             // How the CPU should operate
             // Stepping means that the CPU should step through each operation instead of continuous run
-            step: false,
+            // This flag will show the CPU and debugged instructions
+            debugEnabled: false,
             forceResetVector: '',
             debug: '',
             // If the CPU encountered a critical error
             error: '',
-            powered: false,
+       }
+    },
+    created() {
+        // Cycle count.  When the cycle count hits 0, apply the actual operation
+        this.cycles = 0;
+        // This instruction points to what code should run once cycles count is 0
+        this.instruction = null;
 
-            // Cycle count.  When the cycle count hits 0, apply the actual operation
-            cycles: 0,
-            // This holds the actual instruction callback when cycle hits 0
-            instruction: null,
-            // Determines if we wrote to the OAMDMA Memory mapped register, if so, we need 
-            // to do a memory transfer, and this halts the cpu for a number of cycles
-            OAMDMAWritten: false,
+        // Determines if we wrote to the OAMDMA Memory mapped register, if so, we need 
+        // to do a memory transfer, and this halts the cpu for a number of cycles
+        this.OAMDMAWritten = false;
 
-            // Even/odd CPU cycle
-            odd: false,
-
-            // Interrupt flags
-            // Non-Maskable Interrupt.  Since it's edge, it'll be a simple boolean
-            nmi: false,
-            // Normal Interrupt.  If this happens, since it's line based, it'll be a counter
-            irq: 0,
-        }
+        // Even/odd CPU cycle
+        this.odd = false;
+        // Interrupt flags
+        // Non-Maskable Interrupt.  Since it's edge, it'll be a simple boolean
+        this.nmi = false;
+        // Normal Interrupt.  If this happens, since it's line based, it'll be a counter
+        this.irq = 0;
+        this.inDebug = false;
+    },
+    mounted() {
+        this.mainbus = this.$parent.$refs.mainbus;
+        this.ppu = this.$parent.$refs.ppu;
     },
     computed: {
         // Computed properties help break down the processor flag state
@@ -189,19 +190,20 @@ export default {
             return (this.p & 0b10000000) == 0b10000000;
         },
         mem() {
-            return this.$parent.$refs.mainbus;
+            return this.mainbus;
         },
         debugOutput() {
             return this.debug.join("\n");
         }
     },
+
     methods: {
         // These are sets and gets for our memory mapped registers
         set(address, value) {
             this.$refs.registers.set(address, value);
             // Check if we wrote to OAMDMA
             // That would map to our 0x0014
-            if(address == 0x0014) {
+            if(!this.inDebug && address == 0x0014) {
                 this.OAMDMAWritten = true;
             }
        },
@@ -253,10 +255,6 @@ export default {
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
         reset() {
             this.error = '';
-            // Turn on PPU
-            //this.$parent.$refs.ppu.reset();
-
-
             // Do not touch the A,X,Y registers
             // subtract 3 from sp, wrapping if necessary
             for(let count = 0; count < 3; count++) {
@@ -273,11 +271,6 @@ export default {
         // This is the initial power on state
         // See: http://wiki.nesdev.com/w/index.php/CPU_power_up_state#At_power-up
         power() {
-            this.powered = true;
-
-            // Turn on ppu
-            //this.$parent.$refs.ppu.reset();
-
             // P i set to interrupt disable
             this.p = 0x24;
             this.a = this.x = this.y = 0;
@@ -371,6 +364,17 @@ export default {
 
             // Check to see if we actually need to perform an operation
             if(!this.nmi && this.cycles == 0 && this.instruction == null) {
+
+                /*
+                // Settings Breakpoints
+                if(this.pc == 0x8123) {
+                    this.$parent.stepEnabled = true;
+                    console.log("Breakpoint reached");
+                }
+                */
+
+
+
                 let instr = this.mem.get(this.pc);
                 if(typeof this[instr] == 'undefined') {
                     this.error = "Failed to find instruction handler for " + instr.toString(16);
@@ -400,7 +404,7 @@ export default {
                         for(let i = 0; i < 256; i++) {
                             let value = this.mem.get(base + i);
                             // Copy over to address
-                            this.$parent.$refs.ppu.copyToOAM(i, value);
+                            this.ppu.copyToOAM(i, value);
                         }
                         this.OAMDMAWritten = false;
                     }
@@ -410,6 +414,7 @@ export default {
             if(this.nmi && this.cycles == 0) {
                 this.cycles = 7;
                 this.instruction = () => {
+
                     // First push return address high byte onto stack
                     this.stackPush(this.pc >> 8);
                     // Now push return address low byte onto stack
