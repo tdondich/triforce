@@ -85,34 +85,13 @@ export default {
     };
   },
   created() {
-    this.sectionsCopy = this.sections;
-    this.configuration = [];
-    // build cache of address to node targets
-    for (let count = 0; count < this.sectionsCopy.length; count++) {
-      let node = this.sectionsCopy[count];
-      for(let i = node.min; i <= node.max; i++) {
-        node.target = this.$parent.$refs[node.ref];
-        this.configuration[i] = node;
-      }
+    this.configuration = this.sections;
+    for (let count = 0; count < this.configuration.length; count++) {
+      let node = this.configuration[count];
+      this.configuration[count].target = this.$parent.$refs[node.ref];
     }
 
-    // Get's a value for a requested address, calling the target's get value, but translated from that target's
-    // base address range
-    this.get = (address) => {
-        let node = this.configuration[address];
-        if(!node) {
-          throw "Invalid address: " + address.toString(16);
-        }
-        // We found the memory module we need to reference, plus dealing with memory that repeats
-        let nodeAddress = (address - node.min) % node.size;
-        if (node.bus) {
-          // node.target.get
-          return node.target.get(nodeAddress, node.bus);
-        } else {
-          return node.target.get(nodeAddress);
-        }
-    }
- 
+
   },
 
   mounted() {
@@ -203,7 +182,25 @@ export default {
       }
       throw `Set: Address ${fh(address)} is not valid anywhere.`;
     },
- }
+    // Get's a value for a requested address, calling the target's get value, but translated from that target's
+    // base address range
+    get(address) {
+      for (let count = 0; count < this.configuration.length; count++) {
+        let node = this.configuration[count];
+        if (address <= node.max) {
+          // We found the memory module we need to reference, plus dealing with memory that repeats
+          address = (address - node.min) % node.size;
+          if (node.bus) {
+            // node.target.get
+            return node.target.get(address, node.bus);
+          } else {
+            return node.target.get(address);
+          }
+        }
+      }
+      throw `Get: Address ${fh(address)} is not valid anywhere.`;
+    }
+  }
 };
 </script>
 

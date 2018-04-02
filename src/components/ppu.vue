@@ -70,44 +70,11 @@ export default {
       this.canvas = null;
       this.canvasCtx = null;
 
-      this.oam = this.$refs.oam;
-
       // This feels so dirty, it's our frame cache, caching data for the existing frame
       this.frameCache = {};
-      this.scanlineSpriteCache = [];
+      this.scanlineTileCache = [];
 
       this.frameBuffer = null;
-
-      // Our tile cache will cache tiles but be cleared on each frame
-      this.tileCache = [];
-
-      // Index represents the tile number to fetch
-      // X is x coordinate of the tile
-      // Y is y coordinate
-      this.fetchTilePixelColor = (index, x, y) => {
-        // Remember to flip x in order to get the tile in the right order
-        x = 8 - x; 
-        let base = index << 4;
-        base = base | this.basePatternTableAddress();
-        // Get first plane
-        let first = this.ppumainbus.get(base + y);
-        // Get second plane
-        let second = this.ppumainbus.get(base + y + 8);
-
-        if (!isBitSet(first, x) && !isBitSet(second, x)) {
-          // Color value is 0
-          return 0;
-        } else if (isBitSet(first, x) && isBitSet(second, x)) {
-          // color value is 3
-          return 3;
-        } else if (isBitSet(first, x)) {
-          // Color value is 1
-          return 1;
-        } else {
-          // Color value is 2
-          return 2;
-        }
-      }
 
       this.render = () => {
         this.canvasCtx.putImageData(this.frameBuffer, 0 ,0);
@@ -295,9 +262,9 @@ export default {
     // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
     // sprite size configuration
 
-    buildScanlineSpriteCache(y) {
+    buildScanlineTileCache(y) {
         // Reset
-        this.scanlineSpriteCache = [];
+        this.scanlineTileCache = [];
         let matches = 0;
         for(let spriteNumber = 0; spriteNumber < 64; spriteNumber++) {
             // Base is the base address of the currently evaluated sprite
@@ -318,24 +285,12 @@ export default {
                 let desiredPalette = (attributeByte & 0b00000011) + 4;
                 // @ Note, handle attributes for flipping tile vert/horiz
                 let tileIndex = this.$refs.oam.get(base + 1);
-
-                // Get the visible sprite pixel info for this tile
-                // Remember to flip x in order to get the tile in the right order
-                let tileBase = tileIndex << 4;
-                let tileY = y % 8;
-                tileBase = tileBase | this.basePatternTableAddress();
-                // Get first plane
-                let first = this.ppumainbus.get(tileBase + tileY);
-                // Get second plane
-                let second = this.ppumainbus.get(tileBase + tileY + 8);
-
+ 
                 // Sprite belongs on this scanline
-                this.scanlineSpriteCache[matches] = {
+                this.scanlineTileCache[matches] = {
                     spriteX: spriteX,
                     tileIndex: tileIndex,
                     palette: desiredPalette,
-                    first: first,
-                    second: second,
                     priority: (attributeByte & 0b00100000) == 0b00100000 ? PRIORITY_BACKGROUND : PRIORITY_FOREGROUND,
                 };
                 matches = matches + 1;
@@ -347,29 +302,16 @@ export default {
         }
     },
 
-    // This works off the scanline tile cache
-    fetchVisibleSpritePixelInformation(x) {
-        let tileCacheCount = this.scanlineSpriteCache.length;
-        let colorIndex = 0;
+    fetchVisibleSpritePixelInformation(x, y) {
+        let tileCacheCount = this.scanlineTileCache.length;
         for(let spriteNumber = 0; spriteNumber < tileCacheCount; spriteNumber++) {
-            let item = this.scanlineSpriteCache[spriteNumber];
+            let item = this.scanlineTileCache[spriteNumber];
             if(x >= item.spriteX && x < (item.spriteX + 8)) {
                 // This sprite falls within our X requested coordinate
                 // Base is the base address of the currently evaluated sprite
-                if (!isBitSet(item.first, x) && !isBitSet(item.second, x)) {
-                  // Color value is 0
-                  colorIndex = 0;
-                } else if (isBitSet(item.first, x) && isBitSet(item.second, x)) {
-                  // color value is 3
-                  colorIndex = 3;
-                } else if (isBitSet(item.first, x)) {
-                  // Color value is 1
-                  colorIndex = 1;
-                } else {
-                  // Color value is 2
-                  colorIndex = 2;
-                }
-  
+                let tileY = (y + 1) % 8; 
+                let tileX = (x + 1) % 8;
+                let colorIndex = this.fetchTilePixelColor(item.tileIndex, tileX, tileY);
                 return {
                     colorIndex: colorIndex,
                     palette: item.palette
@@ -378,7 +320,34 @@ export default {
         }
         return null;
     },
-   // Fetch the color hex code for the requested palette and colorIndex combo
+    // Index represents the tile number to fetch
+    // X is x coordinate of the tile
+    // Y is y coordinate
+    fetchTilePixelColor(index, x, y) {
+        // Remember to flip x in order to get the tile in the right order
+        x = 8 - x; 
+      let base = index << 4;
+      base = base | this.basePatternTableAddress();
+      // Get first plane
+      let first = this.ppumainbus.get(base + y);
+      // Get second plane
+      let second = this.ppumainbus.get(base + y + 8);
+
+      if (!isBitSet(first, x) && !isBitSet(second, x)) {
+        // Color value is 0
+        return 0;
+      } else if (isBitSet(first, x) && isBitSet(second, x)) {
+        // color value is 3
+        return 3;
+      } else if (isBitSet(first, x)) {
+        // Color value is 1
+        return 1;
+      } else {
+        // Color value is 2
+        return 2;
+      }
+    },
+    // Fetch the color hex code for the requested palette and colorIndex combo
     // See: mixins/colors.js
     fetchColor(palette, colorIndex) {
         if(colorIndex == 0) {
@@ -504,9 +473,7 @@ export default {
             };
           }
           // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
-          if(this.scanline >=0 && this.scanline < 240) {
-            this.renderPixel(this.cycle - 1, this.scanline);
-          }
+          this.renderPixel(this.cycle - 1, this.scanline);
 
           if (this.cycle == 256) {
             // Do the sprite evaluation for the next line
@@ -520,7 +487,7 @@ export default {
           this.instruction = () => {
             this.fetchNametableByte();
             this.fetchAttributeTableByte();
-            this.buildScanlineSpriteCache(this.scanline + 1);
+            this.buildScanlineTileCache(this.scanline + 1);
           };
         }
       } else if (this.cycle <= 336) {
