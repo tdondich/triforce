@@ -180,15 +180,9 @@ export default {
     mounted() {
         this.mainbus = this.$parent.$refs.mainbus;
         this.ppu = this.$parent.$refs.ppu;
+        this.mem = this.mainbus;
     },
     computed: {
-        // Computed properties help break down the processor flag state
-        // This uses bitwise comparisons to evaluate the value of the p register and return values
-        // We're using the ES6 0b prefix for binary numbers
-        // See http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior for what bits represent which flags
-       mem() {
-            return this.mainbus;
-        },
         debugOutput() {
             return this.debug.join("\n");
         }

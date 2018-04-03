@@ -3,16 +3,7 @@
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
     <!-- Our OAM memory -->
-    <memory ref="oamdata" title="OAM" size="256" />
-
-    <databus ref="oam" name="OAM" :sections="[
-            {
-                ref: 'oamdata',
-                min: 0x00,
-                max: 0xFF,
-                size: 256 
-            }
-        ]" />
+    <memory ref="oam" title="OAM" size="256" />
 
     <!-- Secondary OAM Buffer -->
     <memory ref="secondaryoam" size="32" />
@@ -76,8 +67,6 @@ export default {
     this.frameBuffer = null;
     this.copyOfOAM = null;
     this.copyOfPatternTables = null;
-
-    this.getCount = 0;
 
     this.render = () => {
       this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
@@ -245,20 +234,13 @@ export default {
       let address = this.baseAttributeTableAddress();
       this.attributeTableByte = this.ppumainbus.get(address);
     },
-    // See: https://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
-    spriteEvaluate() {
-      // First secondary OAM
-      this.$refs.secondaryoam.fill(0xff, 0, 31);
-    },
-    // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
+   // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
     // sprite size configuration
 
     buildScanlineSpriteCache(y) {
       // Reset
       this.scanlineSpriteCache = [];
       let matches = 0;
-
-      this.getCount = this.getCount + 2;
 
       for (let spriteNumber = 0; spriteNumber < 64; spriteNumber++) {
         // Base is the base address of the currently evaluated sprite
@@ -359,8 +341,6 @@ export default {
       // Get second plane
       let second = this.copyOfOAM[base + y + 8];
 
-      this.getCount = this.getCount + 2;
-
       if (!isBitSet(first, x) && !isBitSet(second, x)) {
         // Color value is 0
         return 0;
@@ -385,8 +365,6 @@ export default {
       // There are three bytes to a palette
       let base = 0x3f01 + palette * 4;
 
-      this.getCount = this.getCount + 1;
-
       return colors[this.ppumainbus.get(base + (colorIndex - 1))];
     },
 
@@ -400,8 +378,6 @@ export default {
       if (this.frameCache.universalBackgroundColor == null) {
         this.frameCache.universalBackgroundColor =
           colors[this.ppumainbus.get(0x3f00)];
-
-        this.getCount = this.getCount + 1;
       }
 
       let backgroundColorIndex = 0;
@@ -527,11 +503,7 @@ export default {
             this.renderPixel(this.cycle, this.scanline);
           }
 
-          if (this.cycle == 256) {
-            // Do the sprite evaluation for the next line
-            this.spriteEvaluate();
-          }
-        }
+       }
       } else if (this.cycle <= 320) {
         // Tile data for sprites on next scanline are fetched
         if (this.ticks == 0) {
@@ -571,9 +543,6 @@ export default {
         this.cycle = this.cycle + 1;
       }
       if (this.cycle == 341) {
-        //console.log("Scanline " + this.scanline + " : " + this.getCount);
-        this.getCount = 0;
-
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
         this.scanline = this.scanline == 260 ? -1 : this.scanline + 1;

@@ -103,14 +103,55 @@
           bus: 'chr',
           size: 8192
       },
-      // The following repeats the nametables twice
       {
-          ref: 'nametablebus',
+          ref: 'nametable0',
           min: 0x2000,
-          max: 0x3EFF,
-          size: 4096
+          max: 0x23FF,
+          size: 1024
       },
       {
+          ref: 'nametable1',
+          min: 0x2400,
+          max: 0x27FF,
+          size: 1024
+      },
+      {
+          ref: 'nametable2',
+          min: 0x2800,
+          max: 0x2BFF,
+          size: 1024,
+      },
+      {
+          ref: 'nametable3',
+          min: 0x2C00,
+          max: 0x2FFF,
+          size: 1024
+      },
+       {
+          ref: 'nametable0',
+          min: 0x3000,
+          max: 0x33FF,
+          size: 1024
+      },
+      {
+          ref: 'nametable1',
+          min: 0x3400,
+          max: 0x37FF,
+          size: 1024
+      },
+      {
+          ref: 'nametable2',
+          min: 0x3800,
+          max: 0x3BFF,
+          size: 1024,
+      },
+      {
+          ref: 'nametable3',
+          min: 0x3C00,
+          max: 0x3EFF,
+          size: 1024
+      },
+     {
           ref: 'palette',
           min: 0x3F00,
           max: 0x3FFF,
@@ -197,7 +238,7 @@ export default {
     return {
       error: null,
       fps: 0,
-      stepEnabled: false
+      //stepEnabled: false
     };
   },
   components: {
@@ -211,6 +252,7 @@ export default {
     (this.lastFrameTimestamp = null), (this.lastFpsUpdate = null);
     this.framesThisSecond = 0;
     this.maxFPS = 60;
+    this.stepEnabled = false;
   },
   mounted() {
     this.cpu = this.$refs.cpu;

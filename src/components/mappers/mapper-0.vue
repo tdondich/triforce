@@ -60,16 +60,27 @@ export default {
     chr,
     databus
   },
-
+  created() {
+      this.$_memory = new Uint8Array(49120);
+  },
   methods: {
     get(address, bus = "prg") {
       // Pass it on to one of our data buses
+      if(bus == 'prg') {
+          return this.$_memory[address];
+      }
       return this.$refs[bus].get(address, bus);
     },
     getRange(address, length, bus = "prg") {
+        if(bus == 'prg') {
+            return this.$_memory.slice(address, (address + length));
+        }
       return this.$refs[bus].getRange(address, length);
     },
     set(address, value, bus = "prg") {
+        if(bus == 'prg') {
+            this.$_memory[address] = value;
+        }
       // Pass it on to one of our data buses
       return this.$refs[bus].set(address, value, bus);
     }
