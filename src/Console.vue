@@ -211,6 +211,40 @@ export default {
     (this.lastFrameTimestamp = null), (this.lastFpsUpdate = null);
     this.framesThisSecond = 0;
     this.maxFPS = 60;
+
+    this.tick = (timestamp) => {
+      // Throttle FPS to our desired FPS
+
+      if (timestamp < this.lastFrameTimestamp + 1000 / this.maxFPS) {
+        requestAnimationFrame(this.tick);
+        return;
+      }
+
+      // Calculate FPS
+      if (timestamp > this.lastFpsUpdate + 1000) {
+        // update every second
+        this.fps = this.framesThisSecond; // compute the new FPS
+        this.lastFpsUpdate = timestamp;
+        this.framesThisSecond = 0;
+      }
+      this.framesThisSecond++;
+      this.lastFrameTimestamp = timestamp;
+
+      // Now run through 30,000 cpu cycles
+      let frameComplete = false;
+      do {
+        // Our PPU runs 3x the cpu
+        if(this.ppu.tick()) frameComplete = true;
+        if(this.ppu.tick()) frameComplete = true;
+        if(this.ppu.tick()) frameComplete = true;
+        this.cpu.tick();
+      } while (!frameComplete && !this.stepEnabled);
+      this.ppu.render();
+      if (!this.stepEnabled) {
+        requestAnimationFrame(this.tick);
+      }
+    }
+
   },
   mounted() {
     this.cpu = this.$refs.cpu;
@@ -232,39 +266,6 @@ export default {
       this.$refs.ppu.reset();
       this.tick();
     },
-    tick(timestamp) {
-      // Throttle FPS to our desired FPS
-
-      if (timestamp < this.lastFrameTimestamp + 1000 / this.maxFPS) {
-        requestAnimationFrame(this.tick);
-        return;
-      }
-
-      // Calculate FPS
-      if (timestamp > this.lastFpsUpdate + 1000) {
-        // update every second
-        this.fps = this.framesThisSecond; // compute the new FPS
-        this.lastFpsUpdate = timestamp;
-        this.framesThisSecond = 0;
-      }
-      this.framesThisSecond++;
-      this.lastFrameTimestamp = timestamp;
-
-      // Now run through 30,000 cpu cycles
-      let count = 0;
-      do {
-        // Our PPU runs 3x the cpu
-        this.ppu.tick();
-        this.ppu.tick();
-        this.ppu.tick();
-        this.cpu.tick();
-        count++;
-      } while (count < 30000 && !this.stepEnabled);
-      this.ppu.render();
-      if (!this.stepEnabled) {
-        requestAnimationFrame(this.tick);
-      }
-    }
   }
 };
 </script>

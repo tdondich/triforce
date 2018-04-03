@@ -82,6 +82,126 @@ export default {
     this.render = () => {
       this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
     };
+
+    this.tick = () => {
+      // This handles performing an actual operation
+      if (this.ticks > 0) {
+        // consume a tick
+        --this.ticks;
+      }
+      // Now check to see if we really need to run the instruction because all the cycles have been met
+      if (this.ticks == 0 && this.instruction != null) {
+        // Run the instruction
+        this.instruction();
+        this.instruction = null;
+      }
+
+      // Fetch a local copy of data needed for performing caching of data for rendering
+      if (this.cycle == 0 && this.scanline == -1) {
+        // Create a local copy of OAM to work off of instead of constant fetches from the data bus
+        this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
+
+        // Create a local copy of of the pattern table relevant to this scanline
+        this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
+      }
+
+      // Perform a VBlank on the second tick, and also fire VBlank NMI
+      if (this.scanline == 241 && this.cycle == 0 && this.instruction == null) {
+          this.ticks == 2;
+          this.instruction = () => {
+            // Set VBLank
+            this.setVBlank(true);
+            // And fire VBlank NMI
+            this.$parent.$refs.cpu.fireNMI();
+          };
+      } else if (this.cycle == 1 && this.scanline == -1) {
+        // Clear VBlank
+        // @note this is a hack, see our get method, which isn't properly clearing vblank on register read
+        this.setVBlank(false);
+      } else if (this.cycle == 0 || this.scanline == 240) {
+        // Idle cycle...
+      } else if (this.cycle <= 256) {
+        // Note, this if does the same as renderingEnabled, but we want to not call the function because it's another jmp and
+        // we're trying to save costs in this loop
+        if(!((this.ppumask() & 0b11100111) == 0b11100111)) {
+          // Every 8 cycles, feed the following into "shift registers"
+          if (this.ticks == 0) {
+            this.ticks = 8;
+            this.instruction = this.fetchNametableAndAttributeByte;
+          }
+          // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
+          if (this.scanline >= 0 && this.scanline < 240) {
+           // renderPixel takes x and y
+            this.renderPixel(this.cycle, this.scanline);
+          }
+
+          if (this.cycle == 256) {
+            // Do the sprite evaluation for the next line
+            this.spriteEvaluate();
+          }
+        }
+      } else if (this.cycle <= 320) {
+        // Tile data for sprites on next scanline are fetched
+        if (this.ticks == 0) {
+          this.ticks = 8;
+          this.instruction = function() {
+            // Only build the cache for the next scanline if the next scanline will be visible
+            if (this.scanline >= -1 && this.scanline < 239) {
+              this.buildScanlineSpriteCache(this.scanline + 1);
+            }
+          };
+        }
+      } else if (this.cycle <= 336) {
+        if (this.ticks == 0) {
+          this.ticks = 8;
+          this.instruction = function() {
+            // Just spin
+          };
+        }
+      } else if (this.cycle <= 340) {
+        // Two bytes are fetched, but the purpose for this is unknown. Fetches are 2 ppu cycles each
+        this.ticks = 2;
+        this.instruction = function() {
+          // Do nothing. Normally nametable bytes would be fetched but it does nothing.
+        };
+      }
+
+      this.cycle = this.cycle + 1;
+      if (this.cycle == 340 && this.odd) {
+        // Skip the last cycle for odd frames
+        this.cycle = this.cycle + 1;
+      }
+      if (this.cycle == 341) {
+        //console.log("Scanline " + this.scanline + " : " + this.getCount);
+        this.getCount = 0;
+
+        // Reset to cycle 0 and increase scanline
+        this.cycle = 0;
+        this.scanline = this.scanline == 260 ? -1 : this.scanline + 1;
+        this.odd = !this.odd;
+
+        // Dirty dirty dirty
+        this.frameCache = {};
+
+        // Return true to caller to indicate our frame is complete
+        if(this.scanline == -1) {
+          return true;
+        }
+      }
+      // We still have work to do on our frame
+      return false;
+    }
+    this.fetchNametableAndAttributeByte = function() {
+      // Get the base nametable address
+      // @todo Not sure about this one
+      // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
+      let address =
+        this.baseNameTableAddress() +
+        Math.floor(this.scanline / 8) * Math.floor(this.cycle / 8);
+      this.nametableByte = this.ppumainbus.get(address);
+      address = this.baseAttributeTableAddress();
+      this.attributeTableByte = this.ppumainbus.get(address);
+    }
   },
   mounted() {
     this.canvas = document.getElementById("screen");
@@ -231,19 +351,6 @@ export default {
         this.setOAMAddr(0x2f);
         this.setPPUAddress(0x00);
       };
-    },
-    fetchNametableByte() {
-      // Get the base nametable address
-      // @todo Not sure about this one
-      // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
-      let address =
-        this.baseNameTableAddress() +
-        Math.floor(this.scanline / 8) * Math.floor(this.cycle / 8);
-      this.nametableByte = this.ppumainbus.get(address);
-    },
-    fetchAttributeTableByte() {
-      let address = this.baseAttributeTableAddress();
-      this.attributeTableByte = this.ppumainbus.get(address);
     },
     // See: https://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
     spriteEvaluate() {
@@ -468,121 +575,6 @@ export default {
       // A
       this.frameBuffer.data[base + 3] = 255;
     },
-    tick() {
-      // This handles performing an actual operation
-      if (this.ticks > 0) {
-        // consume a tick
-        this.ticks = this.ticks - 1;
-      }
-      // Now check to see if we really need to run the instruction because all the cycles have been met
-      if (this.ticks == 0 && this.instruction != null) {
-        // Run the instruction
-        this.instruction();
-        this.instruction = null;
-      }
-
-      // Fetch a local copy of data needed for performing caching of data for rendering
-      if (this.cycle == 0 && this.scanline == -1) {
-        // Create a local copy of OAM to work off of instead of constant fetches from the data bus
-        this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
-
-        // Create a local copy of of the pattern table relevant to this scanline
-        this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
-      }
-
-      if (this.scanline == 241) {
-        // Perform a VBlank on the second tick, and also fire VBlank NMI
-        if (this.cycle == 0 && this.instruction == null) {
-          this.ticks == 2;
-          this.instruction = () => {
-            // Set VBLank
-            this.setVBlank(true);
-            // And fire VBlank NMI
-            this.$parent.$refs.cpu.fireNMI();
-          };
-        }
-      } else if (this.cycle == 1 && this.scanline == -1) {
-        // Clear VBlank
-        // @note this is a hack, see our get method, which isn't properly clearing vblank on register read
-        this.setVBlank(false);
-      } else if (this.cycle == 0 || this.scanline == 240) {
-        // Idle cycle...
-      } else if (this.cycle <= 256) {
-        if (this.renderingEnabled()) {
-          // Every 8 cycles, feed the following into "shift registers"
-          if (this.ticks == 0) {
-            this.ticks = 8;
-            this.instruction = () => {
-              this.fetchNametableByte();
-              this.fetchAttributeTableByte();
-              // We won't do these documented steps as they'll simply be looked up
-              // in fetchTilePixelColor during rendering
-              //this.fetchTileBitmapLow();
-              //this.fetchTileBitmapHigh();
-            };
-          }
-          // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
-          if (this.scanline >= 0 && this.scanline < 240) {
-           // renderPixel takes x and y
-            this.renderPixel(this.cycle, this.scanline);
-          }
-
-          if (this.cycle == 256) {
-            // Do the sprite evaluation for the next line
-            this.spriteEvaluate();
-          }
-        }
-      } else if (this.cycle <= 320) {
-        // Tile data for sprites on next scanline are fetched
-        if (this.ticks == 0) {
-          this.ticks = 8;
-          this.instruction = () => {
-            // @note These are commented out, because this isn't on visible space
-            //this.fetchNametableByte();
-            //this.fetchAttributeTableByte();
-
-            // Only build the cache for the next scanline if the next scanline will be visible
-            if (this.scanline >= -1 && this.scanline < 239) {
-              this.buildScanlineSpriteCache(this.scanline + 1);
-            }
-          };
-        }
-      } else if (this.cycle <= 336) {
-        if (this.ticks == 0) {
-          this.ticks = 8;
-          this.instruction = () => {
-
-            // @note Disabled for performance reasons, not in visible space
-            //this.fetchNametableByte();
-            //this.fetchAttributeTableByte();
-          };
-        }
-      } else if (this.cycle <= 340) {
-        // Two bytes are fetched, but the purpose for this is unknown. Fetches are 2 ppu cycles each
-        this.ticks = 2;
-        this.instruction = () => {
-          // Do nothing. Normally nametable bytes would be fetched but it does nothing.
-        };
-      }
-
-      this.cycle = this.cycle + 1;
-      if (this.cycle == 340 && this.odd) {
-        // Skip the last cycle for odd frames
-        this.cycle = this.cycle + 1;
-      }
-      if (this.cycle == 341) {
-        //console.log("Scanline " + this.scanline + " : " + this.getCount);
-        this.getCount = 0;
-
-        // Reset to cycle 0 and increase scanline
-        this.cycle = 0;
-        this.scanline = this.scanline == 260 ? -1 : this.scanline + 1;
-        this.odd = !this.odd;
-
-        // Dirty dirty dirty
-        this.frameCache = {};
-      }
-    }
   }
 };
 </script>
