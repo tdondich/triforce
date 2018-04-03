@@ -1,70 +1,69 @@
 <template>
-    <div class="row memory">
-        <div class="col-sm-12">
-            <p>
-                <a class="btn btn-primary" data-toggle="collapse" :href="'#' + uid">{{name}}</a>
-            </p>
-            <div :id="uid" class="collapse">
-                <div class="row">
-                    <div class="col-sm-8">
-                        <table class="debugger table table-bordered table-dark">
-                            <tbody>
-                                <tr v-for="(index, count) in inspectMemorySlice.length / 16" :key="count">
-                                    <th>0x{{(inspectStartCalculated + (16 * count)).toString(16).padStart(4, '0')}}</th>
-                                    <td v-bind:data-address="(inspectStartCalculated + (16 * count) + parseInt(idx))" v-bind:class="{target: (inspectStartCalculated + (16 * count) + parseInt(idx)) == inspectAddressCalculated }" v-for="(value, idx) in inspectMemorySlice.slice(16 * count, (16 * count) + 16)" :key="idx">
-                                        <span v-if="inspectCharCodeEnabled">
-                                            {{String.fromCharCode(value)}}
-                                        </span>
-                                        <span v-else>
-                                            <span v-if="typeof value != 'undefined'">
-                                                {{value.toString(16).padStart(2, '0)').toUpperCase()}}
-                                            </span>
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tbody>
+  <div class="row memory">
+    <div class="col-sm-12">
+      <p>
+        <a class="btn btn-primary" data-toggle="collapse" :href="'#' + uid">{{name}}</a>
+      </p>
+      <div :id="uid" class="collapse">
+        <div class="row">
+          <div class="col-sm-8">
+            <table class="debugger table table-bordered table-dark">
+              <tbody>
+                <tr v-for="(index, count) in inspectMemorySlice.length / 16" :key="count">
+                  <th>0x{{(inspectStartCalculated + (16 * count)).toString(16).padStart(4, '0')}}</th>
+                  <td v-bind:data-address="(inspectStartCalculated + (16 * count) + parseInt(idx))" v-bind:class="{target: (inspectStartCalculated + (16 * count) + parseInt(idx)) == inspectAddressCalculated }" v-for="(value, idx) in inspectMemorySlice.slice(16 * count, (16 * count) + 16)" :key="idx">
+                    <span v-if="inspectCharCodeEnabled">
+                      {{String.fromCharCode(value)}}
+                    </span>
+                    <span v-else>
+                      <span v-if="typeof value != 'undefined'">
+                        {{value.toString(16).padStart(2, '0)').toUpperCase()}}
+                      </span>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
 
-                        </table>
-                    </div>
-                    <div class="col-sm-4">
-                        <h4>Browse Memory</h4>
-                        <div class="form-group">
-                            <label>Memory Location:</label>
-                            <input class="form-control" v-model="inspectAddress">
-                        </div>
-                        <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-if="inspectCharCodeEnabled">Switch To Hex View</button>
-                        <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To Char Code View</button>
-
-                        <hr>
-                        <h4>Memory Fill</h4>
-                        <div class="alert alert-danger" v-if="inspectFillError">
-                            {{inspectFillError}}
-                        </div>
-                        <div class="alert alert-success" v-if="inspectFillSuccess">
-                            {{inspectFillSuccess}}
-                        </div>
-                        <div class="form-group">
-                            <label>Fill Start</label>
-                            <input class="form-control" v-model="inspectFillStart">
-                        </div>
-                        <div class="form-group">
-                            <label>Fill End</label>
-                            <input v-model="inspectFillEnd" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>Fill Value</label>
-                            <input class="form-control" v-model="inspectFillValue">
-                        </div>
-                        <button @click="inspectFill">Fill</button>
-                    </div>
-                </div>
+            </table>
+          </div>
+          <div class="col-sm-4">
+            <h4>Browse Memory</h4>
+            <div class="form-group">
+              <label>Memory Location:</label>
+              <input class="form-control" v-model="inspectAddress">
             </div>
+            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-if="inspectCharCodeEnabled">Switch To Hex View</button>
+            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To Char Code View</button>
+
+            <hr>
+            <h4>Memory Fill</h4>
+            <div class="alert alert-danger" v-if="inspectFillError">
+              {{inspectFillError}}
+            </div>
+            <div class="alert alert-success" v-if="inspectFillSuccess">
+              {{inspectFillSuccess}}
+            </div>
+            <div class="form-group">
+              <label>Fill Start</label>
+              <input class="form-control" v-model="inspectFillStart">
+            </div>
+            <div class="form-group">
+              <label>Fill End</label>
+              <input v-model="inspectFillEnd" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Fill Value</label>
+              <input class="form-control" v-model="inspectFillValue">
+            </div>
+            <button @click="inspectFill">Fill</button>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>
-import { fh } from "../mixins/helpers";
 let uid = 0;
 export default {
   props: ["name", "size", "sections"],
@@ -85,13 +84,20 @@ export default {
     };
   },
   created() {
-    this.configuration = this.sections;
-    for (let count = 0; count < this.configuration.length; count++) {
-      let node = this.configuration[count];
-      this.configuration[count].target = this.$parent.$refs[node.ref];
+    this.configuration = [];
+
+    for (let count = 0; count < this.sections.length; count++) {
+      let node = this.sections[count];
+      for (let address = node.min; address <= node.max; address++) {
+        this.configuration[address] = {
+          min: node.min,
+          max: node.max,
+          size: node.size,
+          bus: node.bus,
+          target: this.$parent.$refs[node.ref]
+        };
+      }
     }
-
-
   },
 
   mounted() {
@@ -167,38 +173,46 @@ export default {
       }
     },
     set(address, value) {
-      for (let count = 0; count < this.configuration.length; count++) {
-        let node = this.configuration[count];
-        if (address <= node.max) {
-          // We found the memory module we need to reference, plus dealing with memory that repeats
-          address = (address - node.min) % node.size;
-          if (node.bus) {
-            this.$parent.$refs[node.ref].set(address, value, node.bus);
-          } else {
-            this.$parent.$refs[node.ref].set(address, value);
-          }
-          return;
-        }
+      let node = this.configuration[address];
+      if (!node) {
+        console.log("Invalid address:" + address + " in " + this.name);
       }
-      throw `Set: Address ${fh(address)} is not valid anywhere.`;
+      // We found the memory module we need to reference, plus dealing with memory that repeats
+      let nodeAddress = (address - node.min) % node.size;
+      if (node.bus) {
+        node.target.set(nodeAddress, value, node.bus);
+      } else {
+        node.target.set(nodeAddress, value);
+      }
+      return;
     },
     // Get's a value for a requested address, calling the target's get value, but translated from that target's
     // base address range
     get(address) {
-      for (let count = 0; count < this.configuration.length; count++) {
-        let node = this.configuration[count];
-        if (address <= node.max) {
-          // We found the memory module we need to reference, plus dealing with memory that repeats
-          address = (address - node.min) % node.size;
-          if (node.bus) {
-            // node.target.get
-            return node.target.get(address, node.bus);
-          } else {
-            return node.target.get(address);
-          }
-        }
+      let node = this.configuration[address];
+      if (!node) {
+        console.log("Invalid address:" + address + " in " + this.name);
       }
-      throw `Get: Address ${fh(address)} is not valid anywhere.`;
+      // We found the memory module we need to reference, plus dealing with memory that repeats
+      let nodeAddress = (address - node.min) % node.size;
+      if (node.bus) {
+        // node.target.get
+        return node.target.get(nodeAddress, node.bus);
+      } else {
+        return node.target.get(nodeAddress);
+      }
+    },
+    getRange(address, length) {
+      let node = this.configuration[address];
+      let endNode = this.configuration[address + (length - 1)];
+      if (node.target != endNode.target) {
+        throw "Databus does not support fetching range across different targets";
+      }
+      if(node.bus) {
+        return node.target.getRange(address, length, node.bus);
+      } else {
+        return node.target.getRange(address, length);
+      }
     }
   }
 };

@@ -1,14 +1,14 @@
 <template>
-    <div>
-        <canvas id="screen" class="screen" width="256" height="240"></canvas>
+  <div>
+    <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
-        <!-- Our registers -->
-        <memory ref="registers" size="8" />
+    <!-- Our registers -->
+    <memory ref="registers" title="REGISTERS" size="8" />
 
-        <!-- Our OAM memory -->
-        <memory ref="oamdata" size="256" />
+    <!-- Our OAM memory -->
+    <memory ref="oamdata" title="OAM" size="256" />
 
-        <databus ref="oam" name="OAM" :sections="[
+    <databus ref="oam" name="OAM" :sections="[
             {
                 ref: 'oamdata',
                 min: 0x00,
@@ -17,10 +17,10 @@
             }
         ]" />
 
-        <!-- Secondary OAM Buffer -->
-        <memory ref="secondaryoam" size="32" />
+    <!-- Secondary OAM Buffer -->
+    <memory ref="secondaryoam" size="32" />
 
-    </div>
+  </div>
 </template>
 
 <script>
@@ -44,51 +44,55 @@ export default {
     memory
   },
   data: function() {
-    return {
-    };
+    return {};
   },
   created() {
-      // Tick count. When tick hits 0, and instruction is not null, instruction will be called
-      this.ticks = 0;
-      // Instruction
-      this.instruction = null;
-      // There are 341 cycles in each scanline
-      this.cycle = 0;
-     // There are 262 scanlines, starting with -1
-      // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
-      this.scanline = -1;
-      // Toggle even/odd frame
-      this.odd = true;
-      // The nametable "latch"
-      this.nametableByte = null;
-      // The attribute "latch"
-      this.attributeTableByte = null;
-      // The current VRAM address
-      this.v = null;
-      // The address latch for PPUADDR
-      this.dataAddress = 0x0000;
-      this.canvas = null;
-      this.canvasCtx = null;
+    // Tick count. When tick hits 0, and instruction is not null, instruction will be called
+    this.ticks = 0;
+    // Instruction
+    this.instruction = null;
+    // There are 341 cycles in each scanline
+    this.cycle = 0;
+    // There are 262 scanlines, starting with -1
+    // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
+    this.scanline = -1;
+    // Toggle even/odd frame
+    this.odd = true;
+    // The nametable "latch"
+    this.nametableByte = null;
+    // The attribute "latch"
+    this.attributeTableByte = null;
+    // The current VRAM address
+    this.v = null;
+    // The address latch for PPUADDR
+    this.dataAddress = 0x0000;
+    this.canvas = null;
+    this.canvasCtx = null;
 
-      // This feels so dirty, it's our frame cache, caching data for the existing frame
-      this.frameCache = {};
-      this.scanlineTileCache = [];
+    // This feels so dirty, it's our frame cache, caching data for the existing frame
+    this.frameCache = {};
+    this.scanlineSpriteCache = [];
 
-      this.frameBuffer = null;
+    // Rendering optimizations aka hacks
+    this.frameBuffer = null;
+    this.copyOfOAM = null;
+    this.copyOfPatternTables = null;
 
-      this.render = () => {
-        this.canvasCtx.putImageData(this.frameBuffer, 0 ,0);
-      }
+    this.getCount = 0;
+
+    this.render = () => {
+      this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
+    };
   },
   mounted() {
-      this.canvas = document.getElementById("screen");
-      this.canvasCtx = this.canvas.getContext("2d");
-      
-      //this.frameBuffer = this.canvasCtx.getImageData(0, 0, 256, 240);
-      this.frameBuffer = new ImageData(256, 240);
+    this.canvas = document.getElementById("screen");
+    this.canvasCtx = this.canvas.getContext("2d");
 
-     // Ideally, this does not change.
-      this.ppumainbus = this.$parent.$refs.ppumainbus;
+    //this.frameBuffer = this.canvasCtx.getImageData(0, 0, 256, 240);
+    this.frameBuffer = new ImageData(256, 240);
+
+    // Ideally, this does not change.
+    this.ppumainbus = this.$parent.$refs.ppumainbus;
   },
   methods: {
     ppumainbus() {
@@ -150,19 +154,21 @@ export default {
         this.dataAddress = this.dataAddress << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.dataAddress = (this.dataAddress | value) & 0xffff;
-     } else if (address == 0x0007) {
+      } else if (address == 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-        if(this.dataAddress == 0x3f11 
-            || this.dataAddress == 0x3f31
-            || this.dataAddress == 0x3f51
-            || this.dataAddress == 0x3f71
-            || this.dataAddress == 0x3f91
-            || this.dataAddress == 0x3fb1
-            || this.dataAddress == 0x3fd1
-            || this.dataAddress == 0x3ff1) {
-            //console.log(this.dataAddress.toString(16) + " : " + value.toString(16));
-            //console.log("PC: " + this.$parent.$refs.cpu.pc.toString(16) + " : " + this.$parent.$refs.cpu.a.toString(16));
+        if (
+          this.dataAddress == 0x3f11 ||
+          this.dataAddress == 0x3f31 ||
+          this.dataAddress == 0x3f51 ||
+          this.dataAddress == 0x3f71 ||
+          this.dataAddress == 0x3f91 ||
+          this.dataAddress == 0x3fb1 ||
+          this.dataAddress == 0x3fd1 ||
+          this.dataAddress == 0x3ff1
+        ) {
+          //console.log(this.dataAddress.toString(16) + " : " + value.toString(16));
+          //console.log("PC: " + this.$parent.$refs.cpu.pc.toString(16) + " : " + this.$parent.$refs.cpu.a.toString(16));
         }
         this.ppumainbus.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
@@ -174,21 +180,21 @@ export default {
       if (address == 0x0007) {
         // Then we actually want to return from the VRAM address requested
         let result = this.ppumainbus.get(this.dataAddress);
-        if(!this.$parent.$refs.cpu.inDebug) {
-            let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
-            // @todo Increase VRAM address
-            this.dataAddress = (this.dataAddress + increase) & 0xffff;
-            //console.log("Increase in get");
+        if (!this.$parent.$refs.cpu.inDebug) {
+          let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
+          // @todo Increase VRAM address
+          this.dataAddress = (this.dataAddress + increase) & 0xffff;
+          //console.log("Increase in get");
         }
         return result;
       } else if (address == 0x0002) {
         let result = this.$refs.registers.get(address);
-        if(!this.$parent.$refs.cpu.inDebug) {
-            // This is reading the PPU status register so be sure to clear vblank.
-            // @todo This really should be done to emulate correct, but we're going to reset
-            // the vblank at the pre-rendering scanline
-            //this.setVBlank(false);
-            this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
+        if (!this.$parent.$refs.cpu.inDebug) {
+          // This is reading the PPU status register so be sure to clear vblank.
+          // @todo This really should be done to emulate correct, but we're going to reset
+          // the vblank at the pre-rendering scanline
+          //this.setVBlank(false);
+          this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
         }
         return result;
       }
@@ -262,76 +268,113 @@ export default {
     // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
     // sprite size configuration
 
-    buildScanlineTileCache(y) {
-        // Reset
-        this.scanlineTileCache = [];
-        let matches = 0;
-        for(let spriteNumber = 0; spriteNumber < 64; spriteNumber++) {
-            // Base is the base address of the currently evaluated sprite
-            let base = spriteNumber * 4;
-            let spriteY = this.$refs.oam.get(base);
-            // Assume 8x8 sprites for the time being
-            // @todo Handle 8x16 sprite configuration
-            if(spriteY == 0xEF || spriteY == 0xFF) {
-                // Skip this sprite
-                continue;
-            }
-            if(y >= spriteY && y < (spriteY + 8)) {
-                let spriteX = this.$refs.oam.get(base + 3);
+    buildScanlineSpriteCache(y) {
+      // Reset
+      this.scanlineSpriteCache = [];
+      let matches = 0;
 
-                let attributeByte = this.$refs.oam.get(base + 2);
-                // Desired pixel falls within the sprite bounds
-                // Get desired palette
-                let desiredPalette = (attributeByte & 0b00000011) + 4;
-                // @ Note, handle attributes for flipping tile vert/horiz
-                let tileIndex = this.$refs.oam.get(base + 1);
- 
-                // Sprite belongs on this scanline
-                this.scanlineTileCache[matches] = {
-                    spriteX: spriteX,
-                    tileIndex: tileIndex,
-                    palette: desiredPalette,
-                    priority: (attributeByte & 0b00100000) == 0b00100000 ? PRIORITY_BACKGROUND : PRIORITY_FOREGROUND,
-                };
-                matches = matches + 1;
-                // We only cache the first 8 matching sprites on the scanline
-                if(matches == 8) {
-                    return;
-                }
-            }
+      this.getCount = this.getCount + 2;
+
+      for (let spriteNumber = 0; spriteNumber < 64; spriteNumber++) {
+        // Base is the base address of the currently evaluated sprite
+        let base = spriteNumber * 4;
+        let spriteY = this.copyOfOAM[base];
+
+        // Assume 8x8 sprites for the time being
+        // @todo Handle 8x16 sprite configuration
+        if (spriteY == 0xef || spriteY == 0xff) {
+          // Skip this sprite
+          continue;
         }
+        if (y >= spriteY && y < spriteY + 8) {
+          let spriteX = this.copyOfOAM[base + 3];
+
+          let attributeByte = this.copyOfOAM[base + 2];
+          // Desired pixel falls within the sprite bounds
+          // Get desired palette
+          let desiredPalette = (attributeByte & 0b00000011) + 4;
+          // @ Note, handle attributes for flipping tile vert/horiz
+          let tileIndex = this.copyOfOAM[base + 1];
+
+          let tileBase = tileIndex << 4;
+          let tileY = y % 8;
+          tileBase = tileBase | this.basePatternTableAddress();
+          // Get first plane
+          let first = this.copyOfPatternTables[tileBase + tileY];
+          // Get second plane
+          let second = this.copyOfPatternTables[tileBase + tileY + 8];
+
+          // Sprite belongs on this scanline
+          this.scanlineSpriteCache[matches] = {
+            spriteX: spriteX,
+            tileIndex: tileIndex,
+            first: first,
+            second: second,
+            palette: desiredPalette,
+            priority:
+              (attributeByte & 0b00100000) == 0b00100000
+                ? PRIORITY_BACKGROUND
+                : PRIORITY_FOREGROUND
+          };
+          matches = matches + 1;
+          // We only cache the first 8 matching sprites on the scanline
+          if (matches == 8) {
+            return;
+          }
+        }
+      }
     },
 
-    fetchVisibleSpritePixelInformation(x, y) {
-        let tileCacheCount = this.scanlineTileCache.length;
-        for(let spriteNumber = 0; spriteNumber < tileCacheCount; spriteNumber++) {
-            let item = this.scanlineTileCache[spriteNumber];
-            if(x >= item.spriteX && x < (item.spriteX + 8)) {
-                // This sprite falls within our X requested coordinate
-                // Base is the base address of the currently evaluated sprite
-                let tileY = (y + 1) % 8; 
-                let tileX = (x + 1) % 8;
-                let colorIndex = this.fetchTilePixelColor(item.tileIndex, tileX, tileY);
-                return {
-                    colorIndex: colorIndex,
-                    palette: item.palette
-                }
-            }
+    fetchVisibleSpritePixelInformation(x) {
+      let tileCacheCount = this.scanlineSpriteCache.length;
+      for (
+        let spriteNumber = 0;
+        spriteNumber < tileCacheCount;
+        spriteNumber++
+      ) {
+        let item = this.scanlineSpriteCache[spriteNumber];
+        if (x >= item.spriteX && x < item.spriteX + 8) {
+          // This sprite falls within our X requested coordinate
+          // Now pull the first/second byte for the tile for this scanline
+          let tileX = 8 - (x % 8);
+
+          let colorIndex = 2;
+          if (!isBitSet(item.first, tileX) && !isBitSet(item.second, tileX)) {
+            // Color value is 0
+            colorIndex = 0;
+          } else if (
+            isBitSet(item.first, tileX) &&
+            isBitSet(item.second, tileX)
+          ) {
+            // color value is 3
+            colorIndex = 3;
+          } else if (isBitSet(item.first, tileX)) {
+            // Color value is 1
+            colorIndex = 1;
+          }
+
+          return {
+            colorIndex: colorIndex,
+            palette: item.palette
+          };
         }
-        return null;
+      }
+      return null;
     },
     // Index represents the tile number to fetch
     // X is x coordinate of the tile
     // Y is y coordinate
     fetchTilePixelColor(index, x, y) {
-        // Remember to flip x in order to get the tile in the right order
-        x = 8 - x; 
+      // Remember to flip x in order to get the tile in the right order
+      x = 8 - x;
       let base = index << 4;
       base = base | this.basePatternTableAddress();
       // Get first plane
       let first = this.ppumainbus.get(base + y);
       // Get second plane
       let second = this.ppumainbus.get(base + y + 8);
+
+      this.getCount = this.getCount + 2;
 
       if (!isBitSet(first, x) && !isBitSet(second, x)) {
         // Color value is 0
@@ -350,29 +393,38 @@ export default {
     // Fetch the color hex code for the requested palette and colorIndex combo
     // See: mixins/colors.js
     fetchColor(palette, colorIndex) {
-        if(colorIndex == 0) {
-            throw "Invalid colorIndex for fetchColor";
-        }
-        // Base will point to our palette starting address
-        // There are three bytes to a palette
-        let base = 0x3F01 + (palette * 4);
-        return colors[this.ppumainbus.get(base + (colorIndex - 1))];
+      if (colorIndex == 0) {
+        throw "Invalid colorIndex for fetchColor";
+      }
+      // Base will point to our palette starting address
+      // There are three bytes to a palette
+      let base = 0x3f01 + palette * 4;
+
+      this.getCount = this.getCount + 1;
+
+      return colors[this.ppumainbus.get(base + (colorIndex - 1))];
     },
+
+    // Renders a requested pixel, utilizing the scanline tile cache for sprites
     renderPixel(x, y) {
       if (y < 0 || y > 239) {
         // Not a visible coordinate
         return;
       }
       // Okay, visible coordinate, get the universal background color
-      if(this.frameCache.universalBackgroundColor == null) {
-        this.frameCache.universalBackgroundColor = colors[this.ppumainbus.get(0x3F00)];
+      if (this.frameCache.universalBackgroundColor == null) {
+        this.frameCache.universalBackgroundColor =
+          colors[this.ppumainbus.get(0x3f00)];
+
+        this.getCount = this.getCount + 1;
       }
 
       let backgroundColorIndex = 0;
 
       // Sprite fetching
-      //let activeSpritePixelInformation = null;
-      let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(x, y);
+      let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(
+        x
+      );
 
       // Background fetching
       // Okay, fetch the tile pixel color for background
@@ -398,17 +450,25 @@ export default {
       let colorIndex = null;
       let color = null;
 
-      if(backgroundColorIndex == 0 && (activeSpritePixelInformation == null || activeSpritePixelInformation.colorIndex == 0)) {
-          color = this.frameCache.universalBackgroundColor;
+      if (
+        backgroundColorIndex == 0 &&
+        (activeSpritePixelInformation == null ||
+          activeSpritePixelInformation.colorIndex == 0)
+      ) {
+        color = this.frameCache.universalBackgroundColor;
       } else {
-        if(activeSpritePixelInformation && activeSpritePixelInformation.colorIndex) {
-            colorIndex = activeSpritePixelInformation.colorIndex;
-            palette = activeSpritePixelInformation.palette;
+        if (
+          activeSpritePixelInformation &&
+          activeSpritePixelInformation.colorIndex
+        ) {
+          colorIndex = activeSpritePixelInformation.colorIndex;
+          palette = activeSpritePixelInformation.palette;
         } else {
-            //colorIndex = backgroundColorIndex;
-            // @todo Find proper palette number for background attribute byte and x/y offset
-            //palette = 0;
+          //colorIndex = backgroundColorIndex;
+          // @todo Find proper palette number for background attribute byte and x/y offset
+          //palette = 0;
         }
+        // @note How about here?
         color = this.fetchColor(palette, colorIndex);
       }
 
@@ -422,12 +482,6 @@ export default {
       this.frameBuffer.data[base + 2] = color[2];
       // A
       this.frameBuffer.data[base + 3] = 255;
-
-      // Let's just write the backgroundColorIndex to the canvas
-      /*
-      this.canvasCtx.fillStyle = colorHex;
-      this.canvasCtx.fillRect(x, y, 1, 1);
-      */
     },
     tick() {
       // This handles performing an actual operation
@@ -441,6 +495,16 @@ export default {
         this.instruction();
         this.instruction = null;
       }
+
+      // Fetch a local copy of data needed for performing caching of data for rendering
+      if (this.cycle == 0 && this.scanline == -1) {
+        // Create a local copy of OAM to work off of instead of constant fetches from the data bus
+        this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
+
+        // Create a local copy of of the pattern table relevant to this scanline
+        this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
+      }
+
       if (this.scanline == 241) {
         // Perform a VBlank on the second tick, and also fire VBlank NMI
         if (this.cycle == 0 && this.instruction == null) {
@@ -473,7 +537,10 @@ export default {
             };
           }
           // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
-          this.renderPixel(this.cycle - 1, this.scanline);
+          if (this.scanline >= 0 && this.scanline < 240) {
+           // renderPixel takes x and y
+            this.renderPixel(this.cycle, this.scanline);
+          }
 
           if (this.cycle == 256) {
             // Do the sprite evaluation for the next line
@@ -487,7 +554,10 @@ export default {
           this.instruction = () => {
             this.fetchNametableByte();
             this.fetchAttributeTableByte();
-            this.buildScanlineTileCache(this.scanline + 1);
+            // Only build the cache for the next scanline if the next scanline will be visible
+            if (this.scanline >= -1 && this.scanline < 239) {
+              this.buildScanlineSpriteCache(this.scanline + 1);
+            }
           };
         }
       } else if (this.cycle <= 336) {
@@ -512,6 +582,9 @@ export default {
         this.cycle = this.cycle + 1;
       }
       if (this.cycle == 341) {
+        //console.log("Scanline " + this.scanline + " : " + this.getCount);
+        this.getCount = 0;
+
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
         this.scanline = this.scanline == 260 ? -1 : this.scanline + 1;

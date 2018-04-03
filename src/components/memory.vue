@@ -31,6 +31,13 @@ export default {
             }
            return this.$_memory[address];
         }
+        this.getRange = (address, length) => {
+            if((address + (length - 1)) >= this.realSize) {
+                throw "Address range exceeds memory size";
+            }
+            return this.$_memory.slice(address, (address + length));
+        }
+
 
     },
    methods: {

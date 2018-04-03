@@ -1,14 +1,14 @@
 <template>
-    <div>
-        <h2>CHR Data</h2>
-        <canvas id="chr-left" width="128" height="128" />
-        <canvas id="chr-right" width="128" height="128" />
-        <br>
-        <p>
-        <button class="btn btn-primary" @click="redraw('left'); redraw('right');">Redraw</button>
-        </p>
+  <div>
+    <h2>CHR Data</h2>
+    <canvas id="chr-left" width="128" height="128" />
+    <canvas id="chr-right" width="128" height="128" />
+    <br>
+    <p>
+      <button class="btn btn-primary" @click="redraw('left'); redraw('right');">Redraw</button>
+    </p>
 
-    </div>
+  </div>
 
 </template>
 
@@ -24,8 +24,7 @@ function isBitSet(value, index) {
 export default {
   props: ["size", "title"],
   data: function() {
-    return {
-    };
+    return {};
   },
   created() {
     this.$_memory = new Uint8Array(this.size);
@@ -52,7 +51,14 @@ export default {
       }
       return this.$_memory[address];
     },
-   redraw(pane = "left") {
+    getRange(address, length) {
+      if (address + (length - 1) >= this.realSize) {
+        throw "Address range exceeds memory size";
+      }
+      return this.$_memory.slice(address, address + length);
+    },
+
+    redraw(pane = "left") {
       let c = document.getElementById("chr-" + pane);
       let ctx = c.getContext("2d");
       let r = 0;

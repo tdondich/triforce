@@ -5,7 +5,6 @@
         <memory size="16384" ref="prgrom1" title="PRG-ROM-1" />
         <memory size="16384" ref="prgrom2" title="PRG-ROM-2" />
 
-
         <memory size="8160" ref="expansion" title="EXPANSION" />
 
         <!-- Our CHR doesn't need a data bus because it's just one entity and not bank swapped -->
@@ -39,7 +38,7 @@
             }
         ]" />
 
-    <databus ref="chr" name="CHR" size="8192" :sections="[
+        <databus ref="chr" name="CHR" size="8192" :sections="[
     {
         ref: 'chrmem',
         min: 0x0000,
@@ -51,28 +50,30 @@
 </template>
 
 <script>
-import memory from '../memory.vue'
-import databus from '../databus.vue'
-import chr from '../chr.vue'
+import memory from "../memory.vue";
+import databus from "../databus.vue";
+import chr from "../chr.vue";
 
 export default {
-    components: {
-        memory,
-        chr,
-        databus
-    },
+  components: {
+    memory,
+    chr,
+    databus
+  },
 
-    methods: {
-        get(address, bus = 'prg') {
-            // Pass it on to one of our data buses
-            return this.$refs[bus].get(address, bus);
-        },
-        set(address, value, bus = 'prg') {
-            // Pass it on to one of our data buses
-            return this.$refs[bus].set(address, value, bus);
-        }
+  methods: {
+    get(address, bus = "prg") {
+      // Pass it on to one of our data buses
+      return this.$refs[bus].get(address, bus);
+    },
+    getRange(address, length, bus = "prg") {
+      return this.$refs[bus].getRange(address, length);
+    },
+    set(address, value, bus = "prg") {
+      // Pass it on to one of our data buses
+      return this.$refs[bus].set(address, value, bus);
     }
-  
-}
+  }
+};
 </script>
 
