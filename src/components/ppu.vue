@@ -2,9 +2,6 @@
   <div>
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
-    <!-- Our registers -->
-    <memory ref="registers" title="REGISTERS" size="8" />
-
     <!-- Our OAM memory -->
     <memory ref="oamdata" title="OAM" size="256" />
 
@@ -47,6 +44,8 @@ export default {
     return {};
   },
   created() {
+    this.registers = new Uint8Array(8);
+
     // Tick count. When tick hits 0, and instruction is not null, instruction will be called
     this.ticks = 0;
     // Instruction
@@ -104,28 +103,28 @@ export default {
       return !((this.ppumask() & 0b11100111) == 0b11100111);
     },
     ppuctrl() {
-      return this.$refs.registers.get(0x0000);
+      return this.registers[0x0000];
     },
     ppumask() {
-      return this.$refs.registers.get(0x0001);
+      return this.registers[0x0001];
     },
     ppustatus() {
-      return this.$refs.registers.get(0x0002);
+      return this.registers[0x0002];
     },
     oamaddr() {
-      return this.$refs.registers.get(0x0003);
+      return this.registers[0x0003];
     },
     oamdata() {
-      return this.$refs.registers.get(0x0004);
+      return this.registers[0x0004];
     },
     ppuscroll() {
-      return this.$refs.registers.get(0x0005);
+      return this.registers[0x0005];
     },
     ppuaddr() {
-      return this.$refs.registers.get(0x0006);
+      return this.registers[0x0006];
     },
     ppudata() {
-      return this.$refs.registers.get(0x0007);
+      return this.registers[0x0007];
     },
     baseNameTableAddress() {
       // Base will be 0 - 3
@@ -145,10 +144,10 @@ export default {
     // The following fill/set/get is for our registers, accessed by memory
     // Fill a memory range with a specific value
     fill(value = 0x00, start = 0, end = this.memory.length) {
-      this.$refs.registers.fill(value, start, end);
+      this.registers.fill(value, start, end);
     },
     set(address, value) {
-      this.$refs.registers.set(address, value);
+      this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
       if (address == 0x0006) {
         this.dataAddress = this.dataAddress << 8;
@@ -157,23 +156,9 @@ export default {
       } else if (address == 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-        if (
-          this.dataAddress == 0x3f11 ||
-          this.dataAddress == 0x3f31 ||
-          this.dataAddress == 0x3f51 ||
-          this.dataAddress == 0x3f71 ||
-          this.dataAddress == 0x3f91 ||
-          this.dataAddress == 0x3fb1 ||
-          this.dataAddress == 0x3fd1 ||
-          this.dataAddress == 0x3ff1
-        ) {
-          //console.log(this.dataAddress.toString(16) + " : " + value.toString(16));
-          //console.log("PC: " + this.$parent.$refs.cpu.pc.toString(16) + " : " + this.$parent.$refs.cpu.a.toString(16));
-        }
-        this.ppumainbus.set(this.dataAddress, value);
+       this.ppumainbus.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
         this.dataAddress = (this.dataAddress + increase) & 0xffff;
-        //console.log("Increase in set");
       }
     },
     get(address) {
@@ -188,7 +173,7 @@ export default {
         }
         return result;
       } else if (address == 0x0002) {
-        let result = this.$refs.registers.get(address);
+        let result = this.registers[address];
         if (!this.$parent.$refs.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
           // @todo This really should be done to emulate correct, but we're going to reset
@@ -198,31 +183,31 @@ export default {
         }
         return result;
       }
-      return this.$refs.registers.get(address);
+      return this.registers[address];
     },
     setPPUCtrl(val) {
-      this.$refs.registers.set(0x0000, val & 0xff);
+      this.registers[0x0000] = val & 0xff;
     },
     setPPUMask(val) {
-      this.$refs.registers.set(0x0001, val & 0xff);
+      this.registers[0x0001] = val & 0xff;
     },
     setPPUStatus(val) {
-      this.$refs.registers.set(0x0002, val & 0xff);
+      this.registers[0x0002] = val & 0xff;
     },
     setOAMAddr(val) {
-      this.$refs.registers.set(0x0003, val & 0xff);
+      this.registers[0x0003] = val & 0xff;
     },
     setOAMData(val) {
-      this.$refs.registers.set(0x0004, val & 0xff);
+      this.registers[0x0004] = val & 0xff;
     },
     setPPUScroll(val) {
-      this.$refs.registers.set(0x0005, val & 0xff);
+      this.registers[0x0005] = val & 0xff;
     },
     setPPUAddress(val) {
-      this.$refs.registers.set(0x0006, val & 0xff);
+      this.registers[0x0006] = val & 0xff;
     },
     setPPUData(val) {
-      this.$refs.registers.set(0x0007, val & 0xff);
+      this.registers[0x0007] = val & 0xff;
     },
     setVBlank(val) {
       if (val) {

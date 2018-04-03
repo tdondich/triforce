@@ -4,19 +4,18 @@
     <h1>NES Emulator in Vue.js</h1>
 
     <!-- Bring in our rom loader -->
-    <rom-loader  ref="loader" />
+    <rom-loader ref="loader" />
     <hr>
 
     <div class="btn-group">
-    <button class="btn btn-primary" v-if="!stepEnabled" @click="stepEnabled = !stepEnabled">Enable Step Debugging</button>
-    <div v-else>
-      <button class="btn btn-primary" @click="tick">Step Forward</button>
-      <button class="btn btn-primary" click="disableStep()">Stop Step Debugging</button>
-    </div>
+      <button class="btn btn-primary" v-if="!stepEnabled" @click="stepEnabled = !stepEnabled">Enable Step Debugging</button>
+      <div v-else>
+        <button class="btn btn-primary" @click="tick">Step Forward</button>
+        <button class="btn btn-primary" click="disableStep()">Stop Step Debugging</button>
+      </div>
     </div>
     <br>
     <br>
-    
 
     <cpu-2a03 ref="cpu" />
 
@@ -24,7 +23,6 @@
       <strong>Frames Per Second:</strong> {{this.fps}}
     </p>
     <ppu ref="ppu" />
-
 
     <!-- 2KB internal RAM -->
     <memory ref="internal" size="2048" />
@@ -67,9 +65,6 @@
       }
    ]" />
 
-
-
-
     <databus name="Nametable Databus" ref="nametablebus" size="4096" :sections="[
       {
           ref: 'nametable0',
@@ -97,8 +92,10 @@
       }
     ]" />
 
-  <databus name="PPU Sub Databus" size="16384" ref="ppusubbus" :sections="[
-      // This represents our pattern tables
+    <!-- Now, our main data bus for the ppu, providing for the full 64K address space -->
+    <!-- Note, we are duplicating the items 4 times due to the fact that nested databus's stink in performance -->
+    <databus name="PPU Main Databus" size="65536" ref="ppumainbus" :sections="[
+     // This represents our pattern tables
       {
           ref: 'loader',
           min: 0x0000,
@@ -118,51 +115,100 @@
           min: 0x3F00,
           max: 0x3FFF,
           size: 32
-      }
-  ]" />
-
-  <!-- Now, our main data bus for the ppu, providing for the full 64K address space -->
-  <databus name="PPU Main Databus" size="65536" ref="ppumainbus" :sections="[
+      },
+      // This represents our pattern tables
       {
-          ref: 'ppusubbus',
-          min: 0x0000,
+          ref: 'loader',
+          min: 0x4000,
+          max: 0x5FFF,
+          bus: 'chr',
+          size: 8192
+      },
+      // The following repeats the nametables twice
+      {
+          ref: 'nametablebus',
+          min: 0x6000,
+          max: 0x7EFF,
+          size: 4096
+      },
+      {
+          ref: 'palette',
+          min: 0x7F00,
+          max: 0x7FFF,
+          size: 32
+      },
+      // This represents our pattern tables
+      {
+          ref: 'loader',
+          min: 0x8000,
+          max: 0x9FFF,
+          bus: 'chr',
+          size: 8192
+      },
+      // The following repeats the nametables twice
+      {
+          ref: 'nametablebus',
+          min: 0xA000,
+          max: 0xBEFF,
+          size: 4096
+      },
+      {
+          ref: 'palette',
+          min: 0xBF00,
+          max: 0xBFFF,
+          size: 32
+      },
+      // This represents our pattern tables
+      {
+          ref: 'loader',
+          min: 0xC000,
+          max: 0xDFFF,
+          bus: 'chr',
+          size: 8192
+      },
+      // The following repeats the nametables twice
+      {
+          ref: 'nametablebus',
+          min: 0xE000,
+          max: 0xFEFF,
+          size: 4096
+      },
+      {
+          ref: 'palette',
+          min: 0xFF00,
           max: 0xFFFF,
-          size: 16384
+          size: 32
       }
   ]" />
 
-  
   </div>
 </template>
 
 <script>
-
-
-import ppu from './components/ppu.vue';
-import cpu2a03 from './components/cpu-2a03.vue';
-import memory from './components/memory.vue';
-import romLoader from './components/rom-loader.vue';
-import databus from './components/databus.vue';
+import ppu from "./components/ppu.vue";
+import cpu2a03 from "./components/cpu-2a03.vue";
+import memory from "./components/memory.vue";
+import romLoader from "./components/rom-loader.vue";
+import databus from "./components/databus.vue";
 
 export default {
-  name: 'app',
+  name: "app",
   data: function() {
     return {
       error: null,
       fps: 0,
       stepEnabled: false
-    }
+    };
   },
   components: {
-    'cpu-2a03': cpu2a03,
-    'memory': memory,
-    'rom-loader': romLoader,
-    'ppu': ppu,
-    'databus': databus
+    "cpu-2a03": cpu2a03,
+    memory: memory,
+    "rom-loader": romLoader,
+    ppu: ppu,
+    databus: databus
   },
   created() {
-    this.lastFrameTimestamp = null,
-    this.lastFpsUpdate = null;
+    (this.lastFrameTimestamp = null), (this.lastFpsUpdate = null);
     this.framesThisSecond = 0;
     this.maxFPS = 60;
   },
@@ -180,26 +226,26 @@ export default {
       this.$refs.cpu.power();
       this.$refs.ppu.reset();
       this.tick();
-   },
+    },
     reset() {
       this.$refs.cpu.reset();
       this.$refs.ppu.reset();
       this.tick();
-   },
+    },
     tick(timestamp) {
       // Throttle FPS to our desired FPS
 
-      if (timestamp < this.lastFrameTimestamp + (1000 / this.maxFPS)) {
+      if (timestamp < this.lastFrameTimestamp + 1000 / this.maxFPS) {
         requestAnimationFrame(this.tick);
         return;
       }
 
-
       // Calculate FPS
-      if (timestamp > this.lastFpsUpdate + 1000) { // update every second
-          this.fps = this.framesThisSecond; // compute the new FPS
-          this.lastFpsUpdate = timestamp;
-          this.framesThisSecond = 0;
+      if (timestamp > this.lastFpsUpdate + 1000) {
+        // update every second
+        this.fps = this.framesThisSecond; // compute the new FPS
+        this.lastFpsUpdate = timestamp;
+        this.framesThisSecond = 0;
       }
       this.framesThisSecond++;
       this.lastFrameTimestamp = timestamp;
@@ -213,21 +259,20 @@ export default {
         this.ppu.tick();
         this.cpu.tick();
         count++;
-      } while(count < 30000 && !this.stepEnabled);
+      } while (count < 30000 && !this.stepEnabled);
       this.ppu.render();
-      if(!this.stepEnabled) {
+      if (!this.stepEnabled) {
         requestAnimationFrame(this.tick);
       }
     }
   }
-}
+};
 </script>
 
 <style lang="scss">
-@import '~bootstrap/scss/bootstrap.scss';
+@import "~bootstrap/scss/bootstrap.scss";
 
 body {
   padding-bottom: 32px;
 }
-
 </style>
