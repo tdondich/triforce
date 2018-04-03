@@ -370,9 +370,9 @@ export default {
       let base = index << 4;
       base = base | this.basePatternTableAddress();
       // Get first plane
-      let first = this.ppumainbus.get(base + y);
+      let first = this.copyOfOAM[base + y];
       // Get second plane
-      let second = this.ppumainbus.get(base + y + 8);
+      let second = this.copyOfOAM[base + y + 8];
 
       this.getCount = this.getCount + 2;
 
@@ -552,8 +552,10 @@ export default {
         if (this.ticks == 0) {
           this.ticks = 8;
           this.instruction = () => {
-            this.fetchNametableByte();
-            this.fetchAttributeTableByte();
+            // @note These are commented out, because this isn't on visible space
+            //this.fetchNametableByte();
+            //this.fetchAttributeTableByte();
+
             // Only build the cache for the next scanline if the next scanline will be visible
             if (this.scanline >= -1 && this.scanline < 239) {
               this.buildScanlineSpriteCache(this.scanline + 1);
@@ -564,8 +566,10 @@ export default {
         if (this.ticks == 0) {
           this.ticks = 8;
           this.instruction = () => {
-            this.fetchNametableByte();
-            this.fetchAttributeTableByte();
+
+            // @note Disabled for performance reasons, not in visible space
+            //this.fetchNametableByte();
+            //this.fetchAttributeTableByte();
           };
         }
       } else if (this.cycle <= 340) {
