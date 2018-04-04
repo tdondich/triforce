@@ -175,7 +175,7 @@ export default {
     set(address, value) {
       let node = this.configuration[address];
       if (!node) {
-        console.log("Invalid address:" + address + " in " + this.name);
+        throw ("Invalid address:" + address + " in " + this.name);
       }
       // We found the memory module we need to reference, plus dealing with memory that repeats
       let nodeAddress = (address - node.min) % node.size;
@@ -191,10 +191,10 @@ export default {
     get(address) {
       let node = this.configuration[address];
       if (!node) {
-        console.log("Invalid address:" + address + " in " + this.name);
+        throw ("Invalid address:" + address + " in " + this.name);
       }
       if(!node.target) {
-        console.log("Target undefined for address: " + address);
+        throw ("Target undefined for address: " + address);
       }
       // We found the memory module we need to reference, plus dealing with memory that repeats
       let nodeAddress = (address - node.min) % node.size;
