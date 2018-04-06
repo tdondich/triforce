@@ -3,7 +3,15 @@
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
     <!-- Our OAM memory -->
-    <memory ref="oam" title="OAM" size="256" />
+    <memory ref="oamdata" title="OAM" size="256" />
+        <databus ref="oam" name="OAM" :sections="[
+              {
+                  ref: 'oamdata',
+                  min: 0x00,
+                  max: 0xFF,
+                  size: 256 
+              }
+          ]" />
 
     <!-- Secondary OAM Buffer -->
     <memory ref="secondaryoam" size="32" />
@@ -63,26 +71,6 @@ export default {
     this.frameCache = {};
     this.scanlineSpriteCache = [];
 
-    this.counters = {
-      tickCountdown: 0,
-      instructionRun: 0,
-      copyOAMandPattern: 0,
-      fireVBlankAndNMI: 0,
-      clearVBlank: 0,
-      idleCycleAndScanline: 0,
-      checkFor256: 0,
-      checkForCycle340AndOdd: 0,
-      checkForCycle341: 0,
-      checkForCycleLessThan320: 0,
-      checkForCyclesLessThan320AndTicks0: 0,
-      checkForCyclesLessThan336AndTicks0: 0,
-      checkForCyclesLessThan336: 0,
-      checkForCyclesLessThan340: 0,
-      checkForFrameComplete: 0,
-      renderAndTick0: 0,
-      renderPixel: 0
-    };
-
     // Rendering optimizations aka hacks
     this.frameBuffer = null;
     this.copyOfOAM = null;
@@ -93,127 +81,57 @@ export default {
     };
 
     this.tick = () => {
-     // Now check to see if we really need to run the instruction because all the cycles have been met
-      if (--this.ticks <= 0 && this.instruction != null) {
-        // Run the instruction
-        this.instruction();
-        this.instruction = null;
+      // Setting up local vars to avoid property lookup costs
+      let scanline = this.scanline;
+      let cycle = this.cycle;
 
-        this.counters.instructionRun++;
-      }
-
-      // Fetch a local copy of data needed for performing caching of data for rendering
-      if (this.cycle == 0 && this.scanline == -1) {
-        // Create a local copy of OAM to work off of instead of constant fetches from the data bus
+      if (scanline == -1 && cycle == 0) {
+        // Fetch a local copy of data needed for performing caching of data for rendering
         this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
 
         // Create a local copy of of the pattern table relevant to this scanline
         this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
-
-        this.counters.copyOAMandPattern++;
       }
-
-      // Perform a VBlank on the second tick, and also fire VBlank NMI
-      if (this.scanline == 241 && this.cycle == 0 && this.instruction == null) {
-          this.ticks == 2;
-          this.instruction = () => {
-            // Set VBLank
-            this.setVBlank(true);
-            // And fire VBlank NMI
-            this.$parent.$refs.cpu.fireNMI();
-          };
-
-          this.counters.fireVBlankAndNMI++;
-      } else if (this.cycle == 1 && this.scanline == -1) {
-        // Clear VBlank
-        // @note this is a hack, see our get method, which isn't properly clearing vblank on register read
-        this.setVBlank(false);
-
-        this.counters.clearVBlank++;
-      } else if (this.cycle == 0 || this.scanline == 240) {
-        // Idle cycle...
-
-        this.counters.idleCycleAndScanline++;
-      } else if (this.cycle <= 256) {
-        this.counters.checkFor256++;
-
-
-        // Note, this if does the same as renderingEnabled, but we want to not call the function because it's another jmp and
-        // we're trying to save costs in this loop
-        if(!((this.ppumask() & 0b11100111) == 0b11100111)) {
-          this.counters.checkForRenderingEnabled++;
-          // Every 8 cycles, feed the following into "shift registers"
-          if (this.ticks == 0) {
-            this.counters.renderAndTick0++;
-            this.ticks = 8;
-            this.instruction = this.fetchNametableAndAttributeByte;
+      if ((scanline == -1 || scanline == 261) && cycle % 8 == 1)  {
+        // fetch the nametable and attribute byte for background
+        this.fetchNametableAndAttributeByte();
+      } else if (scanline <= 239) {
+        // Visible scanlines
+        if (cycle == 0) {
+          // Build the scanline sprite cache for this scanline by reading OAM data and compiling
+          // cache
+          this.buildScanlineSpriteCache(scanline);
+        } else if (cycle <= 257) {
+          if (cycle % 8 == 1) {
+            // fetch the nametable and attribute byte for background
+            this.fetchNametableAndAttributeByte();
           }
-          // Go ahead and render our pixel, marking our x (cycle) and y(scanline)
-          if (this.scanline >= 0 && this.scanline < 240) {
-            this.counters.renderPixel++;
-           // renderPixel takes x and y
-            this.renderPixel(this.cycle, this.scanline);
-          }
-
-       }
-      } else if (this.cycle <= 320) {
-        this.counters.checkForCycleLessThan320++;
-        // Tile data for sprites on next scanline are fetched
-        if (this.ticks == 0) {
-          this.counters.checkForCyclesLessThan320AndTicks0++;
-          this.ticks = 8;
-          this.instruction = function() {
-            // Only build the cache for the next scanline if the next scanline will be visible
-            if (this.scanline >= -1 && this.scanline < 239) {
-              this.buildScanlineSpriteCache(this.scanline + 1);
-            }
-          };
         }
-      } else if (this.cycle <= 336) {
-        this.counters.checkForCyclesLessThan336++;
-        if (this.ticks == 0) {
-          this.counters.checkForCyclesLessThan336AndTicks0++;
-          this.ticks = 8;
-          this.instruction = function() {
-            // Just spin
-          };
+        if (this.renderingEnabled()) {
+          this.renderPixel(cycle, scanline);
         }
-      } else if (this.cycle <= 340) {
-        this.counters.checkForCyclesLessThan340++;
-        // Two bytes are fetched, but the purpose for this is unknown. Fetches are 2 ppu cycles each
-        this.ticks = 2;
-        this.instruction = function() {
-          // Do nothing. Normally nametable bytes would be fetched but it does nothing.
-        };
+      } else if (scanline == 241 && cycle == 1) {
+        // Fire off Vblank
+        this.setVBlank(true);
+        // And fire VBlank NMI
+        this.$parent.$refs.cpu.fireNMI();
       }
 
-      this.cycle = this.cycle + 1;
-      if (this.cycle == 340 && this.odd) {
-        this.counters.checkForCycle340AndOdd++;
-        // Skip the last cycle for odd frames
-        this.cycle = this.cycle + 1;
-      }
-      if (this.cycle == 341) {
-        this.counters.checkForCycle341++;
-        this.getCount = 0;
-
+      if (++this.cycle == 341) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
-        this.scanline = this.scanline == 260 ? -1 : this.scanline + 1;
+        this.scanline = scanline == 260 ? -1 : scanline + 1;
         this.odd = !this.odd;
-
-        // Dirty dirty dirty
-        this.frameCache = {};
-
         // Return true to caller to indicate our frame is complete
-        if(this.scanline == -1) {
-          this.counters.checkForFrameComplete++;
-          return true;
+        if (this.scanline == -1) {
+          // Dirty dirty dirty
+          this.frameCache = {};
+          this.$parent.frameComplete = true;
         }
       }
       // We still have work to do on our frame
       return false;
-    }
+    };
     this.fetchNametableAndAttributeByte = function() {
       // Get the base nametable address
       // @todo Not sure about this one
@@ -224,7 +142,7 @@ export default {
       this.nametableByte = this.ppumainbus.get(address);
       address = this.baseAttributeTableAddress();
       this.attributeTableByte = this.ppumainbus.get(address);
-    }
+    };
   },
   mounted() {
     this.canvas = document.getElementById("screen");
@@ -299,7 +217,7 @@ export default {
       } else if (address == 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-       this.ppumainbus.set(this.dataAddress, value);
+        this.ppumainbus.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
         this.dataAddress = (this.dataAddress + increase) & 0xffff;
       }
@@ -375,7 +293,7 @@ export default {
         this.setPPUAddress(0x00);
       };
     },
-   // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
+    // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
     // sprite size configuration
 
     buildScanlineSpriteCache(y) {
@@ -444,7 +362,7 @@ export default {
         if (x >= item.spriteX && x < item.spriteX + 8) {
           // This sprite falls within our X requested coordinate
           // Now pull the first/second byte for the tile for this scanline
-          let tileX = 8 - (x % 8);
+          let tileX = 8 - x % 8;
 
           let colorIndex = 2;
           if (!isBitSet(item.first, tileX) && !isBitSet(item.second, tileX)) {
@@ -584,7 +502,7 @@ export default {
       this.frameBuffer.data[base + 2] = color[2];
       // A
       this.frameBuffer.data[base + 3] = 255;
-    },
+    }
   }
 };
 </script>

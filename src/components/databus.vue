@@ -98,6 +98,19 @@ export default {
         };
       }
     }
+
+    this.get = function(address) {
+      let node = this.configuration[address];
+     // We found the memory module we need to reference, plus dealing with memory that repeats
+      let nodeAddress = (address - node.min) % node.size;
+      if (node.bus) {
+        // node.target.get
+        return node.target.get(nodeAddress, node.bus);
+      } else {
+        return node.target.get(nodeAddress);
+      }
+    };
+ 
   },
 
   mounted() {
@@ -188,24 +201,7 @@ export default {
     },
     // Get's a value for a requested address, calling the target's get value, but translated from that target's
     // base address range
-    get(address) {
-      let node = this.configuration[address];
-      if (!node) {
-        throw ("Invalid address:" + address + " in " + this.name);
-      }
-      if(!node.target) {
-        throw ("Target undefined for address: " + address);
-      }
-      // We found the memory module we need to reference, plus dealing with memory that repeats
-      let nodeAddress = (address - node.min) % node.size;
-      if (node.bus) {
-        // node.target.get
-        return node.target.get(nodeAddress, node.bus);
-      } else {
-        return node.target.get(nodeAddress);
-      }
-    },
-    getRange(address, length) {
+   getRange(address, length) {
       let node = this.configuration[address];
       let endNode = this.configuration[address + (length - 1)];
       if (node.target != endNode.target) {

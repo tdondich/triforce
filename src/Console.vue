@@ -19,9 +19,6 @@
 
     <cpu-2a03 ref="cpu" />
 
-    <p>
-      <strong>Frames Per Second:</strong> {{this.fps}}
-    </p>
     <ppu ref="ppu" />
 
     <!-- 2KB internal RAM -->
@@ -223,6 +220,7 @@
   ]" />
 
   </div>
+
 </template>
 
 <script>
@@ -237,8 +235,7 @@ export default {
   data: function() {
     return {
       error: null,
-      fps: 0,
-      stepEnabled: false
+      displayStepEnabled: false
     };
   },
   components: {
@@ -249,64 +246,47 @@ export default {
     databus: databus
   },
   created() {
-    (this.lastFrameTimestamp = null), (this.lastFpsUpdate = null);
-    this.framesThisSecond = 0;
-    this.maxFPS = 60;
+    this.stepEnabled = false;
+    
+    this.frameComplete = false;
 
-    this.tick = (timestamp) => {
-      // Throttle FPS to our desired FPS
-
-      if (timestamp < this.lastFrameTimestamp + 1000 / this.maxFPS) {
-        requestAnimationFrame(this.tick);
-        return;
-      }
-
-      // Calculate FPS
-      if (timestamp > this.lastFpsUpdate + 1000) {
-        // update every second
-        this.fps = this.framesThisSecond; // compute the new FPS
-        this.lastFpsUpdate = timestamp;
-        this.framesThisSecond = 0;
-      }
-      this.framesThisSecond++;
-      this.lastFrameTimestamp = timestamp;
-
-      // Now run through 30,000 cpu cycles
-      let frameComplete = false;
+    this.tick = () => {
+     this.frameComplete = false;
       do {
         // Our PPU runs 3x the cpu
-        if(this.ppu.tick()) frameComplete = true;
-        if(this.ppu.tick()) frameComplete = true;
-        if(this.ppu.tick()) frameComplete = true;
+        this.ppu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
         this.cpu.tick();
-      } while (!frameComplete && !this.stepEnabled);
+      } while (!this.frameComplete && !this.stepEnabled);
       this.ppu.render();
       if (!this.stepEnabled) {
         requestAnimationFrame(this.tick);
       }
-    }
-
+    };
   },
   mounted() {
     this.cpu = this.$refs.cpu;
     this.ppu = this.$refs.ppu;
   },
   methods: {
-    disableStep() {
-      this.stepEnabled = false;
+    toggleStep() {
+      this.stepEnabled = !this.stepEnabled;
+      this.displayStepEnabled = this.stepEnabled;
+
       // Restart game loop
       setTimeout(this.tick, 10);
     },
     power() {
       this.$refs.cpu.power();
       this.$refs.ppu.reset();
-      this.tick();
+      requestAnimationFrame(this.tick);
     },
     reset() {
       this.$refs.cpu.reset();
       this.$refs.ppu.reset();
-      this.tick();
-    },
+      requestAnimationFrame(this.tick);
+    }
   }
 };
 </script>
@@ -315,6 +295,7 @@ export default {
 @import "~bootstrap/scss/bootstrap.scss";
 
 body {
+  padding-top: 32px;
   padding-bottom: 32px;
 }
 </style>
