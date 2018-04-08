@@ -186,9 +186,9 @@ export default {
       }
     },
     set(address, value) {
-      let node = this.configuration[address];
+     let node = this.configuration[address];
       if (!node) {
-        throw ("Invalid address:" + address + " in " + this.name);
+        throw ("Invalid address:" + address.toString(16) + " in " + this.name);
       }
       // We found the memory module we need to reference, plus dealing with memory that repeats
       let nodeAddress = (address - node.min) % node.size;

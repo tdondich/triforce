@@ -8,10 +8,10 @@
     <hr>
 
     <div class="btn-group">
-      <button class="btn btn-primary" v-if="!stepEnabled" @click="stepEnabled = !stepEnabled">Enable Step Debugging</button>
+      <button class="btn btn-primary" v-if="!displayStepEnabled" @click="toggleStep">Enable Step Debugging</button>
       <div v-else>
         <button class="btn btn-primary" @click="tick">Step Forward</button>
-        <button class="btn btn-primary" click="disableStep()">Stop Step Debugging</button>
+        <button class="btn btn-primary" @click="toggleStep">Stop Step Debugging</button>
       </div>
     </div>
     <br>
@@ -21,8 +21,25 @@
 
     <ppu ref="ppu" />
 
+    <joypad ref="joypad1" title="Player 1" :config="{
+      38: 'up',
+      40: 'down',
+      37: 'left',
+      39: 'right',
+      188: 'select',
+      190: 'start',
+      90: 'b',
+      88: 'a'
+    }" />
+    <joypad ref="joypad2" title="Player 2" :config="{
+      // Leave empty, we're disabling player 2 for now
+      
+      }" />
+
     <!-- 2KB internal RAM -->
     <memory ref="internal" size="2048" />
+
+    <memory ref="disabled" size="8" />
 
     <!-- Our nametables -->
     <memory ref="nametable0" size="1024" />
@@ -50,8 +67,26 @@
       {
         ref: 'cpu',
         min: 0x4000,
+        max: 0x4015,
+        size: 22
+      },
+      {
+        ref: 'joypad1',
+        min: 0x4016,
+        max: 0x4016,
+        size: 1
+      },
+      {
+        ref: 'joypad2',
+        min: 0x4017,
+        max: 0x4017,
+        size: 1
+      },
+      {
+        ref: 'disabled',
+        min: 0x4018,
         max: 0x401F,
-        size: 32
+        size: 8
       },
       {
         ref: 'loader',
@@ -229,6 +264,8 @@ import cpu2a03 from "./components/cpu-2a03.vue";
 import memory from "./components/memory.vue";
 import romLoader from "./components/rom-loader.vue";
 import databus from "./components/databus.vue";
+import debugmemory from "./components/debugmemory.vue";
+import joypad from "./components/joypad.vue";
 
 export default {
   name: "app",
@@ -243,7 +280,9 @@ export default {
     memory: memory,
     "rom-loader": romLoader,
     ppu: ppu,
-    databus: databus
+    databus: databus,
+    debugmemory,
+    joypad
   },
   created() {
     this.stepEnabled = false;
@@ -278,13 +317,13 @@ export default {
       setTimeout(this.tick, 10);
     },
     power() {
-      this.$refs.cpu.power();
       this.$refs.ppu.reset();
+      this.$refs.cpu.power();
       requestAnimationFrame(this.tick);
     },
     reset() {
-      this.$refs.cpu.reset();
       this.$refs.ppu.reset();
+      this.$refs.cpu.reset();
       requestAnimationFrame(this.tick);
     }
   }

@@ -114,6 +114,7 @@ export default {
         // Fire off Vblank
         this.setVBlank(true);
         // And fire VBlank NMI
+
         this.$parent.$refs.cpu.fireNMI();
       }
 
@@ -147,8 +148,8 @@ export default {
   mounted() {
     this.canvas = document.getElementById("screen");
     this.canvasCtx = this.canvas.getContext("2d");
+    this.canvasCtx.imageSmoothingEnabled = false;
 
-    //this.frameBuffer = this.canvasCtx.getImageData(0, 0, 256, 240);
     this.frameBuffer = new ImageData(256, 240);
 
     // Ideally, this does not change.
@@ -215,7 +216,7 @@ export default {
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.dataAddress = (this.dataAddress | value) & 0xffff;
       } else if (address == 0x0007) {
-        // If this is the case, then we write to the address requested by this.dataAddress as well
+       // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
         this.ppumainbus.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
@@ -230,7 +231,6 @@ export default {
           let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
           // @todo Increase VRAM address
           this.dataAddress = (this.dataAddress + increase) & 0xffff;
-          //console.log("Increase in get");
         }
         return result;
       } else if (address == 0x0002) {
@@ -323,7 +323,8 @@ export default {
           let tileIndex = this.copyOfOAM[base + 1];
 
           let tileBase = tileIndex << 4;
-          let tileY = y % 8;
+          // Find the relative y position of the sprite
+          let tileY = y - spriteY;
           tileBase = tileBase | this.basePatternTableAddress();
           // Get first plane
           let first = this.copyOfPatternTables[tileBase + tileY];
@@ -362,8 +363,7 @@ export default {
         if (x >= item.spriteX && x < item.spriteX + 8) {
           // This sprite falls within our X requested coordinate
           // Now pull the first/second byte for the tile for this scanline
-          let tileX = 8 - x % 8;
-
+          let tileX = 7 - (x - item.spriteX);
           let colorIndex = 2;
           if (!isBitSet(item.first, tileX) && !isBitSet(item.second, tileX)) {
             // Color value is 0
