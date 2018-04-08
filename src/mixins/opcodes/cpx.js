@@ -28,7 +28,7 @@ export default {
         },
         // Zero Page
         0xE4: function() {
-            this.cycles = 2;
+            this.cycles = 3;
             this.instruction = () => {
                 this.debugger(2, () => `CPX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.cpx(this.getZeroPageAddress(this.pc + 1));

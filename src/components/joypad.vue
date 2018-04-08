@@ -40,14 +40,14 @@ export default {
   ],
   data: function() {
     return {
-      a: false,
-      b: false,
-      select: false,
-      start: false,
-      up: false,
-      down: false,
-      left: false,
-      right: false,
+      a: 0x00,
+      b: 0x00,
+      select: 0x00,
+      start: 0x00,
+      up: 0x00,
+      down: 0x00,
+      left: 0x00,
+      right: 0x00,
 
       // These are flags for the "stream" of input data
       initPhase: 0,
@@ -57,13 +57,13 @@ export default {
   mounted() {
       window.addEventListener("keydown", (event) => {
           if(event.keyCode in this.config) {
-              this[this.config[event.keyCode]] = true;
+              this[this.config[event.keyCode]] = 0x01;
               event.preventDefault();
           }
       });
       window.addEventListener("keyup", () => {
           if(event.keyCode in this.config) {
-              this[this.config[event.keyCode]] = false;
+              this[this.config[event.keyCode]] = 0x00;
               event.preventDefault();
           }
       });

@@ -1,49 +1,50 @@
 <template>
-    <div class="row">
-        <div class="col-sm-12">
-            <button class="btn btn-primary" v-if="!debugEnabled" @click="debugEnabled = !debugEnabled">Enable CPU Debug View</button>
-            <button class="btn btn-primary" v-else @click="debugEnabled = !debugEnabled">Disable CPU Debug View</button>
-        </div>
-        <div v-if="debugEnabled" class="col-sm-12">
-            <div class="form-group">
-                <label>Force Reset Vector</label>
-                <input v-model="forceResetVector" class="form-control col-sm-1">
-            </div>
-        </div>
-
-        <div v-if="debugEnabled" class="col-sm-12">
-            <h4>Registers</h4>
-            <table class="table table-dark table-sm table-bordered">
-                <tbody>
-                    <tr>
-                        <th>A</th>
-                        <td>{{a.toString(16).padStart(2, '0')}}</td>
-                        <th>X</th>
-                        <td>{{x.toString(16).padStart(2, '0')}}</td>
-                        <th>Y</th>
-                        <td>{{y.toString(16).padStart(2, '0')}}</td>
-                        <th>PC</th>
-                        <td>{{pc.toString(16).padStart(2, '0')}}</td>
-                        <th>SP</th>
-                        <td>{{sp.toString(16).padStart(2, '0')}}</td>
-                        <th>P</th>
-                        <td>{{p.toString(16).padStart(2, '0')}}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="alert alert-danger" v-if="error">
-            {{error}}
-        </div>
-        <div v-if="debugEnabled" class="col-sm-12 debug">
-            <textarea rows="5" class="form-control" v-model="debug"></textarea>
-        </div>
-
-        <!-- These are memory mapped registers -->
-        <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
-        <memory ref="registers" size="32" />
-
+  <div class="row">
+    <div class="col-sm-12">
+      <button class="btn btn-primary" v-if="!debugEnabled" @click="debugEnabled = !debugEnabled">Enable CPU Debug View</button>
+      <button class="btn btn-primary" v-else @click="debugEnabled = !debugEnabled">Disable CPU Debug View</button>
     </div>
+    <div v-if="debugEnabled" class="col-sm-12">
+      <div class="form-group">
+        <label>Force Reset Vector</label>
+        <input v-model="forceResetVector" class="form-control col-sm-1">
+      </div>
+    </div>
+
+    <div v-if="debugEnabled" class="col-sm-12">
+      <h4>Registers</h4>
+      <table class="table table-dark table-sm table-bordered">
+        <tbody>
+          <tr>
+            <th>A</th>
+            <td>{{a.toString(16).padStart(2, '0')}}</td>
+            <th>X</th>
+            <td>{{x.toString(16).padStart(2, '0')}}</td>
+            <th>Y</th>
+            <td>{{y.toString(16).padStart(2, '0')}}</td>
+            <th>PC</th>
+            <td>{{pc.toString(16).padStart(2, '0')}}</td>
+            <th>SP</th>
+            <td>{{sp.toString(16).padStart(2, '0')}}</td>
+            <th>P</th>
+            <td>{{p.toString(16).padStart(2, '0')}}</td>
+          </tr>
+        </tbody>
+      </table>
+      Cycle Count: {{cycles}}
+    </div>
+    <div class="alert alert-danger" v-if="error">
+      {{error}}
+    </div>
+    <div v-if="debugEnabled" class="col-sm-12 debug">
+      <textarea rows="5" class="form-control" v-model="debug"></textarea>
+    </div>
+
+    <!-- These are memory mapped registers -->
+    <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
+    <memory ref="registers" size="32" />
+
+  </div>
 
 </template>
 
@@ -121,7 +122,9 @@ export default {
       forceResetVector: "",
       debug: "",
       // If the CPU encountered a critical error
-      error: ""
+      error: "",
+
+      cycles: 0
     };
   },
   created() {
@@ -143,7 +146,9 @@ export default {
     this.p = 0;
 
     // Cycle count.  When the cycle count hits 0, apply the actual operation
-    this.cycles = 0;
+    // @todo Put it back here so it's not reactive
+    //this.cycles = 0;
+
     // This instruction points to what code should run once cycles count is 0
     this.instruction = null;
 
@@ -396,20 +401,8 @@ export default {
     // Performs a CPU tick, going through an operation
     tick() {
       this.odd = !this.odd;
-      let cycles = this.cycles;
 
-      // Check to see if we actually need to perform an operation
-      if (!this.nmi && cycles == 0 && this.instruction == null) {
-        let instr = this.mem.get(this.pc);
-        // Run the opcode. This will set the cycles counter and the instruction handler
-        this[instr]();
-      }
-      if (cycles > 0) {
-        // consume a cycle
-        cycles = this.cycles = cycles - 1;
-      }
-      // Now check to see if we really need to run the instruction because all the cycles have been met
-      if (cycles == 0 && this.instruction != null) {
+      if (this.cycles == 0 && this.instruction != null) {
         // Run the instruction
         this.instruction();
         this.instruction = null;
@@ -419,17 +412,39 @@ export default {
           this.instruction = this.copyOAM;
         }
       }
-      // Check for NMI (this takes priority over regular IRQs)
-      if (this.nmi && cycles == 0) {
-        cycles = this.cycles = 7;
+      // Check to see if we actually need to fetch an operation
+      if (!this.nmi && this.cycles == 0 && this.instruction == null) {
+        let instr = this.mem.get(this.pc);
+        if (typeof this[instr] == "undefined") {
+          this.error =
+            "Failed to find instruction handler for " + instr.toString(16);
+          throw this.error;
+        } else {
+          // Run the opcode. This will set the cycles counter and the instruction handler
+          this[instr]();
+        }
+      }
+     // Check for NMI (this takes priority over regular IRQs)
+      if (this.nmi && this.cycles == 0) {
+        this.cycles = this.cycles = 7;
         this.instruction = this.handleNMI;
       }
       // Check to determine if we need to handle IRQ
       // If cycles is greater than 0, then we need to allow the current opcode to complete
-      if (!this.nmi && cycles == 0 && this.irq > 0) {
+      if (!this.nmi && this.cycles == 0 && this.irq > 0) {
         this.cycles = 7;
         this.instruction = this.handleIRQ;
       }
+      if (this.cycles > 0) {
+        // consume a cycle
+        this.cycles = this.cycles = this.cycles - 1;
+      }
+
+
+      /*
+
+    // Now check to see if we really need to run the instruction because all the cycles have been met
+     */
     },
     // Pushes to the top of the stack then modified the stack pointer
     stackPush(val) {

@@ -136,54 +136,18 @@
           size: 8192
       },
       {
-          ref: 'nametable0',
-          min: 0x2000,
-          max: 0x23FF,
-          size: 1024
+        ref: 'nametablebus',
+        min: 0x2000,
+        max: 0x2FFF,
+        size: 4096
       },
       {
-          ref: 'nametable1',
-          min: 0x2400,
-          max: 0x27FF,
-          size: 1024
+        ref: 'nametablebus',
+        min: 0x3000,
+        max: 0x3EFF,
+        size: 3840
       },
       {
-          ref: 'nametable2',
-          min: 0x2800,
-          max: 0x2BFF,
-          size: 1024,
-      },
-      {
-          ref: 'nametable3',
-          min: 0x2C00,
-          max: 0x2FFF,
-          size: 1024
-      },
-       {
-          ref: 'nametable0',
-          min: 0x3000,
-          max: 0x33FF,
-          size: 1024
-      },
-      {
-          ref: 'nametable1',
-          min: 0x3400,
-          max: 0x37FF,
-          size: 1024
-      },
-      {
-          ref: 'nametable2',
-          min: 0x3800,
-          max: 0x3BFF,
-          size: 1024,
-      },
-      {
-          ref: 'nametable3',
-          min: 0x3C00,
-          max: 0x3EFF,
-          size: 1024
-      },
-     {
           ref: 'palette',
           min: 0x3F00,
           max: 0x3FFF,
@@ -293,10 +257,10 @@ export default {
      this.frameComplete = false;
       do {
         // Our PPU runs 3x the cpu
-        this.ppu.tick();
-        this.ppu.tick();
-        this.ppu.tick();
         this.cpu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
       } while (!this.frameComplete && !this.stepEnabled);
       this.ppu.render();
       if (!this.stepEnabled) {

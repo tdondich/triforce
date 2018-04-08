@@ -1,5 +1,6 @@
 <template>
   <div>
+    PPU Cycles: {{cycle}}<br>
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
     <!-- Our OAM memory -->
@@ -40,17 +41,15 @@ export default {
     memory
   },
   data: function() {
-    return {};
+    return {
+      cycle: 0
+    };
   },
   created() {
     this.registers = new Uint8Array(8);
-
-    // Tick count. When tick hits 0, and instruction is not null, instruction will be called
-    this.ticks = 0;
-    // Instruction
-    this.instruction = null;
     // There are 341 cycles in each scanline
-    this.cycle = 0;
+    // @todo Put this back in
+    //this.cycle = 0;
     // There are 262 scanlines, starting with -1
     // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
     this.scanline = -1;
@@ -75,6 +74,16 @@ export default {
     this.frameBuffer = null;
     this.copyOfOAM = null;
     this.copyOfPatternTables = null;
+
+    // @todo This is debug helpers
+    this.oldCycleCount = 0;
+
+    this.previousCycleCount = () => {
+      let value = this.oldCycleCount;
+      this.oldCycleCount = this.cycle;
+      return value;
+
+    };
 
     this.render = () => {
       this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
@@ -121,7 +130,7 @@ export default {
       if (++this.cycle == 341) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
-        this.scanline = scanline == 260 ? -1 : scanline + 1;
+        this.scanline = scanline == 261 ? -1 : scanline + 1;
         this.odd = !this.odd;
         // Return true to caller to indicate our frame is complete
         if (this.scanline == -1) {
@@ -241,6 +250,9 @@ export default {
           // the vblank at the pre-rendering scanline
           //this.setVBlank(false);
           this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
+          // Reset address latch used by PPUADDR and PPUSCROLL
+          // See: https://wiki.nesdev.com/w/index.php/PPU_registers#Notes
+          this.dataAddress = 0x00;
         }
         return result;
       }
@@ -285,14 +297,13 @@ export default {
     reset() {
       // We set our registers after ~29658 cpu clicks (which we run 3x faster)
       // Set VBlank flag
-      this.ticks = 88974;
       this.frameComplete = false;
-      this.instruction = () => {
-        this.setPPUStatus(0x80);
-        this.setOAMAddr(0x2f);
-        this.setPPUAddress(0x00);
-      };
-    },
+      // @todo Make sure writes to these registers aren't valid until after the needed 
+      // cpu clicks
+      this.setPPUStatus(0x80);
+      this.setOAMAddr(0x2f);
+      this.setPPUAddress(0x00);
+  },
     // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
     // sprite size configuration
 

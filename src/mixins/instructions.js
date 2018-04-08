@@ -22,9 +22,9 @@ export default {
             debug = (debug + data.join(" ")).padEnd(16, " ");
             debug = debug + (operation().padEnd(32, ' '));
             // Now add register info
-            debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)}\n`;
-            //this.debug = this.debug + debug;
-            this.debug = debug;
+            debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)} CYC: ${this.$parent.$refs.ppu.previousCycleCount().toString().padStart(3)}\n`;
+            this.debug = this.debug + debug;
+            //this.debug = debug;
             this.inDebug = false;
         },
         // These are now the opcodes we handle
@@ -148,7 +148,8 @@ export default {
             this.cycles = 2;
             if (this.isZero()) {
                 this.cycles = 3;
-                if(this.pageCrossed(this.pc, this.getRelativeAddress(this.pc + 1))) {
+                // See: http://forums.nesdev.com/viewtopic.php?t=8243
+                if(this.pageCrossed(this.pc+2, this.getRelativeAddress(this.pc + 1))) {
                     this.cycles = 4;
                 }
             }
