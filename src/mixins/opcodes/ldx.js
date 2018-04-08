@@ -56,7 +56,8 @@ export default {
         0xBE: function() {
             this.cycles = 4;
             let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
-            if(this.pageCrossed(this.pc + 1), targetAddress) {
+            let first = this.getAbsoluteAddress(this.pc + 1);
+            if(this.pageCrossed(first, targetAddress)) {
                 this.cycles = 5;
             }
             this.instruction = () => {

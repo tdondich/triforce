@@ -56,7 +56,8 @@ export default {
         0xD1: function () {
             this.cycles = 5;
             let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
-            if(this.pageCrossed(this.pc + 1), targetAddress) {
+            let first = this.getAbsoluteAddress(this.mem.get(this.pc + 1), true)
+            if(this.pageCrossed(first, targetAddress)) {
                 this.cycles = 6;
             }
             this.instruction = () => {
@@ -82,7 +83,8 @@ export default {
         0xD9: function() {
             this.cycles = 4;
             let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
-            if(this.pageCrossed(this.pc + 1), targetAddress) {
+            let first = this.getAbsoluteAddress(this.pc + 1);
+            if(this.pageCrossed(first, targetAddress)) {
                 this.cycles = 5;
             }
             this.instruction = () => {
@@ -96,7 +98,8 @@ export default {
         0xDD: function () {
             this.cycles = 4;
             let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-            if(this.pageCrossed(this.pc + 1), targetAddress) {
+            let first = this.getAbsoluteAddress(this.pc + 1);
+            if(this.pageCrossed(first, targetAddress)) {
                 this.cycles = 5;
             }
             this.instruction = () => {

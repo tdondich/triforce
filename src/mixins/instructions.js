@@ -22,7 +22,7 @@ export default {
             debug = (debug + data.join(" ")).padEnd(16, " ");
             debug = debug + (operation().padEnd(32, ' '));
             // Now add register info
-            debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)} CYC: ${this.$parent.$refs.ppu.previousCycleCount().toString().padStart(3)}\n`;
+            debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)} CYC:${this.$parent.$refs.ppu.previousCycleCount().toString().padStart(3)}\n`;
             this.debug = this.debug + debug;
             //this.debug = debug;
             this.inDebug = false;
@@ -41,7 +41,7 @@ export default {
         },
         // JMP with indirect 
         0x6C: function () {
-            this.cycles = 3;
+            this.cycles = 5;
             this.instruction = () => {
                 let sourceAddress = this.getAbsoluteAddress(this.pc + 1);
                 let targetAddress = null;
