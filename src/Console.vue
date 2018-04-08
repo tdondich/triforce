@@ -22,7 +22,6 @@
     <ppu ref="ppu" />
 
     <joypad ref="joypad1" title="Player 1" :config="{
-      /*
       38: 'up',
       40: 'down',
       37: 'left',
@@ -31,7 +30,6 @@
       190: 'start',
       90: 'b',
       88: 'a'
-      */
     }" />
     <joypad ref="joypad2" title="Player 2" :config="{
       // Leave empty, we're disabling player 2 for now

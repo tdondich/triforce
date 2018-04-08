@@ -31,7 +31,6 @@
           </tr>
         </tbody>
       </table>
-      Cycle Count: {{cycles}}
     </div>
     <div class="alert alert-danger" v-if="error">
       {{error}}
@@ -123,8 +122,6 @@ export default {
       debug: "",
       // If the CPU encountered a critical error
       error: "",
-
-      cycles: 0
     };
   },
   created() {
@@ -146,8 +143,7 @@ export default {
     this.p = 0;
 
     // Cycle count.  When the cycle count hits 0, apply the actual operation
-    // @todo Put it back here so it's not reactive
-    //this.cycles = 0;
+    this.cycles = 0;
 
     // This instruction points to what code should run once cycles count is 0
     this.instruction = null;
@@ -201,6 +197,11 @@ export default {
     };
 
     this.handleNMI = function() {
+
+      if(this.debugEnabled) {
+        this.debug = this.debug + "\n\nNMI FIRED\n\n";
+      }
+
       // First push return address high byte onto stack
       this.stackPush(this.pc >> 8);
       // Now push return address low byte onto stack

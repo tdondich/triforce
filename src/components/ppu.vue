@@ -1,6 +1,5 @@
 <template>
   <div>
-    PPU Cycles: {{cycle}}<br>
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
     <!-- Our OAM memory -->
@@ -42,14 +41,13 @@ export default {
   },
   data: function() {
     return {
-      cycle: 0
+      //empty 
     };
   },
   created() {
     this.registers = new Uint8Array(8);
     // There are 341 cycles in each scanline
-    // @todo Put this back in
-    //this.cycle = 0;
+    this.cycle = 0;
     // There are 262 scanlines, starting with -1
     // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
     this.scanline = -1;
@@ -77,6 +75,7 @@ export default {
 
     // @todo This is debug helpers
     this.oldCycleCount = 0;
+    this.oldScanline = -1;
 
     this.previousCycleCount = () => {
       let value = this.oldCycleCount;
@@ -84,6 +83,12 @@ export default {
       return value;
 
     };
+
+    this.previousScanline = () => {
+      let value = this.oldScanline;
+      this.oldScanline = this.scanline;
+      return value;
+    }
 
     this.render = () => {
       this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
@@ -100,6 +105,8 @@ export default {
 
         // Create a local copy of of the pattern table relevant to this scanline
         this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
+
+        this.setVBlank(false);
       }
       if ((scanline == -1 || scanline == 261) && cycle % 8 == 1)  {
         // fetch the nametable and attribute byte for background
@@ -122,9 +129,12 @@ export default {
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.setVBlank(true);
-        // And fire VBlank NMI
 
-        this.$parent.$refs.cpu.fireNMI();
+        // And fire VBlank NMI if PPUCTRL bit 7 is set
+
+        if((this.ppuctrl() & 0b10000000) == 0b10000000) {
+          this.$parent.$refs.cpu.fireNMI();
+        }
       }
 
       if (++this.cycle == 341) {
@@ -246,9 +256,10 @@ export default {
         let result = this.registers[address];
         if (!this.$parent.$refs.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
-          // @todo This really should be done to emulate correct, but we're going to reset
-          // the vblank at the pre-rendering scanline
+
+          // @todo Only track reading from the cpu when calling
           //this.setVBlank(false);
+
           this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
           // Reset address latch used by PPUADDR and PPUSCROLL
           // See: https://wiki.nesdev.com/w/index.php/PPU_registers#Notes
@@ -300,8 +311,11 @@ export default {
       this.frameComplete = false;
       // @todo Make sure writes to these registers aren't valid until after the needed 
       // cpu clicks
-      this.setPPUStatus(0x80);
-      this.setOAMAddr(0x2f);
+      //this.setPPUStatus(0x80);
+
+      this.setPPUStatus(0x00);
+      
+      this.setOAMAddr(0x00);
       this.setPPUAddress(0x00);
   },
     // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
