@@ -137,18 +137,35 @@ export default {
         }
       }
 
-      if (++this.cycle == 341) {
+      // Increase cycle
+      ++this.cycle;
+      
+      if((this.scanline == -1 || this.scanline == 261) && this.cycle == 340 && this.odd && this.renderingEnabled()) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
         this.scanline = scanline == 261 ? -1 : scanline + 1;
-        this.odd = !this.odd;
         // Return true to caller to indicate our frame is complete
         if (this.scanline == -1) {
+          this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};
           this.$parent.frameComplete = true;
         }
+        return true;
       }
+
+      if (this.cycle == 341) {
+        // Reset to cycle 0 and increase scanline
+        this.cycle = 0;
+        this.scanline = scanline == 261 ? -1 : scanline + 1;
+        // Return true to caller to indicate our frame is complete
+        if (this.scanline == -1) {
+          this.odd = !this.odd;
+          // Dirty dirty dirty
+          this.frameCache = {};
+          this.$parent.frameComplete = true;
+        }
+      } 
       // We still have work to do on our frame
       return false;
     };
@@ -156,9 +173,7 @@ export default {
       // Get the base nametable address
       // @todo Not sure about this one
       // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
-      let address =
-        this.baseNameTableAddress() +
-        Math.floor(this.scanline / 8) * Math.floor(this.cycle / 8);
+      let address = this.baseNameTableAddress() + (Math.floor(this.scanline / 8) * 32 + Math.floor(this.cycle / 8)); 
       this.nametableByte = this.ppumainbus.get(address);
       address = this.baseAttributeTableAddress();
       this.attributeTableByte = this.ppumainbus.get(address);
@@ -219,8 +234,8 @@ export default {
       return base;
     },
     basePatternTableAddress() {
-      let base = this.ppuctrl() & 0b00010000;
-      return base == 0b00010000 ? 0x0000 : 0x1000;
+      let base = this.ppuctrl() & 0x10;
+      return base == 0x10 ? 0x1000 : 0x0000;
     },
     // The following fill/set/get is for our registers, accessed by memory
     // Fill a memory range with a specific value
@@ -228,6 +243,10 @@ export default {
       this.registers.fill(value, start, end);
     },
     set(address, value) {
+      if(address == 0x0002) {
+        // Do not do anything.  PPUSTATUS is read only
+        return;
+      }
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
       if (address == 0x0006) {
@@ -257,8 +276,7 @@ export default {
         if (!this.$parent.$refs.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
 
-          // @todo Only track reading from the cpu when calling
-          //this.setVBlank(false);
+          this.setVBlank(false);
 
           this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
           // Reset address latch used by PPUADDR and PPUSCROLL
@@ -413,17 +431,19 @@ export default {
       return null;
     },
     // Index represents the tile number to fetch
+    // This is used purely in background tile rendering
     // X is x coordinate of the tile
     // Y is y coordinate
     fetchTilePixelColor(index, x, y) {
-      // Remember to flip x in order to get the tile in the right order
+     // Remember to flip x in order to get the tile in the right order
       x = 8 - x;
       let base = index << 4;
       base = base | this.basePatternTableAddress();
+
       // Get first plane
-      let first = this.copyOfOAM[base + y];
+      let first = this.copyOfPatternTables[base + y];
       // Get second plane
-      let second = this.copyOfOAM[base + y + 8];
+      let second = this.copyOfPatternTables[base + y + 8];
 
       if (!isBitSet(first, x) && !isBitSet(second, x)) {
         // Color value is 0
@@ -476,6 +496,7 @@ export default {
       let tileX = x % 8;
       let tileY = y % 8;
 
+
       let pixelColor = this.fetchTilePixelColor(
         this.nametableByte,
         tileX,
@@ -509,7 +530,10 @@ export default {
           colorIndex = activeSpritePixelInformation.colorIndex;
           palette = activeSpritePixelInformation.palette;
         } else {
-          //colorIndex = backgroundColorIndex;
+          colorIndex = backgroundColorIndex;
+          color = this.fetchColor(palette, colorIndex);
+
+
           // @todo Find proper palette number for background attribute byte and x/y offset
           //palette = 0;
         }
