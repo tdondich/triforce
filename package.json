@@ -5,12 +5,21 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "test": "jest",
+    "test-watch": "jest --watch"
   },
   "dependencies": {
+    "@vue/test-utils": "^1.0.0-beta.13",
+    "babel-core": "^6.26.0",
+    "babel-env": "^2.4.1",
+    "babel-jest": "^22.4.3",
+    "jest": "^22.4.3",
     "jquery": "^3.3.1",
     "popper.js": "^1.12.9",
-    "vue": "^2.5.13"
+    "regenerator-runtime": "^0.11.1",
+    "vue": "^2.5.13",
+    "vue-jest": "^2.4.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.0.0-beta.5",
@@ -44,5 +53,18 @@
     "> 1%",
     "last 2 versions",
     "not ie <= 8"
-  ]
+  ],
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "vue"
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest",
+      ".*\\.(vue)$": "./node_modules/vue-jest"
+    },
+    "collectCoverage": true,
+    "coverageDirectory": "test/coverage"
+  }
 }
