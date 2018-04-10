@@ -107,6 +107,7 @@ export default {
         this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
 
         this.setVBlank(false);
+        this.setSprite0Hit(false);
       }
       if ((scanline == -1 || scanline == 261) && cycle % 8 == 1)  {
         // fetch the nametable and attribute byte for background
@@ -318,6 +319,13 @@ export default {
         this.setPPUStatus(this.ppustatus() & 0b01111111);
       }
     },
+    setSprite0Hit(val) {
+      if (val) {
+        this.setPPUStatus(this.ppustatus() | 0b01000000);
+      } else {
+        this.setPPUStatus(this.ppustatus() & 0b10111111);
+      }
+    },
     copyToOAM(address, value) {
       // Copy the info to the requested OAM address
       this.$refs.oam.set(address, value);
@@ -523,6 +531,15 @@ export default {
       ) {
         color = this.frameCache.universalBackgroundColor;
       } else {
+        // Check for sprite 0 hitting
+        // @todo Add more edge cases
+        if(activeSpritePixelInformation 
+          && activeSpritePixelInformation.tileIndex == 0x00 
+          && this.renderingEnabled()
+          && activeSpritePixelInformation.colorIndex 
+          && backgroundColorIndex) {
+            this.setSprite0Hit(true);
+          }
         if (
           activeSpritePixelInformation &&
           activeSpritePixelInformation.colorIndex
