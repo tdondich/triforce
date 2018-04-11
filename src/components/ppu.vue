@@ -51,9 +51,9 @@ export default {
     this.registers = new Uint8Array(8);
     // There are 341 cycles in each scanline
     this.cycle = 0;
-    // There are 262 scanlines, starting with -1
+    // There are 262 scanlines, starting with 0, they refrence 261 as -1 as well in the following link
     // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
-    this.scanline = -1;
+    this.scanline = 0;
     // Toggle even/odd frame
     this.odd = true;
     // The nametable "latch"
@@ -103,7 +103,7 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
 
-      if (scanline == -1 && cycle == 0) {
+      if (scanline == 0 && cycle == 0) {
         // Fetch a local copy of data needed for performing caching of data for rendering
         this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
 
@@ -113,7 +113,7 @@ export default {
         this.setVBlank(false);
         this.setSprite0Hit(false);
       }
-      if ((scanline == -1 || scanline == 261) && cycle % 8 == 1)  {
+      if ((scanline == 261) && cycle % 8 == 1)  {
         // fetch the nametable and attribute byte for background
         this.fetchNametableAndAttributeByte();
       } else if (scanline <= 239) {
@@ -145,12 +145,12 @@ export default {
       // Increase cycle
       ++this.cycle;
       
-      if((this.scanline == -1 || this.scanline == 261) && this.cycle == 340 && this.odd && this.renderingEnabled()) {
+      if(this.scanline == 261 && this.cycle == 340 && this.odd && this.renderingEnabled()) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
-        this.scanline = scanline == 261 ? -1 : scanline + 1;
+        this.scanline = scanline == 261 ? 0 : scanline + 1;
         // Return true to caller to indicate our frame is complete
-        if (this.scanline == -1) {
+        if (this.scanline == 0) {
           this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};
@@ -162,9 +162,9 @@ export default {
       if (this.cycle == 341) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
-        this.scanline = scanline == 261 ? -1 : scanline + 1;
+        this.scanline = scanline == 261 ? 0 : scanline + 1;
         // Return true to caller to indicate our frame is complete
-        if (this.scanline == -1) {
+        if (this.scanline == 0) {
           this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};

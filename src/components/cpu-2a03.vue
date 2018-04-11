@@ -427,7 +427,7 @@ export default {
       }
      // Check for NMI (this takes priority over regular IRQs)
       if (this.nmi && this.cycles == 0) {
-        this.cycles = this.cycles = 7;
+        this.cycles = 7;
         this.instruction = this.handleNMI;
       }
       // Check to determine if we need to handle IRQ
@@ -438,7 +438,7 @@ export default {
       }
       if (this.cycles > 0) {
         // consume a cycle
-        this.cycles = this.cycles = this.cycles - 1;
+        this.cycles = this.cycles - 1;
       }
 
 
