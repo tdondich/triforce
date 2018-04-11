@@ -21,20 +21,21 @@
 
     <ppu ref="ppu" :console="this" />
 
-    <joypad ref="joypad1" title="Player 1" :config="{
-      38: 'up',
-      40: 'down',
-      37: 'left',
-      39: 'right',
-      188: 'select',
-      190: 'start',
-      90: 'b',
-      88: 'a'
+    <joypads ref="joypads" :config="{
+      one: {
+        38: 'up',
+        40: 'down',
+        37: 'left',
+        39: 'right',
+        188: 'select',
+        190: 'start',
+        90: 'b',
+        88: 'a'
+      },
+      two: {
+        // Disabled
+      }
     }" />
-    <joypad ref="joypad2" title="Player 2" :config="{
-      // Leave empty, we're disabling player 2 for now
-      
-      }" />
 
     <!-- 2KB internal RAM -->
     <memory ref="internal" size="2048" />
@@ -71,14 +72,8 @@
         size: 22
       },
       {
-        ref: 'joypad1',
+        ref: 'joypads',
         min: 0x4016,
-        max: 0x4016,
-        size: 1
-      },
-      {
-        ref: 'joypad2',
-        min: 0x4017,
         max: 0x4017,
         size: 1
       },
@@ -229,7 +224,7 @@ import memory from "./components/memory.vue";
 import romLoader from "./components/rom-loader.vue";
 import databus from "./components/databus.vue";
 import debugmemory from "./components/debugmemory.vue";
-import joypad from "./components/joypad.vue";
+import joypads from "./components/joypads.vue";
 
 export default {
   name: "app",
@@ -246,7 +241,7 @@ export default {
     ppu: ppu,
     databus: databus,
     debugmemory,
-    joypad
+    joypads
   },
   created() {
     this.stepEnabled = false;
