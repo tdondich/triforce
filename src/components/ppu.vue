@@ -106,10 +106,8 @@ export default {
         // Create a local copy of of the pattern table relevant to this scanline
         this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
       }
-      if (scanline == 261 && cycle % 8 == 1) {
-        // fetch the nametable and attribute byte for background
-        this.fetchNametableAndAttributeByte();
-      } else if (scanline <= 239) {
+
+      if (scanline >= 0 && scanline <= 239) {
         // Visible scanlines
         if (cycle == 0) {
           // Build the scanline sprite cache for this scanline by reading OAM data and compiling
@@ -127,28 +125,25 @@ export default {
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.setVBlank(true);
-
         // And fire VBlank NMI if PPUCTRL bit 7 is set
-
         if ((this.ppuctrl() & 0b10000000) == 0b10000000) {
           this.console.$refs.cpu.fireNMI();
         }
       }
 
       // Clearing VBlank and sprite 0
-      if (this.scanline == 261 && this.cycle == 0) {
+      if (scanline == 261 && cycle == 0) {
         this.setVBlank(false);
         this.setSprite0Hit(false);
       }
 
-      ++this.cycle;
+      cycle = ++this.cycle;
 
-      if(this.scanline == 261 && this.cycle == 340 && this.odd && this.renderingEnabled()) {
+      if(scanline == 261 && cycle == 340 && this.odd && this.renderingEnabled()) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
-        this.scanline = scanline == 261 ? 0 : scanline + 1;
         // Return true to caller to indicate our frame is complete
-        if (this.scanline == 0) {
+        if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
           this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};
@@ -157,7 +152,7 @@ export default {
         return true;
       }
 
-      if (this.cycle == 341) {
+      if (cycle == 341) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
         this.scanline = scanline == 261 ? 0 : scanline + 1;
