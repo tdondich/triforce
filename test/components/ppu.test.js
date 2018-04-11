@@ -63,13 +63,51 @@ describe('memory', () => {
     it('it should have 89342 cycles when rendering is disabled per frame', () => {
         // Reset the ppu
         wrapper.vm.cycle = 0;
-        wrapper.vm.scanline = -1;
+        wrapper.vm.scanline = 0;
+
         let count = 0;
         do {
             wrapper.vm.tick();
             count++;
         } while(!wrapper.vm.console.frameComplete);
         expect(count).toBe(89342);
+    })
+    it('should clear VBlank after 6820 (or 6819 if odd) cycles from being set', () => {
+        // Run until vblank is set
+        // Enable rendering
+        wrapper.vm.registers[0x01] = 0b00011000;
+        // PERFORM A ODD FRAME
+        do {
+            wrapper.vm.tick();
+        } while((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        let count = 1;
+        // FOLLOWING FRAME WILL BE EVEN
+        do {
+            wrapper.vm.tick();
+            count = count + 1;
+        } while((wrapper.vm.registers[0x0002] & 0b10000000) == 0b10000000)
+        // This checks for even
+        expect(count).toBe(6820)
+
+        // Run until vblank is set
+        // RUN AN ODD FRAME
+        do {
+            wrapper.vm.tick();
+        } while((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        // do it again to force to go to odd frame
+        // THIS WILL BE EVEN
+        do {
+            wrapper.vm.tick();
+        } while((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        count = 1;
+        // THIS FRAME WILL BE ODD
+        do {
+            wrapper.vm.tick();
+            count = count + 1;
+        } while((wrapper.vm.registers[0x0002] & 0b10000000) == 0b10000000)
+        // This checks for odd frames
+         expect(count).toBe(6819)
+
     })
 })
 

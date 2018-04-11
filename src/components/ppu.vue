@@ -4,7 +4,7 @@
 
     <!-- Our OAM memory -->
     <memory ref="oamdata" title="OAM" size="256" />
-        <databus ref="oam" name="OAM" :sections="[
+    <databus ref="oam" name="OAM" :sections="[
               {
                   ref: 'oamdata',
                   min: 0x00,
@@ -39,12 +39,10 @@ export default {
     databus,
     memory
   },
-  props: [
-    'console',
-  ],
+  props: ["console"],
   data: function() {
     return {
-      //empty 
+      //empty
     };
   },
   created() {
@@ -76,7 +74,6 @@ export default {
     this.copyOfOAM = null;
     this.copyOfPatternTables = null;
 
-
     // @todo This is debug helpers
     this.oldCycleCount = 0;
     this.oldScanline = -1;
@@ -85,14 +82,13 @@ export default {
       let value = this.oldCycleCount;
       this.oldCycleCount = this.cycle;
       return value;
-
     };
 
     this.previousScanline = () => {
       let value = this.oldScanline;
       this.oldScanline = this.scanline;
       return value;
-    }
+    };
 
     this.render = () => {
       this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
@@ -109,11 +105,8 @@ export default {
 
         // Create a local copy of of the pattern table relevant to this scanline
         this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
-
-        this.setVBlank(false);
-        this.setSprite0Hit(false);
       }
-      if ((scanline == 261) && cycle % 8 == 1)  {
+      if (scanline == 261 && cycle % 8 == 1) {
         // fetch the nametable and attribute byte for background
         this.fetchNametableAndAttributeByte();
       } else if (scanline <= 239) {
@@ -137,14 +130,19 @@ export default {
 
         // And fire VBlank NMI if PPUCTRL bit 7 is set
 
-        if((this.ppuctrl() & 0b10000000) == 0b10000000) {
+        if ((this.ppuctrl() & 0b10000000) == 0b10000000) {
           this.console.$refs.cpu.fireNMI();
         }
       }
 
-      // Increase cycle
+      // Clearing VBlank and sprite 0
+      if (this.scanline == 261 && this.cycle == 0) {
+        this.setVBlank(false);
+        this.setSprite0Hit(false);
+      }
+
       ++this.cycle;
-      
+
       if(this.scanline == 261 && this.cycle == 340 && this.odd && this.renderingEnabled()) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
@@ -169,8 +167,9 @@ export default {
           // Dirty dirty dirty
           this.frameCache = {};
           this.console.frameComplete = true;
+          return true;
         }
-      } 
+      }
       // We still have work to do on our frame
       return false;
     };
@@ -178,7 +177,9 @@ export default {
       // Get the base nametable address
       // @todo Not sure about this one
       // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
-      let address = this.baseNameTableAddress() + (Math.floor(this.scanline / 8) * 32 + Math.floor(this.cycle / 8)); 
+      let address =
+        this.baseNameTableAddress() +
+        (Math.floor(this.scanline / 8) * 32 + Math.floor(this.cycle / 8));
       this.nametableByte = this.vram.get(address);
       address = this.baseAttributeTableAddress();
       this.attributeTableByte = this.vram.get(address);
@@ -187,13 +188,11 @@ export default {
   mounted() {
     this.vram = this.console.$refs.ppumainbus;
 
-
     this.canvas = this.$el.querySelector("#screen");
     this.canvasCtx = this.canvas.getContext("2d");
     this.canvasCtx.imageSmoothingEnabled = false;
 
     this.frameBuffer = this.canvasCtx.createImageData(256, 240);
-
   },
   methods: {
     ppumainbus() {
@@ -202,7 +201,10 @@ export default {
     renderingEnabled() {
       // Need to check to see if background and sprites is meant to be rendered
       // Any of the bits for 3 and 4 should be set for rendering to be enabled
-      if(isBitSet(this.registers[0x01], 3) || isBitSet(this.registers[0x01], 4)) {
+      if (
+        isBitSet(this.registers[0x01], 3) ||
+        isBitSet(this.registers[0x01], 4)
+      ) {
         return true;
       }
       return false;
@@ -252,7 +254,7 @@ export default {
       this.registers.fill(value, start, end);
     },
     set(address, value) {
-      if(address == 0x0002) {
+      if (address == 0x0002) {
         // Do not do anything.  PPUSTATUS is read only
         return;
       }
@@ -263,7 +265,7 @@ export default {
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.dataAddress = (this.dataAddress | value) & 0xffff;
       } else if (address == 0x0007) {
-       // If this is the case, then we write to the address requested by this.dataAddress as well
+        // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
         this.vram.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
@@ -343,15 +345,15 @@ export default {
       // We set our registers after ~29658 cpu clicks (which we run 3x faster)
       // Set VBlank flag
       this.frameComplete = false;
-      // @todo Make sure writes to these registers aren't valid until after the needed 
+      // @todo Make sure writes to these registers aren't valid until after the needed
       // cpu clicks
       //this.setPPUStatus(0x80);
 
       this.setPPUStatus(0x00);
-      
+
       this.setOAMAddr(0x00);
       this.setPPUAddress(0x00);
-  },
+    },
     // Fetch first sprite pixel information that falls within an x,y coordinate, given the current
     // sprite size configuration
 
@@ -451,7 +453,7 @@ export default {
     // X is x coordinate of the tile
     // Y is y coordinate
     fetchTilePixelColor(index, x, y) {
-     // Remember to flip x in order to get the tile in the right order
+      // Remember to flip x in order to get the tile in the right order
       x = 8 - x;
       let base = index << 4;
       base = base | this.basePatternTableAddress();
@@ -512,7 +514,6 @@ export default {
       let tileX = x % 8;
       let tileY = y % 8;
 
-
       let pixelColor = this.fetchTilePixelColor(
         this.nametableByte,
         tileX,
@@ -541,13 +542,15 @@ export default {
       } else {
         // Check for sprite 0 hitting
         // @todo Add more edge cases
-        if(activeSpritePixelInformation 
-          && activeSpritePixelInformation.tileIndex == 0x00 
-          && this.renderingEnabled()
-          && activeSpritePixelInformation.colorIndex 
-          && backgroundColorIndex) {
-            this.setSprite0Hit(true);
-          }
+        if (
+          activeSpritePixelInformation &&
+          activeSpritePixelInformation.tileIndex == 0x00 &&
+          this.renderingEnabled() &&
+          activeSpritePixelInformation.colorIndex &&
+          backgroundColorIndex
+        ) {
+          this.setSprite0Hit(true);
+        }
         if (
           activeSpritePixelInformation &&
           activeSpritePixelInformation.colorIndex
@@ -557,7 +560,6 @@ export default {
         } else {
           colorIndex = backgroundColorIndex;
           color = this.fetchColor(palette, colorIndex);
-
 
           // @todo Find proper palette number for background attribute byte and x/y offset
           //palette = 0;
