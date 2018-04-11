@@ -99,29 +99,154 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
 
-      if (scanline == 0 && cycle == 0) {
-        // Fetch a local copy of data needed for performing caching of data for rendering
-        this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
-
-        // Create a local copy of of the pattern table relevant to this scanline
-        this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
-      }
-
-      if (scanline >= 0 && scanline <= 239) {
+      if (scanline <= 239) {
         // Visible scanlines
         if (cycle == 0) {
+          if (scanline == 0) {
+            // Fetch a local copy of data needed for performing caching of data for rendering
+            this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
+
+            // Create a local copy of of the pattern table relevant to this scanline
+            this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
+          }
           // Build the scanline sprite cache for this scanline by reading OAM data and compiling
           // cache
           this.buildScanlineSpriteCache(scanline);
-        } else if (cycle <= 257) {
-          if (cycle % 8 == 1) {
-            // fetch the nametable and attribute byte for background
-            this.fetchNametableAndAttributeByte();
+        } else if (cycle % 8 == 1) {
+          // fetch the nametable and attribute byte for background
+          // COMMENTED OUT TO INLINE FUNCTION CALL FOR PERFORMANCE, SEE BELOW
+          //this.fetchNametableAndAttributeByte();
+
+          // Get the base nametable address
+          // @todo Not sure about this one
+          // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
+          let address =
+            this.baseNameTableAddress() +
+            (Math.floor(this.scanline / 8) * 32 + Math.floor(this.cycle / 8));
+          this.nametableByte = this.vram.get(address);
+          address = this.baseAttributeTableAddress();
+          this.attributeTableByte = this.vram.get(address);
+        }
+        // Bitwise to check if rendering is enabled
+        if ((this.registers[0x01] & 0b00011000) != 0) {
+          // COMMENTING OUT FOR PERFORMANCE REASONS
+          //this.renderPixel(cycle, scanline);
+
+          // Okay, visible coordinate, get the universal background color
+          if (this.frameCache.universalBackgroundColor == null) {
+            this.frameCache.universalBackgroundColor =
+              colors[this.vram.get(0x3f00)];
+          }
+
+          let backgroundColorIndex = 0;
+
+          // Sprite fetching
+          let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(cycle);
+
+          // Background fetching
+          // Okay, fetch the tile pixel color for background
+          let tileX = cycle == 0 ? 0 : (cycle - 1) % 8;
+          let tileY = scanline % 8;
+
+          // INLINING FOR PERFORMANCE
+          // FETCH THE BACKGROUND COLOR
+          /*
+          let pixelColor = this.fetchTilePixelColor(
+            this.nametableByte,
+            tileX,
+            tileY
+          );
+          */
+          // Remember to flip x in order to get the tile in the right order
+          tileX = 7 - tileX;
+          let base = this.nametableByte << 4;
+          base = base | this.basePatternTableAddress();
+
+          // Get first plane
+          let first = this.copyOfPatternTables[base + tileY];
+          // Get second plane
+          let second = this.copyOfPatternTables[base + tileY + 8];
+
+          if (!isBitSet(first, tileX) && !isBitSet(second, tileX)) {
+            // Color value is 0
+            backgroundColorIndex =  0;
+          } else if (isBitSet(first, tileX) && isBitSet(second, tileX)) {
+            // color value is 3
+            backgroundColorIndex = 3;
+          } else if (isBitSet(first, tileX)) {
+            // Color value is 1
+            backgroundColorIndex = 1;
+          } else {
+            backgroundColorIndex = 2;
+          }
+    
+          // Now do pixel evaluation
+          let palette = null;
+          let colorIndex = null;
+          let color = null;
+
+          if (
+            backgroundColorIndex == 0 &&
+            (activeSpritePixelInformation == null ||
+              activeSpritePixelInformation.colorIndex == 0)
+          ) {
+            color = this.frameCache.universalBackgroundColor;
+          } else {
+            // Check for sprite 0 hitting
+            // @todo Add more edge cases
+            if (
+              activeSpritePixelInformation &&
+              activeSpritePixelInformation.tileIndex == 0x00 &&
+              this.renderingEnabled() &&
+              activeSpritePixelInformation.colorIndex &&
+              backgroundColorIndex
+            ) {
+              this.setSprite0Hit(true);
+            }
+            if (
+              activeSpritePixelInformation &&
+              activeSpritePixelInformation.colorIndex
+            ) {
+              colorIndex = activeSpritePixelInformation.colorIndex;
+              palette = activeSpritePixelInformation.palette;
+            } else {
+              colorIndex = backgroundColorIndex;
+              color = this.fetchColor(palette, colorIndex);
+
+              // @todo Find proper palette number for background attribute byte and x/y offset
+              //palette = 0;
+            }
+            // @note How about here?
+            color = this.fetchColor(palette, colorIndex);
+          }
+
+          // Write to our framebuffer
+          base = (scanline * 256 + cycle) * 4;
+          //R
+          this.frameBuffer.data[base] = color[0];
+          //G
+          this.frameBuffer.data[base + 1] = color[1];
+          // B
+          this.frameBuffer.data[base + 2] = color[2];
+          // A
+          this.frameBuffer.data[base + 3] = 255;
+
+          // DONE WITH RENDER PIXEL
+        }
+
+        if (++this.cycle == 341) {
+          // Reset to cycle 0 and increase scanline
+          this.cycle = 0;
+          // Return true to caller to indicate our frame is complete
+          if ((this.scanline = scanline == 261 ? 0 : scanline + 1) == 0) {
+            this.odd = !this.odd;
+            // Dirty dirty dirty
+            this.frameCache = {};
+            this.console.frameComplete = true;
+            return;
           }
         }
-        if (this.renderingEnabled()) {
-          this.renderPixel(cycle, scanline);
-        }
+        return;
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.setVBlank(true);
@@ -129,30 +254,37 @@ export default {
         if ((this.ppuctrl() & 0b10000000) == 0b10000000) {
           this.console.$refs.cpu.fireNMI();
         }
-      }
-
-      // Clearing VBlank and sprite 0
-      if (scanline == 261 && cycle == 0) {
+        // Do some addition here and then return
+        ++this.cycle;
+        return;
+      } else if (scanline == 261 && cycle == 0) {
+        // Clearing VBlank and sprite 0
         this.setVBlank(false);
         this.setSprite0Hit(false);
+
+        ++this.cycle;
+        return;
       }
 
-      cycle = ++this.cycle;
-
-      if(scanline == 261 && cycle == 340 && this.odd && this.renderingEnabled()) {
+      if (
+        ++this.cycle == 340 &&
+        scanline == 261 &&
+        this.odd &&
+        this.renderingEnabled()
+      ) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
         // Return true to caller to indicate our frame is complete
-        if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
+        if ((this.scanline = scanline == 261 ? 0 : scanline + 1) == 0) {
           this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};
           this.console.frameComplete = true;
         }
-        return true;
+        return;
       }
 
-      if (cycle == 341) {
+      if (this.cycle == 341) {
         // Reset to cycle 0 and increase scanline
         this.cycle = 0;
         this.scanline = scanline == 261 ? 0 : scanline + 1;
@@ -162,11 +294,11 @@ export default {
           // Dirty dirty dirty
           this.frameCache = {};
           this.console.frameComplete = true;
-          return true;
+          return;
         }
       }
       // We still have work to do on our frame
-      return false;
+      return;
     };
     this.fetchNametableAndAttributeByte = function() {
       // Get the base nametable address
@@ -261,17 +393,18 @@ export default {
       let oldValue = this.registers[address];
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
-      if(address == 0x0000) {
+      if (address == 0x0000) {
         // PPUCTRL write
         // Check to see if NMI is set while during vblank, if so, fire off an nmi immediately
-        if (((this.ppuctrl() & 0b10000000) == 0b10000000) 
-        && ((oldValue & 0b10000000) == 0b00000000)
-        && (this.ppustatus() & 0b10000000) == 0b10000000) {
+        if (
+          (this.ppuctrl() & 0b10000000) == 0b10000000 &&
+          (oldValue & 0b10000000) == 0b00000000 &&
+          (this.ppustatus() & 0b10000000) == 0b10000000
+        ) {
           // NMI set, fire off nmi
           this.console.$refs.cpu.fireNMI();
         }
-      }
-      else if (address == 0x0006) {
+      } else if (address == 0x0006) {
         this.dataAddress = this.dataAddress << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.dataAddress = (this.dataAddress | value) & 0xffff;
@@ -434,11 +567,13 @@ export default {
         spriteNumber++
       ) {
         let item = this.scanlineSpriteCache[spriteNumber];
-       if (x >= item.spriteX && x < item.spriteX + 8) {
+        if (x >= item.spriteX && x < item.spriteX + 8) {
           // This sprite falls within our X requested coordinate
           // Now pull the first/second byte for the tile for this scanline
           // Check for flipping horizontally
-          let tileX = item.flipHorizontal ? (x - item.spriteX) : 7 - (x - item.spriteX);
+          let tileX = item.flipHorizontal
+            ? x - item.spriteX
+            : 7 - (x - item.spriteX);
 
           let colorIndex = 2;
           if (!isBitSet(item.first, tileX) && !isBitSet(item.second, tileX)) {
@@ -469,7 +604,7 @@ export default {
     // Y is y coordinate
     fetchTilePixelColor(index, x, y) {
       // Remember to flip x in order to get the tile in the right order
-      if(index == 0x00) {
+      if (index == 0x00) {
         //console.log(x + " : " + (7 - x));
       }
       x = 7 - x;
@@ -529,7 +664,7 @@ export default {
 
       // Background fetching
       // Okay, fetch the tile pixel color for background
-      let tileX = x == 0 ? 0 : (x  - 1) % 8;
+      let tileX = x == 0 ? 0 : (x - 1) % 8;
       let tileY = y % 8;
 
       let pixelColor = this.fetchTilePixelColor(
