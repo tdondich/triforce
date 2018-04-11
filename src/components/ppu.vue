@@ -39,6 +39,9 @@ export default {
     databus,
     memory
   },
+  props: [
+    'console',
+  ],
   data: function() {
     return {
       //empty 
@@ -73,6 +76,7 @@ export default {
     this.copyOfOAM = null;
     this.copyOfPatternTables = null;
 
+
     // @todo This is debug helpers
     this.oldCycleCount = 0;
     this.oldScanline = -1;
@@ -104,7 +108,7 @@ export default {
         this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
 
         // Create a local copy of of the pattern table relevant to this scanline
-        this.copyOfPatternTables = this.ppumainbus.getRange(0x0000, 8192);
+        this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
 
         this.setVBlank(false);
         this.setSprite0Hit(false);
@@ -134,7 +138,7 @@ export default {
         // And fire VBlank NMI if PPUCTRL bit 7 is set
 
         if((this.ppuctrl() & 0b10000000) == 0b10000000) {
-          this.$parent.$refs.cpu.fireNMI();
+          this.console.$refs.cpu.fireNMI();
         }
       }
 
@@ -150,7 +154,7 @@ export default {
           this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};
-          this.$parent.frameComplete = true;
+          this.console.frameComplete = true;
         }
         return true;
       }
@@ -164,7 +168,7 @@ export default {
           this.odd = !this.odd;
           // Dirty dirty dirty
           this.frameCache = {};
-          this.$parent.frameComplete = true;
+          this.console.frameComplete = true;
         }
       } 
       // We still have work to do on our frame
@@ -175,29 +179,33 @@ export default {
       // @todo Not sure about this one
       // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
       let address = this.baseNameTableAddress() + (Math.floor(this.scanline / 8) * 32 + Math.floor(this.cycle / 8)); 
-      this.nametableByte = this.ppumainbus.get(address);
+      this.nametableByte = this.vram.get(address);
       address = this.baseAttributeTableAddress();
-      this.attributeTableByte = this.ppumainbus.get(address);
+      this.attributeTableByte = this.vram.get(address);
     };
   },
   mounted() {
-    this.canvas = document.getElementById("screen");
+    this.vram = this.console.$refs.ppumainbus;
+
+
+    this.canvas = this.$el.querySelector("#screen");
     this.canvasCtx = this.canvas.getContext("2d");
     this.canvasCtx.imageSmoothingEnabled = false;
 
-    this.frameBuffer = new ImageData(256, 240);
+    this.frameBuffer = this.canvasCtx.createImageData(256, 240);
 
-    // Ideally, this does not change.
-    this.ppumainbus = this.$parent.$refs.ppumainbus;
   },
   methods: {
     ppumainbus() {
-      return this.ppumainbus;
+      return this.vram;
     },
     renderingEnabled() {
       // Need to check to see if background and sprites is meant to be rendered
       // Any of the bits for 3 and 4 should be set for rendering to be enabled
-      return !((this.ppumask() & 0b11100111) == 0b11100111);
+      if(isBitSet(this.registers[0x01], 3) || isBitSet(this.registers[0x01], 4)) {
+        return true;
+      }
+      return false;
     },
     ppuctrl() {
       return this.registers[0x0000];
@@ -257,7 +265,7 @@ export default {
       } else if (address == 0x0007) {
        // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-        this.ppumainbus.set(this.dataAddress, value);
+        this.vram.set(this.dataAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
         this.dataAddress = (this.dataAddress + increase) & 0xffff;
       }
@@ -265,8 +273,8 @@ export default {
     get(address) {
       if (address == 0x0007) {
         // Then we actually want to return from the VRAM address requested
-        let result = this.ppumainbus.get(this.dataAddress);
-        if (!this.$parent.$refs.cpu.inDebug) {
+        let result = this.vram.get(this.dataAddress);
+        if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
           // @todo Increase VRAM address
           this.dataAddress = (this.dataAddress + increase) & 0xffff;
@@ -274,7 +282,7 @@ export default {
         return result;
       } else if (address == 0x0002) {
         let result = this.registers[address];
-        if (!this.$parent.$refs.cpu.inDebug) {
+        if (!this.console.$refs.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
 
           this.setVBlank(false);
@@ -477,7 +485,7 @@ export default {
       // There are three bytes to a palette
       let base = 0x3f01 + palette * 4;
 
-      return colors[this.ppumainbus.get(base + (colorIndex - 1))];
+      return colors[this.vram.get(base + (colorIndex - 1))];
     },
 
     // Renders a requested pixel, utilizing the scanline tile cache for sprites
@@ -489,7 +497,7 @@ export default {
       // Okay, visible coordinate, get the universal background color
       if (this.frameCache.universalBackgroundColor == null) {
         this.frameCache.universalBackgroundColor =
-          colors[this.ppumainbus.get(0x3f00)];
+          colors[this.vram.get(0x3f00)];
       }
 
       let backgroundColorIndex = 0;

@@ -19,7 +19,7 @@
 
     <cpu-2a03 ref="cpu" />
 
-    <ppu ref="ppu" />
+    <ppu ref="ppu" :console="this" />
 
     <joypad ref="joypad1" title="Player 1" :config="{
       38: 'up',

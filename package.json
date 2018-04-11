@@ -14,28 +14,38 @@
     "babel-core": "^6.26.0",
     "babel-env": "^2.4.1",
     "babel-jest": "^22.4.3",
+    "canvas": "^1.6.10",
     "jest": "^22.4.3",
     "jquery": "^3.3.1",
-    "popper.js": "^1.12.9",
+    "popper.js": "^1.14.3",
     "regenerator-runtime": "^0.11.1",
-    "vue": "^2.5.13",
+    "vue": "^2.5.16",
     "vue-jest": "^2.4.1"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^3.0.0-beta.5",
-    "@vue/cli-plugin-eslint": "^3.0.0-beta.5",
-    "@vue/cli-service": "^3.0.0-beta.5",
+    "@vue/cli-plugin-babel": "^3.0.0-beta.6",
+    "@vue/cli-plugin-eslint": "^3.0.0-beta.6",
+    "@vue/cli-service": "^3.0.0-beta.6",
     "axios": "^0.18.0",
     "babel-plugin-syntax-jsx": "^6.18.0",
-    "bootstrap": "^4.0.0",
-    "node-sass": "^4.7.2",
+    "bootstrap": "^4.1.0",
+    "node-sass": "^4.8.3",
     "sass-loader": "^6.0.7",
-    "vue-template-compiler": "^2.5.13"
+    "vue-template-compiler": "^2.5.16"
   },
   "babel": {
-    "presets": [
-      "@vue/app"
-    ]
+    "env": {
+      "production": {
+        "presets": [
+          "@vue/app"
+        ]
+      },
+      "test": {
+        "presets": [
+          "env"
+        ]
+      }
+    }
   },
   "eslintConfig": {
     "root": true,
@@ -61,7 +71,7 @@
       "vue"
     ],
     "transform": {
-      "^.+\\.js$": "babel-jest",
+      "^.+\\.js$": "./node_modules/babel-jest",
       ".*\\.(vue)$": "./node_modules/vue-jest"
     },
     "collectCoverage": true,
