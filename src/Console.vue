@@ -75,7 +75,7 @@
         ref: 'joypads',
         min: 0x4016,
         max: 0x4017,
-        size: 1
+        size: 2
       },
       {
         ref: 'disabled',

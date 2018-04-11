@@ -136,7 +136,10 @@ export default {
             // Valid phase, let's stream serialize data
             let pointer = node.streamPointer;
             // Increment before our return
-            node.streamPointer = node.streamPointer + 1;
+            // But only if we're not in debug mode
+            if(!this.$parent.$refs.cpu.inDebug) {
+                node.streamPointer = node.streamPointer + 1;
+            }
             switch(pointer) {
                 case 0:
                     return node.a;

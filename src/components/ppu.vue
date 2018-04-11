@@ -248,6 +248,11 @@ export default {
       let base = this.ppuctrl() & 0x10;
       return base == 0x10 ? 0x1000 : 0x0000;
     },
+    baseSpritePatternTableAddress() {
+      // @todo check for sprite size, if 8x8 or 8x16
+      let base = this.ppuctrl() & 0x08;
+      return base == 0x08 ? 0x1000 : 0x0000;
+    },
     // The following fill/set/get is for our registers, accessed by memory
     // Fill a memory range with a specific value
     fill(value = 0x00, start = 0, end = this.memory.length) {
@@ -397,7 +402,7 @@ export default {
           let tileBase = tileIndex << 4;
           // Find the relative y position of the sprite
           let tileY = y - spriteY;
-          tileBase = tileBase | this.basePatternTableAddress();
+          tileBase = tileBase | this.baseSpritePatternTableAddress();
           // Get first plane
           let first = this.copyOfPatternTables[tileBase + tileY];
           // Get second plane
@@ -413,7 +418,9 @@ export default {
             priority:
               (attributeByte & 0b00100000) == 0b00100000
                 ? PRIORITY_BACKGROUND
-                : PRIORITY_FOREGROUND
+                : PRIORITY_FOREGROUND,
+            flipHorizontal: (attributeByte & 0b01000000) == 0b01000000,
+            flipVertical: (attributeByte & 0b10000000) == 0b10000000
           };
           matches = matches + 1;
           // We only cache the first 8 matching sprites on the scanline
@@ -432,10 +439,12 @@ export default {
         spriteNumber++
       ) {
         let item = this.scanlineSpriteCache[spriteNumber];
-        if (x >= item.spriteX && x < item.spriteX + 8) {
+       if (x >= item.spriteX && x < item.spriteX + 8) {
           // This sprite falls within our X requested coordinate
           // Now pull the first/second byte for the tile for this scanline
-          let tileX = 7 - (x - item.spriteX);
+          // Check for flipping horizontally
+          let tileX = item.flipHorizontal ? (x - item.spriteX) : 7 - (x - item.spriteX);
+
           let colorIndex = 2;
           if (!isBitSet(item.first, tileX) && !isBitSet(item.second, tileX)) {
             // Color value is 0
@@ -465,7 +474,10 @@ export default {
     // Y is y coordinate
     fetchTilePixelColor(index, x, y) {
       // Remember to flip x in order to get the tile in the right order
-      x = 8 - x;
+      if(index == 0x00) {
+        //console.log(x + " : " + (7 - x));
+      }
+      x = 7 - x;
       let base = index << 4;
       base = base | this.basePatternTableAddress();
 
@@ -522,7 +534,7 @@ export default {
 
       // Background fetching
       // Okay, fetch the tile pixel color for background
-      let tileX = x % 8;
+      let tileX = x == 0 ? 0 : (x  - 1) % 8;
       let tileY = y % 8;
 
       let pixelColor = this.fetchTilePixelColor(
