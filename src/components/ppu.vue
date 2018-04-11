@@ -258,9 +258,20 @@ export default {
         // Do not do anything.  PPUSTATUS is read only
         return;
       }
+      let oldValue = this.registers[address];
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
-      if (address == 0x0006) {
+      if(address == 0x0000) {
+        // PPUCTRL write
+        // Check to see if NMI is set while during vblank, if so, fire off an nmi immediately
+        if (((this.ppuctrl() & 0b10000000) == 0b10000000) 
+        && ((oldValue & 0b10000000) == 0b00000000)
+        && (this.ppustatus() & 0b10000000) == 0b10000000) {
+          // NMI set, fire off nmi
+          this.console.$refs.cpu.fireNMI();
+        }
+      }
+      else if (address == 0x0006) {
         this.dataAddress = this.dataAddress << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.dataAddress = (this.dataAddress | value) & 0xffff;

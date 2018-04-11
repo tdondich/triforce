@@ -155,8 +155,11 @@ export default {
     // Even/odd CPU cycle
     this.odd = false;
     // Interrupt flags
-    // Non-Maskable Interrupt.  Since it's edge, it'll be a simple boolean
-    this.nmi = false;
+    // Non-Maskable Interrupt.
+    // If value is 0, no nmi has occurred
+    // If value is 1, nmi has been fired, but waiting for next instruction to run
+    // If value is 2, nmi takes priority and needs to be handled
+    this.nmi = 0;
     // Normal Interrupt.  If this happens, since it's line based, it'll be a counter
     this.irq = 0;
     this.inDebug = false;
@@ -197,11 +200,6 @@ export default {
     };
 
     this.handleNMI = function() {
-
-      if(this.debugEnabled) {
-        this.debug = this.debug + "\n\nNMI FIRED\n\n";
-      }
-
       // First push return address high byte onto stack
       this.stackPush(this.pc >> 8);
       // Now push return address low byte onto stack
@@ -211,7 +209,7 @@ export default {
       // Get NMI vector and place it into this.pc
       this.pc = this.getNMIVector();
       // We set nmi to false here to ensure nothing else takes priority over this
-      this.nmi = false;
+      this.nmi = 0;
     };
 
     this.handleIRQ = function() {
@@ -285,7 +283,7 @@ export default {
     },
     // Our Interrupt Handling
     fireNMI() {
-      this.nmi = true;
+      this.nmi = 1;
     },
     fireIRQ() {
       if (!this.isInterruptDisabled) {
@@ -403,6 +401,7 @@ export default {
     tick() {
       this.odd = !this.odd;
 
+      // Run queued instruction
       if (this.cycles == 0 && this.instruction != null) {
         // Run the instruction
         this.instruction();
@@ -412,9 +411,13 @@ export default {
           this.cycles = this.odd ? 514 : 513;
           this.instruction = this.copyOAM;
         }
+        // Check if NMI is pending, if it is, set it to ready to execute
+        if(this.nmi == 1) {
+          this.nmi = 2;
+        }
       }
       // Check to see if we actually need to fetch an operation
-      if (!this.nmi && this.cycles == 0 && this.instruction == null) {
+      if (this.nmi < 2 && this.cycles == 0 && this.instruction == null) {
         let instr = this.mem.get(this.pc);
         if (typeof this[instr] == "undefined") {
           this.error =
@@ -426,7 +429,7 @@ export default {
         }
       }
      // Check for NMI (this takes priority over regular IRQs)
-      if (this.nmi && this.cycles == 0) {
+      if (this.nmi == 2 && this.cycles == 0) {
         this.cycles = 7;
         this.instruction = this.handleNMI;
       }

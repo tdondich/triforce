@@ -11,6 +11,10 @@ let console = {
 
 describe('memory', () => {
     beforeEach(() => {
+        console = {
+            frameComplete: false
+        }
+
         mainbus = mount(memory, {
             propsData: {
                 title: 'PPU Main Bus',
@@ -51,10 +55,10 @@ describe('memory', () => {
     it('should have odd and even frames toggled for each frame', () => {
         // Get the first initial value
         let expected = false
-        for(let i = 0; i < 20; i++) {
+        for (let i = 0; i < 20; i++) {
             do {
                 wrapper.vm.tick()
-            } while(!console.frameComplete)
+            } while (!console.frameComplete)
             expect(wrapper.vm.odd).toBe(expected)
             expected = !expected
             console.frameComplete = false
@@ -69,7 +73,7 @@ describe('memory', () => {
         do {
             wrapper.vm.tick();
             count++;
-        } while(!wrapper.vm.console.frameComplete);
+        } while (!wrapper.vm.console.frameComplete);
         expect(count).toBe(89342);
     })
     it('should clear VBlank after 6820 (or 6819 if odd) cycles from being set', () => {
@@ -79,13 +83,13 @@ describe('memory', () => {
         // PERFORM A ODD FRAME
         do {
             wrapper.vm.tick();
-        } while((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
         let count = 1;
         // FOLLOWING FRAME WILL BE EVEN
         do {
             wrapper.vm.tick();
             count = count + 1;
-        } while((wrapper.vm.registers[0x0002] & 0b10000000) == 0b10000000)
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) == 0b10000000)
         // This checks for even
         expect(count).toBe(6820)
 
@@ -93,21 +97,49 @@ describe('memory', () => {
         // RUN AN ODD FRAME
         do {
             wrapper.vm.tick();
-        } while((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
         // do it again to force to go to odd frame
         // THIS WILL BE EVEN
         do {
             wrapper.vm.tick();
-        } while((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
         count = 1;
         // THIS FRAME WILL BE ODD
         do {
             wrapper.vm.tick();
             count = count + 1;
-        } while((wrapper.vm.registers[0x0002] & 0b10000000) == 0b10000000)
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) == 0b10000000)
         // This checks for odd frames
-         expect(count).toBe(6819)
-
+        expect(count).toBe(6819)
+    })
+    it('should fire off an nmi on the CPU when setting nmi and during vblank', () => {
+        // Mock the cpu nmi call
+        let nmiMock = jest.fn()
+        console.$refs.cpu = {
+            fireNMI: nmiMock
+        }
+        // Render until we hit a VBlank
+        do {
+            wrapper.vm.tick();
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        wrapper.vm.set(0x0000, 0b10000000);
+        expect(nmiMock.mock.calls.length).toBe(1)
+    })
+    it('should not fire another nmi when setting bit after its already been set at start of vblank', () => {
+        // Enable NMI from start
+        wrapper.vm.set(0x0000, 0b10000000);
+        let nmiMock = jest.fn()
+        console.$refs.cpu = {
+            fireNMI: nmiMock
+        }
+        // Render until we hit a VBlank
+        do {
+            wrapper.vm.tick();
+        } while ((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
+        // Call again, setting the NMI flag
+        wrapper.vm.set(0x0000, 0b10000000);
+        // ensure the nmi was fired only once
+        expect(nmiMock.mock.calls.length).toBe(1)
     })
 })
 
