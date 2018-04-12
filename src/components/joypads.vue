@@ -140,25 +140,34 @@ export default {
             if(!this.$parent.$refs.cpu.inDebug) {
                 node.streamPointer = node.streamPointer + 1;
             }
+            let value = 0x01;
             switch(pointer) {
                 case 0:
-                    return node.a;
+                    value = node.a;
+                    break;
                 case 1:
-                    return node.b;
+                    value = node.b;
+                    break;
                 case 2:
-                    return node.select;
+                    value = node.select;
+                    break;
                 case 3:
-                    return node.start;
+                    value = node.start;
+                    break;
                 case 4:
-                    return node.up;
+                    value = node.up;
+                    break;
                 case 5:
-                    return node.down;
+                    value = node.down;
+                    break;
                 case 6:
-                    return node.left;
+                    value = node.left;
+                    break;
                 case 7:
-                    return node.right;
+                    value = node.right;
+                    break;
             }
-            return 0x01;
+            return value;
         }
         return 0x01;
     },
