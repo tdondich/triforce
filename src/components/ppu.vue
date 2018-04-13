@@ -200,13 +200,7 @@ export default {
     renderingEnabled() {
       // Need to check to see if background and sprites is meant to be rendered
       // Any of the bits for 3 and 4 should be set for rendering to be enabled
-      if (
-        isBitSet(this.registers[0x01], 3) ||
-        isBitSet(this.registers[0x01], 4)
-      ) {
-        return true;
-      }
-      return false;
+      return (!(this.registers[0x01] & 0b00011000) == 0);
     },
     ppuctrl() {
       return this.registers[0x0000];
@@ -409,6 +403,7 @@ export default {
 
           // Sprite belongs on this scanline
           this.scanlineSpriteCache[matches] = {
+            oamAddress: base,
             spriteX: spriteX,
             tileIndex: tileIndex,
             first: first,
@@ -460,6 +455,7 @@ export default {
           }
 
           return {
+            oamAddress: item.oamAddress,
             colorIndex: colorIndex,
             palette: item.palette
           };
@@ -566,8 +562,8 @@ export default {
         // @todo Add more edge cases
         if (
           activeSpritePixelInformation &&
-          activeSpritePixelInformation.tileIndex == 0x00 &&
-          this.renderingEnabled() &&
+          activeSpritePixelInformation.oamAddress == 0x00 &&
+          ((this.registers[0x01] & 0b00011000) == 0b00011000) &&
           activeSpritePixelInformation.colorIndex &&
           backgroundColorIndex
         ) {
