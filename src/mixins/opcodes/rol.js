@@ -5,7 +5,7 @@ export default {
         // ROL - Rotate Left
         rol: function (location) {
             let value = 0;
-            if(!location) {
+            if(location === undefined) {
                 // Perform it on the accumulator
                 value = this.a;
                 let bit0 = this.isCarry() ? 0x01 : 0x00;

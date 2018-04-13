@@ -5,7 +5,7 @@ export default {
         // ROR - Rotate Right
         ror: function (location) {
             let value = 0;
-            if(!location) {
+            if(location === undefined) {
                 // Perform it on the accumulator
                 value = this.a;
                 let bit7 = this.isCarry() ? 0x80 : 0x00;

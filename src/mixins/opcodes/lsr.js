@@ -5,7 +5,7 @@ export default {
         // LSR - Logical Shift Right
         lsr: function (location) {
             let value = 0;
-            if (!location) {
+            if(location === undefined) {
                 // Perform it on the accumulator
                 value = this.a;
                 // First, set the carry
