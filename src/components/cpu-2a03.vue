@@ -418,6 +418,17 @@ export default {
       }
       // Check to see if we actually need to fetch an operation
       if (this.nmi < 2 && this.cycles == 0 && this.instruction == null) {
+
+        // @Note: This checks for a position in code and set console to debug (BREAKPOINT)
+        /*
+        if(this.pc == 0xF522) {
+          // Halt before the next cycle
+          this.$parent.stepEnabled = this.$parent.displayStepEnabled = true;
+          console.log("Breakpoint reached");
+        }
+        */
+
+
         let instr = this.mem.get(this.pc);
         if (typeof this[instr] == "undefined") {
           this.error =

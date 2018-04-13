@@ -125,15 +125,21 @@ export default {
   methods: {
     // These are meant to only handle one "address"
     // Ignore address parameter, we only deal with one address
+    // @todo Properly implement open bus behavior
     get: function(address) {
+        // Default to player 1
+        let node = this.one;
+        if(address == 0x01) {
+            // player two
+            node = this.two;
+        }
+        if(this.initPhase == 1) {
+            // Always send the status of the first button 'A'
+            return (0b01000000 | node.a);
+            
+        }
         if(this.initPhase == 2) {
-            // Default to player 1
-            let node = this.one;
-            if(address == 0x01) {
-                // player two
-                node = this.two;
-            }
-            // Valid phase, let's stream serialize data
+           // Valid phase, let's stream serialize data
             let pointer = node.streamPointer;
             // Increment before our return
             // But only if we're not in debug mode
@@ -167,9 +173,9 @@ export default {
                     value = node.right;
                     break;
             }
-            return value;
+            return (0b01000000 | value);
         }
-        return 0x01;
+        return (0b01000000 | 0x01);
     },
     set: function(address, value) {
         if(address == 0x00) {

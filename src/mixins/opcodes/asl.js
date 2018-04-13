@@ -5,7 +5,7 @@ export default {
         // ASL - Artithmetic Shift Left
         asl: function (location) {
             let value = 0;
-            if(!location) {
+            if(location === undefined) {
                 // Perform it on the accumulator
                 value = this.a;
                 // First, set the carry
