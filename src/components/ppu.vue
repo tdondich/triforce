@@ -385,6 +385,9 @@ export default {
         if (y >= spriteY && y < spriteY + 8) {
           let spriteX = this.copyOfOAM[base + 3];
 
+          // Note, we decrement spriteX to handle 0 indexed x coordinates
+          // @todo, is this accurate?  Is the background shifted, or is sprite x shifted incorrectly?
+
           let attributeByte = this.copyOfOAM[base + 2];
           // Desired pixel falls within the sprite bounds
           // Get desired palette
@@ -394,7 +397,8 @@ export default {
 
           let tileBase = tileIndex << 4;
           // Find the relative y position of the sprite
-          let tileY = y - spriteY;
+          let tileY = ((attributeByte & 0b10000000) == 0b10000000) ? 7 - (y - spriteY) : y - spriteY;
+
           tileBase = tileBase | this.baseSpritePatternTableAddress();
           // Get first plane
           let first = this.copyOfPatternTables[tileBase + tileY];
@@ -564,6 +568,9 @@ export default {
           activeSpritePixelInformation &&
           activeSpritePixelInformation.oamAddress == 0x00 &&
           ((this.registers[0x01] & 0b00011000) == 0b00011000) &&
+          // Check for left clipping
+          (((this.registers[0x01] & 0b00000110) == 0x06) || x > 7) &&
+          // End left clip check
           activeSpritePixelInformation.colorIndex &&
           backgroundColorIndex
         ) {
