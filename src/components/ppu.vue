@@ -2,20 +2,6 @@
   <div>
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
 
-    <!-- Our OAM memory -->
-    <memory ref="oamdata" title="OAM" size="256" />
-    <databus ref="oam" name="OAM" :sections="[
-              {
-                  ref: 'oamdata',
-                  min: 0x00,
-                  max: 0xFF,
-                  size: 256 
-              }
-          ]" />
-
-    <!-- Secondary OAM Buffer -->
-    <memory ref="secondaryoam" size="32" />
-
   </div>
 </template>
 
@@ -46,6 +32,11 @@ export default {
   },
   created() {
     this.registers = new Uint8Array(8);
+
+    // Create our OAM array
+    this.oam = new Uint8Array(256);
+
+
     // There are 341 cycles in each scanline
     this.cycle = 0;
     // There are 262 scanlines, starting with 0, they refrence 261 as -1 as well in the following link
@@ -70,15 +61,15 @@ export default {
     this.backgroundAndSpriteRendering = false;
     this.leftSideBackgroundAndSpriteFlag = false;
     this.NMIEnabled = false;
+    this.renderingEnabled = false;
 
     // Rendering optimizations aka hacks
     this.frameBuffer = null;
-    this.copyOfOAM = null;
     this.copyOfPatternTables = null;
 
     // @todo This is debug helpers
     this.oldCycleCount = 0;
-    this.oldScanline = -1;
+    this.oldScanline = 0;
 
     this.previousCycleCount = () => {
       let value = this.oldCycleCount;
@@ -101,24 +92,21 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
 
-      if (scanline <= 239) {
-        // Visible scanlines
-        if (cycle == 0) {
-          if(scanline == 0) {
-            // Fetch a local copy of data needed for performing caching of data for rendering
-            this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
+      if (scanline <= 239 && cycle <= 257) {
+          if(cycle == 0) {
+            if(scanline == 0) {
+              // Fetch a local copy of data needed for performing caching of data for rendering
 
-            // Create a local copy of of the pattern table relevant to this scanline
-            this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
+              // Create a local copy of of the pattern table relevant to this scanline
+              this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
 
-            // Set the cache data for this frame
-            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
-          }
-          // Build the scanline sprite cache for this scanline by reading OAM data and compiling
-          // cache
-          this.buildScanlineSpriteCache(scanline);
-        } else if (cycle <= 257) {
-          if (cycle % 8 == 1) {
+              // Set the cache data for this frame
+              this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
+            }
+           // Build the scanline sprite cache for this scanline by reading OAM data and compiling
+            // cache
+            this.buildScanlineSpriteCache(scanline);
+          } else if (cycle % 8 == 1) {
             // fetch the nametable and attribute byte for background
 
             // Get the base nametable address
@@ -146,9 +134,6 @@ export default {
           // after this fact
           ++this.cycle;
           return;
-
-        }
-
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.registers[0x02] = this.registers[0x02] | 0b10000000;
@@ -157,38 +142,42 @@ export default {
         if (this.NMIEnabled) {
           this.cpu.nmi = 1;
         }
+        ++this.cycle;
+        return;
       } else if (scanline == 261 && cycle == 0) {
       // Clearing VBlank and sprite 0
         this.registers[0x02] = this.registers[0x02] & 0b00111111;
+        ++this.cycle;
+        return;
       }
 
-      if(++this.cycle >= 340) {
-        if(scanline == 261 && this.cycle == 340 && this.odd && this.renderingEnabled) {
-          // Reset to cycle 0 and increase scanline
-          this.cycle = 0;
-          // Return true to caller to indicate our frame is complete
-          if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
-            this.odd = !this.odd;
-            // Dirty dirty dirty
-            this.console.frameNotCompleted = false;
-          }
-          return;
-        }
 
-        if (this.cycle == 341) {
-          // Reset to cycle 0 and increase scanline
-          this.cycle = 0;
-          this.scanline = scanline == 261 ? 0 : scanline + 1;
-          // Return true to caller to indicate our frame is complete
-          if (this.scanline == 0) {
-            this.odd = !this.odd;
-            // Dirty dirty dirty
+      // Handle new scanline possibly
+      if(++this.cycle >= 340) {
+        // This first if will fire at cycle 340, if the frame is odd
+        if(this.odd && this.renderingEnabled) {
+          if(++this.scanline < 262) {
+            this.cycle = 0;
+            return;
+          } else {
+            this.scanline = this.cycle = 0;
+            this.odd = false;
+            this.console.frameNotCompleted = false;
+            return;
+          }
+        } else {
+          // This else fires if on even frame
+          if(++this.scanline < 262) {
+            this.cycle = 0;
+          } else {
+            this.scanline = this.cycle = 0;
+            this.odd = true;
             this.console.frameNotCompleted = false;
             return;
           }
         }
       }
-      // We still have work to do on our frame
+     // We still have work to do on our frame
       return;
     };
   },
@@ -362,7 +351,7 @@ export default {
     },
     copyToOAM(address, value) {
       // Copy the info to the requested OAM address
-      this.$refs.oam.set(address, value);
+      this.oam[address] = value;
     },
     // See: http://wiki.nesdev.com/w/index.php/PPU_power_up_state
     reset() {
@@ -389,7 +378,7 @@ export default {
       for (let spriteNumber = 0; spriteNumber < 64; spriteNumber++) {
         // Base is the base address of the currently evaluated sprite
         let base = spriteNumber * 4;
-        let spriteY = this.copyOfOAM[base];
+        let spriteY = this.oam[base];
 
         // Assume 8x8 sprites for the time being
         // @todo Handle 8x16 sprite configuration
@@ -398,17 +387,17 @@ export default {
           continue;
         }
         if (y >= spriteY && y < spriteY + 8) {
-          let spriteX = this.copyOfOAM[base + 3];
+          let spriteX = this.oam[base + 3];
 
           // Note, we decrement spriteX to handle 0 indexed x coordinates
           // @todo, is this accurate?  Is the background shifted, or is sprite x shifted incorrectly?
 
-          let attributeByte = this.copyOfOAM[base + 2];
+          let attributeByte = this.oam[base + 2];
           // Desired pixel falls within the sprite bounds
           // Get desired palette
           let desiredPalette = (attributeByte & 0b00000011) + 4;
           // @ Note, handle attributes for flipping tile vert/horiz
-          let tileIndex = this.copyOfOAM[base + 1];
+          let tileIndex = this.oam[base + 1];
 
           let tileBase = tileIndex << 4;
           // Find the relative y position of the sprite
@@ -532,6 +521,8 @@ export default {
 
       // Sprite fetching
       let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(x);
+
+      //return;
 
       // Fetch background tile info only if background rendering is enabled
       let backgroundColorIndex = 0;
