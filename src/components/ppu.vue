@@ -66,8 +66,10 @@ export default {
     this.canvasCtx = null;
 
     // This feels so dirty, it's our frame cache, caching data for the existing frame
-    this.frameCache = {};
+    this.universalBackgroundColor = 0;
     this.scanlineSpriteCache = [];
+    this.backgroundAndSpriteRendering = false;
+    this.leftSideBackgroundAndSpriteFlag = false;
 
     // Rendering optimizations aka hacks
     this.frameBuffer = null;
@@ -105,6 +107,10 @@ export default {
 
         // Create a local copy of of the pattern table relevant to this scanline
         this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
+
+        // Set the cache data for this frame
+        this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
+ 
       }
 
       if (scanline >= 0 && scanline <= 239) {
@@ -118,10 +124,9 @@ export default {
             // fetch the nametable and attribute byte for background
             this.fetchNametableAndAttributeByte();
           }
+          if(!(this.registers[0x01] & 0b00011000) == 0) this.renderPixel(cycle, scanline);
         }
-        if (this.renderingEnabled()) {
-          this.renderPixel(cycle, scanline);
-        }
+
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.setVBlank(true);
@@ -146,7 +151,6 @@ export default {
         if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
           this.odd = !this.odd;
           // Dirty dirty dirty
-          this.frameCache = {};
           this.console.frameComplete = true;
         }
         return true;
@@ -160,7 +164,6 @@ export default {
         if (this.scanline == 0) {
           this.odd = !this.odd;
           // Dirty dirty dirty
-          this.frameCache = {};
           this.console.frameComplete = true;
           return true;
         }
@@ -192,6 +195,10 @@ export default {
     this.canvasCtx.imageSmoothingEnabled = false;
 
     this.frameBuffer = this.canvasCtx.createImageData(256, 240);
+
+    // Prefill frameBuffer.data with 255's to pre-populate alpha value
+    this.frameBuffer.data.fill(255);
+
   },
   methods: {
     ppumainbus() {
@@ -252,6 +259,7 @@ export default {
       this.registers.fill(value, start, end);
     },
     set(address, value) {
+
       if (address == 0x0002) {
         // Do not do anything.  PPUSTATUS is read only
         return;
@@ -268,8 +276,14 @@ export default {
           // NMI set, fire off nmi
           this.console.$refs.cpu.fireNMI();
         }
-      }
-      else if (address == 0x0006) {
+      } else if(address == 0x0001) {
+        // Writing to MASK
+        // So let's determine if backgroundAndSpriteRendering is enabled
+        this.backgroundAndSpriteRendering = (value & 0b00011000) == 0b00011000 ? true : false;
+        // This determines if BOTH background and sprite rendering is allowed in the leftmost 8 pixels
+        // Used for sprite 0 checks
+        this.leftSideBackgroundAndSpriteFlag = (value & 0b00000110) == 0b00000110 ? true : false;
+      } else if (address == 0x0006) {
         this.dataAddress = this.dataAddress << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.dataAddress = (this.dataAddress | value) & 0xffff;
@@ -502,9 +516,6 @@ export default {
     // Fetch the color hex code for the requested palette and colorIndex combo
     // See: mixins/colors.js
     fetchColor(palette, colorIndex) {
-      if (colorIndex == 0) {
-        throw "Invalid colorIndex for fetchColor";
-      }
       // Base will point to our palette starting address
       // There are three bytes to a palette
       let base = 0x3f01 + palette * 4;
@@ -514,72 +525,41 @@ export default {
 
     // Renders a requested pixel, utilizing the scanline tile cache for sprites
     renderPixel(x, y) {
-      if (y < 0 || y > 239) {
-        // Not a visible coordinate
-        return;
-      }
-      // Okay, visible coordinate, get the universal background color
-      if (this.frameCache.universalBackgroundColor == null) {
-        this.frameCache.universalBackgroundColor =
-          colors[this.vram.get(0x3f00)];
-      }
-
-      let backgroundColorIndex = 0;
+      // The color for the specified pixel
+      // By default, it will be the universal background color
+      let color = this.universalBackgroundColor;
 
       // Sprite fetching
-      let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(
-        x
-      );
+      let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(x);
 
-      // Background fetching
-      // Okay, fetch the tile pixel color for background
-      let tileX = x == 0 ? 0 : (x  - 1) % 8;
-      let tileY = y % 8;
-
-      let pixelColor = this.fetchTilePixelColor(
-        this.nametableByte,
-        tileX,
-        tileY
-      );
-
-      if (pixelColor == 1) {
-        backgroundColorIndex = 1;
-      } else if (pixelColor == 2) {
-        backgroundColorIndex = 2;
-      } else if (pixelColor == 3) {
-        backgroundColorIndex = 3;
+      // Fetch background tile info only if background rendering is enabled
+      let backgroundColorIndex = 0;
+      // This if checks for background tile rendering enabled
+      if((this.registers[0x01] & 0x08) == 0x08) {
+        backgroundColorIndex = this.fetchTilePixelColor(
+          this.nametableByte,
+          x == 0 ? 0 : (x  - 1) % 8,
+          y % 8
+        );
       }
 
       // Now do pixel evaluation
       let palette = null;
       let colorIndex = null;
-      let color = null;
 
-      if (
-        backgroundColorIndex == 0 &&
-        (activeSpritePixelInformation == null ||
-          activeSpritePixelInformation.colorIndex == 0)
-      ) {
-        color = this.frameCache.universalBackgroundColor;
-      } else {
-        // Check for sprite 0 hitting
-        // @todo Add more edge cases
-        if (
-          activeSpritePixelInformation &&
-          activeSpritePixelInformation.oamAddress == 0x00 &&
-          ((this.registers[0x01] & 0b00011000) == 0b00011000) &&
+      if(backgroundColorIndex != 0 || (activeSpritePixelInformation && activeSpritePixelInformation.colorIndex != 0)) {
+        // If we have an active sprite, do sprite detail
+       if ( activeSpritePixelInformation && activeSpritePixelInformation.colorIndex) {
+          // Check for sprite 0
+          if(activeSpritePixelInformation.oamAddress == 0x00 &&
+          this.backgroundAndSpriteRendering &&
           // Check for left clipping
-          (((this.registers[0x01] & 0b00000110) == 0x06) || x > 7) &&
+          (this.leftSideBackgroundAndSpriteFlag || x > 7) &&
           // End left clip check
-          activeSpritePixelInformation.colorIndex &&
           backgroundColorIndex
-        ) {
-          this.setSprite0Hit(true);
-        }
-        if (
-          activeSpritePixelInformation &&
-          activeSpritePixelInformation.colorIndex
-        ) {
+          ) {
+            this.setSprite0Hit(true);
+          }
           colorIndex = activeSpritePixelInformation.colorIndex;
           palette = activeSpritePixelInformation.palette;
         } else {
@@ -605,9 +585,7 @@ export default {
               palette = ((this.attributeTableByte & 0b11000000) >>> 6);
             }
           }
-          color = this.fetchColor(palette, colorIndex);
         }
-        // @note How about here?
         color = this.fetchColor(palette, colorIndex);
       }
 
@@ -619,8 +597,6 @@ export default {
       this.frameBuffer.data[base + 1] = color[1];
       // B
       this.frameBuffer.data[base + 2] = color[2];
-      // A
-      this.frameBuffer.data[base + 3] = 255;
     }
   }
 };
