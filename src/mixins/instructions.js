@@ -1,7 +1,7 @@
 import { fh } from "./helpers";
 
 export default {
-        debugger(numberOfOperands, operation) {
+        enabledDebugger(numberOfOperands, operation) {
             if(typeof operation != 'function') {
                 return;
             }
@@ -27,15 +27,15 @@ export default {
             //this.debug = debug;
             this.inDebug = false;
         },
+        // Disabled debugger
+        disabledDebugger() {},
         // These are now the opcodes we handle
         // JMP with absoute addressing
         0x4C: function () {
             this.cycles = 3;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                if(this.debugEnabled) {
-                    this.debugger(3, () => `JMP $${fh(targetAddress, 4)}`);
-                }
+                this.debugger(3, () => `JMP $${fh(targetAddress, 4)}`);
                 this.pc = targetAddress;
             }
         },

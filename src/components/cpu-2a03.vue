@@ -1,8 +1,8 @@
 <template>
   <div class="row">
     <div class="col-sm-12">
-      <button class="btn btn-primary" v-if="!debugEnabled" @click="debugEnabled = !debugEnabled">Enable CPU Debug View</button>
-      <button class="btn btn-primary" v-else @click="debugEnabled = !debugEnabled">Disable CPU Debug View</button>
+      <button class="btn btn-primary" v-if="!debugEnabled" @click="toggleDebug">Enable CPU Debug View</button>
+      <button class="btn btn-primary" v-else @click="toggleDebug">Disable CPU Debug View</button>
     </div>
     <div v-if="debugEnabled" class="col-sm-12">
       <div class="form-group">
@@ -167,6 +167,9 @@ export default {
     // @todo Move the rest of the opcodes into this component via assign instead of the mixins vue behavior
     Object.assign(this, instructions);
 
+    this.debugger = this.disabledDebugger;
+
+
     this.isCarry = () => {
       return (this.p & 0b0001) == 0b0001;
     };
@@ -237,6 +240,15 @@ export default {
   },
 
   methods: {
+    toggleDebug() {
+      this.debugEnabled = !this.debugEnabled;
+      if(this.debugEnabled) {
+        this.debugger = this.enabledDebugger;
+      } else {
+        this.debugger = this.disabledDebugger;
+      }
+
+    },
     // These are sets and gets for our memory mapped registers
     set(address, value) {
       this.$refs.registers.set(address, value);

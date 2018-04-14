@@ -93,22 +93,17 @@ export default {
           min: node.min,
           max: node.max,
           size: node.size,
-          bus: node.bus,
+          bus: node.bus ? node.bus : undefined,
           target: this.$parent.$refs[node.ref]
         };
       }
     }
 
     this.get = function(address) {
-      let node = this.configuration[address];
+      let {min, size, bus, target} = this.configuration[address];
      // We found the memory module we need to reference, plus dealing with memory that repeats
-      let nodeAddress = (address - node.min) % node.size;
-      if (node.bus) {
-        // node.target.get
-        return node.target.get(nodeAddress, node.bus);
-      } else {
-        return node.target.get(nodeAddress);
-      }
+      let nodeAddress = (address - min) % size;
+      return target.get(nodeAddress, bus);
     };
  
   },

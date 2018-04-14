@@ -120,9 +120,6 @@ export default {
         } else if (cycle <= 257) {
           if (cycle % 8 == 1) {
             // fetch the nametable and attribute byte for background
-            //this.fetchNametableAndAttributeByte();
-
-            // @performance Inline the fetching of nametable and attribute byte
 
             // Get the base nametable address
             // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
@@ -154,15 +151,15 @@ export default {
 
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
-        this.setVBlank(true);
+        this.registers[0x02] = this.registers[0x02] | 0b10000000;
+
         // And fire VBlank NMI if PPUCTRL bit 7 is set
         if (this.NMIEnabled) {
-          this.console.$refs.cpu.fireNMI();
+          this.cpu.nmi = 1;
         }
       } else if (scanline == 261 && cycle == 0) {
       // Clearing VBlank and sprite 0
-        this.setVBlank(false);
-        this.setSprite0Hit(false);
+        this.registers[0x02] = this.registers[0x02] & 0b00111111;
       }
 
       if(++this.cycle >= 340) {
@@ -197,6 +194,7 @@ export default {
   },
   mounted() {
     this.vram = this.console.$refs.ppumainbus;
+    this.cpu = this.console.$refs.cpu;
 
     this.canvas = this.$el.querySelector("#screen");
     this.canvasCtx = this.canvas.getContext("2d");
@@ -453,32 +451,33 @@ export default {
         spriteNumber < tileCacheCount;
         spriteNumber++
       ) {
-        let item = this.scanlineSpriteCache[spriteNumber];
-       if (x >= item.spriteX && x < item.spriteX + 8) {
+        // Destructuring the sprite info
+        let {spriteX, oamAddress, palette, flipHorizontal, first, second} = this.scanlineSpriteCache[spriteNumber];
+       if (x >= spriteX && x < spriteX + 8) {
           // This sprite falls within our X requested coordinate
           // Now pull the first/second byte for the tile for this scanline
           // Check for flipping horizontally
-          let tileX = item.flipHorizontal ? (x - item.spriteX) : 7 - (x - item.spriteX);
+          let tileX = flipHorizontal ? (x - spriteX) : 7 - (x - spriteX);
 
           let colorIndex = 2;
-          if (!isBitSet(item.first, tileX) && !isBitSet(item.second, tileX)) {
+          if (!isBitSet(first, tileX) && !isBitSet(second, tileX)) {
             // Color value is 0
             colorIndex = 0;
           } else if (
-            isBitSet(item.first, tileX) &&
-            isBitSet(item.second, tileX)
+            isBitSet(first, tileX) &&
+            isBitSet(second, tileX)
           ) {
             // color value is 3
             colorIndex = 3;
-          } else if (isBitSet(item.first, tileX)) {
+          } else if (isBitSet(first, tileX)) {
             // Color value is 1
             colorIndex = 1;
           }
 
           return {
-            oamAddress: item.oamAddress,
+            oamAddress: oamAddress,
             colorIndex: colorIndex,
-            palette: item.palette
+            palette: palette
           };
         }
       }
