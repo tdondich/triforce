@@ -123,7 +123,7 @@ export default {
             // fetch the nametable and attribute byte for background
             this.fetchNametableAndAttributeByte();
           }
-          if(this.renderingEnabled) this.renderPixel(cycle, scanline);
+          this.renderPixel(cycle, scanline);
         }
 
       } else if (scanline == 241 && cycle == 1) {
@@ -149,7 +149,7 @@ export default {
             // Dirty dirty dirty
             this.console.frameComplete = true;
           }
-          return true;
+          return;
         }
 
         if (this.cycle == 341) {
@@ -161,12 +161,12 @@ export default {
             this.odd = !this.odd;
             // Dirty dirty dirty
             this.console.frameComplete = true;
-            return true;
+            return;
           }
         }
       }
       // We still have work to do on our frame
-      return false;
+      return;
     };
     this.fetchNametableAndAttributeByte = function() {
       // Get the base nametable address
