@@ -246,22 +246,37 @@ export default {
   created() {
     this.stepEnabled = false;
     
-    this.frameComplete = false;
+    this.frameNotCompleted = true;
 
-    this.tick = () => {
-     this.frameComplete = false;
+    this.debugTick = () => {
+     this.frameNotCompleted = true;
       do {
         // Our PPU runs 3x the cpu
         this.cpu.tick();
         this.ppu.tick();
         this.ppu.tick();
         this.ppu.tick();
-      } while (!this.frameComplete && !this.stepEnabled);
+      } while (this.frameNotCompleted && !this.stepEnabled);
       this.ppu.render();
       if (!this.stepEnabled) {
         requestAnimationFrame(this.tick);
       }
     };
+    this.prodTick = () => {
+     this.frameNotCompleted = true;
+      do {
+        // Our PPU runs 3x the cpu
+        this.cpu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
+        this.ppu.tick();
+      } while (this.frameNotCompleted);
+      this.ppu.render();
+      requestAnimationFrame(this.tick);
+    };
+    // Set our initial tick method
+    this.tick = this.prodTick;
+ 
   },
   mounted() {
     this.cpu = this.$refs.cpu;
@@ -271,6 +286,12 @@ export default {
     toggleStep() {
       this.stepEnabled = !this.stepEnabled;
       this.displayStepEnabled = this.stepEnabled;
+
+      if(this.stepEnabled) {
+        this.tick = this.debugTick;
+      } else {
+        this.tick = this.prodTick;
+      }
 
       // Restart game loop
       setTimeout(this.tick, 10);

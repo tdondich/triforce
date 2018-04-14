@@ -25,8 +25,7 @@ import memory from "./memory.vue";
 import colors from "../mixins/colors";
 
 function isBitSet(value, index) {
-  let mask = 1 << index;
-  return (value & mask) != 0;
+  return (value & (1 << index)) != 0;
 }
 
 const PRIORITY_FOREGROUND = 0;
@@ -121,9 +120,36 @@ export default {
         } else if (cycle <= 257) {
           if (cycle % 8 == 1) {
             // fetch the nametable and attribute byte for background
-            this.fetchNametableAndAttributeByte();
+            //this.fetchNametableAndAttributeByte();
+
+            // @performance Inline the fetching of nametable and attribute byte
+
+            // Get the base nametable address
+            // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
+
+            // Base will be 0 - 3
+            // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
+      
+            let baseAddress = (0x2000 + (this.registers[0x00] & 0b00000011) * 0x400);
+            let address = baseAddress + 
+              (Math.floor(scanline / 8) * 32 + Math.floor(cycle / 8));
+            this.nametableByte = this.vram.get(address);
+
+            // Now get attribute byte
+            address = baseAddress + 0x3c0;
+
+            let y = Math.floor(scanline / 32);
+            let x = Math.floor(cycle / 32);
+            address = address + ((y * 8) + x);
+            this.attributeTableByte = this.vram.get(address);
           }
           this.renderPixel(cycle, scanline);
+
+          // We don't need to evaluate further if statements since we know there are additional cycles
+          // after this fact
+          ++this.cycle;
+          return;
+
         }
 
       } else if (scanline == 241 && cycle == 1) {
@@ -147,7 +173,7 @@ export default {
           if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
             this.odd = !this.odd;
             // Dirty dirty dirty
-            this.console.frameComplete = true;
+            this.console.frameNotCompleted = false;
           }
           return;
         }
@@ -160,28 +186,13 @@ export default {
           if (this.scanline == 0) {
             this.odd = !this.odd;
             // Dirty dirty dirty
-            this.console.frameComplete = true;
+            this.console.frameNotCompleted = false;
             return;
           }
         }
       }
       // We still have work to do on our frame
       return;
-    };
-    this.fetchNametableAndAttributeByte = function() {
-      // Get the base nametable address
-      // @todo Not sure about this one
-      // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
-      let address =
-        this.baseNameTableAddress() +
-        (Math.floor(this.scanline / 8) * 32 + Math.floor(this.cycle / 8));
-      this.nametableByte = this.vram.get(address);
-      address = this.baseAttributeTableAddress();
-
-      let y = Math.floor(this.scanline / 32);
-      let x = Math.floor(this.cycle / 32);
-      address = address + ((y * 8) + x);
-      this.attributeTableByte = this.vram.get(address);
     };
   },
   mounted() {
@@ -236,11 +247,7 @@ export default {
       let base = this.baseNameTableAddress() + 0x3c0;
       return base;
     },
-    basePatternTableAddress() {
-      let base = this.ppuctrl() & 0x10;
-      return base == 0x10 ? 0x1000 : 0x0000;
-    },
-    baseSpritePatternTableAddress() {
+   baseSpritePatternTableAddress() {
       // @todo check for sprite size, if 8x8 or 8x16
       let base = this.ppuctrl() & 0x08;
       return base == 0x08 ? 0x1000 : 0x0000;
@@ -483,12 +490,11 @@ export default {
     // Y is y coordinate
     fetchTilePixelColor(index, x, y) {
       // Remember to flip x in order to get the tile in the right order
-      if(index == 0x00) {
-        //console.log(x + " : " + (7 - x));
-      }
       x = 7 - x;
       let base = index << 4;
-      base = base | this.basePatternTableAddress();
+
+      // This ors against the base pattern table address for background
+      base = base | ((this.registers[0x00] & 0x10) == 0x10 ? 0x1000 : 0x0000);
 
       // Get first plane
       let first = this.copyOfPatternTables[base + y];
@@ -562,10 +568,8 @@ export default {
           colorIndex = backgroundColorIndex;
           // @todo Find proper palette number for background attribute byte and x/y offset
           //palette = 0;
-          let bgXRemainder = x % 32;
-          let bgYRemainder = y % 32;
-          if(bgXRemainder < 16) {
-            if(bgYRemainder < 16) {
+          if(x % 32 < 16) {
+            if(y % 32 < 16) {
               // top left
               palette = (this.attributeTableByte & 0b00000011);
             } else {
@@ -573,7 +577,7 @@ export default {
               palette = ((this.attributeTableByte & 0b00110000) >>> 4);
             }
           } else {
-            if(bgYRemainder < 16) {
+            if(y % 32 < 16) {
               // top right
               palette = ((this.attributeTableByte & 0b00001100) >>> 2);
             } else {
