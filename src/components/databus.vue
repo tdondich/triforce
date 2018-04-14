@@ -84,12 +84,10 @@ export default {
     };
   },
   created() {
-    this.configuration = [];
-
     for (let count = 0; count < this.sections.length; count++) {
       let node = this.sections[count];
       for (let address = node.min; address <= node.max; address++) {
-        this.configuration[address] = {
+        this[address] = {
           min: node.min,
           max: node.max,
           size: node.size,
@@ -100,10 +98,9 @@ export default {
     }
 
     this.get = function(address) {
-      let {min, size, bus, target} = this.configuration[address];
+      let {min, size, bus, target} = this[address];
      // We found the memory module we need to reference, plus dealing with memory that repeats
-      let nodeAddress = (address - min) % size;
-      return target.get(nodeAddress, bus);
+      return target.get((address - min) % size, bus);
     };
  
   },
@@ -181,32 +178,30 @@ export default {
       }
     },
     set(address, value) {
-     let node = this.configuration[address];
+      let {min, size, bus, target} = this[address];
+      /** Disable if check for performance reasons */
+      /*
       if (!node) {
         throw ("Invalid address:" + address.toString(16) + " in " + this.name);
       }
+      */
       // We found the memory module we need to reference, plus dealing with memory that repeats
-      let nodeAddress = (address - node.min) % node.size;
-      if (node.bus) {
-        node.target.set(nodeAddress, value, node.bus);
-      } else {
-        node.target.set(nodeAddress, value);
-      }
+      target.set((address - min) % size, value, bus);
       return;
     },
     // Get's a value for a requested address, calling the target's get value, but translated from that target's
     // base address range
    getRange(address, length) {
-      let node = this.configuration[address];
+      let {bus, target} = this[address];
+
+      /*
+      // Disable boundry checking for performance reasons
       let endNode = this.configuration[address + (length - 1)];
       if (node.target != endNode.target) {
         throw "Databus does not support fetching range across different targets";
       }
-      if(node.bus) {
-        return node.target.getRange(address, length, node.bus);
-      } else {
-        return node.target.getRange(address, length);
-      }
+      */
+      return target.getRange(address, length, bus);
     }
   }
 };
