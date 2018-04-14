@@ -70,6 +70,7 @@ export default {
     this.scanlineSpriteCache = [];
     this.backgroundAndSpriteRendering = false;
     this.leftSideBackgroundAndSpriteFlag = false;
+    this.NMIEnabled = false;
 
     // Rendering optimizations aka hacks
     this.frameBuffer = null;
@@ -101,21 +102,19 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
 
-      if (scanline == 0 && cycle == 0) {
-        // Fetch a local copy of data needed for performing caching of data for rendering
-        this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
-
-        // Create a local copy of of the pattern table relevant to this scanline
-        this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
-
-        // Set the cache data for this frame
-        this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
- 
-      }
-
       if (scanline >= 0 && scanline <= 239) {
         // Visible scanlines
         if (cycle == 0) {
+          if(scanline == 0) {
+            // Fetch a local copy of data needed for performing caching of data for rendering
+            this.copyOfOAM = this.$refs.oam.getRange(0x0000, 256);
+
+            // Create a local copy of of the pattern table relevant to this scanline
+            this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
+
+            // Set the cache data for this frame
+            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
+          }
           // Build the scanline sprite cache for this scanline by reading OAM data and compiling
           // cache
           this.buildScanlineSpriteCache(scanline);
@@ -124,48 +123,46 @@ export default {
             // fetch the nametable and attribute byte for background
             this.fetchNametableAndAttributeByte();
           }
-          if(!(this.registers[0x01] & 0b00011000) == 0) this.renderPixel(cycle, scanline);
+          if(this.renderingEnabled) this.renderPixel(cycle, scanline);
         }
 
       } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.setVBlank(true);
         // And fire VBlank NMI if PPUCTRL bit 7 is set
-        if ((this.ppuctrl() & 0b10000000) == 0b10000000) {
+        if (this.NMIEnabled) {
           this.console.$refs.cpu.fireNMI();
         }
-      }
-
+      } else if (scanline == 261 && cycle == 0) {
       // Clearing VBlank and sprite 0
-      if (scanline == 261 && cycle == 0) {
         this.setVBlank(false);
         this.setSprite0Hit(false);
       }
 
-      cycle = ++this.cycle;
-
-      if(scanline == 261 && cycle == 340 && this.odd && this.renderingEnabled()) {
-        // Reset to cycle 0 and increase scanline
-        this.cycle = 0;
-        // Return true to caller to indicate our frame is complete
-        if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
-          this.odd = !this.odd;
-          // Dirty dirty dirty
-          this.console.frameComplete = true;
-        }
-        return true;
-      }
-
-      if (cycle == 341) {
-        // Reset to cycle 0 and increase scanline
-        this.cycle = 0;
-        this.scanline = scanline == 261 ? 0 : scanline + 1;
-        // Return true to caller to indicate our frame is complete
-        if (this.scanline == 0) {
-          this.odd = !this.odd;
-          // Dirty dirty dirty
-          this.console.frameComplete = true;
+      if(++this.cycle >= 340) {
+        if(scanline == 261 && this.cycle == 340 && this.odd && this.renderingEnabled) {
+          // Reset to cycle 0 and increase scanline
+          this.cycle = 0;
+          // Return true to caller to indicate our frame is complete
+          if ((this.scanline = scanline == 261 ? 0 : scanline + 1)  == 0) {
+            this.odd = !this.odd;
+            // Dirty dirty dirty
+            this.console.frameComplete = true;
+          }
           return true;
+        }
+
+        if (this.cycle == 341) {
+          // Reset to cycle 0 and increase scanline
+          this.cycle = 0;
+          this.scanline = scanline == 261 ? 0 : scanline + 1;
+          // Return true to caller to indicate our frame is complete
+          if (this.scanline == 0) {
+            this.odd = !this.odd;
+            // Dirty dirty dirty
+            this.console.frameComplete = true;
+            return true;
+          }
         }
       }
       // We still have work to do on our frame
@@ -203,11 +200,6 @@ export default {
   methods: {
     ppumainbus() {
       return this.vram;
-    },
-    renderingEnabled() {
-      // Need to check to see if background and sprites is meant to be rendered
-      // Any of the bits for 3 and 4 should be set for rendering to be enabled
-      return (!(this.registers[0x01] & 0b00011000) == 0);
     },
     ppuctrl() {
       return this.registers[0x0000];
@@ -268,9 +260,11 @@ export default {
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
       if(address == 0x0000) {
+        // Check if nmi is set by checking bit 7
+        this.NMIEnabled = (value & 0b10000000) == 0b10000000;
         // PPUCTRL write
         // Check to see if NMI is set while during vblank, if so, fire off an nmi immediately
-        if (((this.ppuctrl() & 0b10000000) == 0b10000000) 
+        if ((this.NMIEnabled) 
         && ((oldValue & 0b10000000) == 0b00000000)
         && (this.ppustatus() & 0b10000000) == 0b10000000) {
           // NMI set, fire off nmi
@@ -279,10 +273,12 @@ export default {
       } else if(address == 0x0001) {
         // Writing to MASK
         // So let's determine if backgroundAndSpriteRendering is enabled
-        this.backgroundAndSpriteRendering = (value & 0b00011000) == 0b00011000 ? true : false;
+        this.backgroundAndSpriteRendering = ((value & 0b00011000) == 0b00011000);
         // This determines if BOTH background and sprite rendering is allowed in the leftmost 8 pixels
         // Used for sprite 0 checks
-        this.leftSideBackgroundAndSpriteFlag = (value & 0b00000110) == 0b00000110 ? true : false;
+        this.leftSideBackgroundAndSpriteFlag = ((value & 0b00000110) == 0b00000110);
+        // Store if we should be rendering either sprite or background, so rendering should be enabled
+        this.renderingEnabled = !((value & 0b00011000) == 0)
       } else if (address == 0x0006) {
         this.dataAddress = this.dataAddress << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
