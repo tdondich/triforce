@@ -102,7 +102,7 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
 
-      if (scanline >= 0 && scanline <= 239) {
+      if (scanline <= 239) {
         // Visible scanlines
         if (cycle == 0) {
           if(scanline == 0) {
