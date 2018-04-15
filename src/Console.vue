@@ -48,7 +48,7 @@
     <memory ref="nametable2" size="1024" />
     <memory ref="nametable3" size="1024" />
     <!-- Our palettes -->
-    <memory ref="palette" size="32" />
+    <palette ref="palette" size="32" />
 
     <!-- Now, tie it all together with an address bus for cpu -->
     <databus name="Main Databus" size="65536" ref="mainbus" :sections="[
@@ -225,6 +225,7 @@ import romLoader from "./components/rom-loader.vue";
 import databus from "./components/databus.vue";
 import debugmemory from "./components/debugmemory.vue";
 import joypads from "./components/joypads.vue";
+import palette from "./components/palette.vue";
 
 export default {
   name: "app",
@@ -241,7 +242,8 @@ export default {
     ppu: ppu,
     databus: databus,
     debugmemory,
-    joypads
+    joypads,
+    palette
   },
   created() {
     this.stepEnabled = false;

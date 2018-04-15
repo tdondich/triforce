@@ -48,10 +48,20 @@ export default {
     this.nametableByte = null;
     // The attribute "latch"
     this.attributeTableByte = null;
+
+    // INTERNAL REGISTERS: https://wiki.nesdev.com/w/index.php/PPU_scrolling
     // The current VRAM address
-    this.v = null;
-    // The address latch for PPUADDR
-    this.dataAddress = 0x0000;
+    this.v = 0x0000;
+    // The pointer to the nametable tile that is for the top-left of the screen
+    this.t = 0x0000;
+    // Fine x-scroll, set by PPUSCROLL
+    this.x = 0;
+    // First/second write toggle
+    this.w = false;
+
+
+
+
     this.canvas = null;
     this.canvasCtx = null;
 
@@ -274,38 +284,40 @@ export default {
         // Store if we should be rendering either sprite or background, so rendering should be enabled
         this.renderingEnabled = !((value & 0b00011000) == 0)
       } else if (address == 0x0006) {
-        this.dataAddress = this.dataAddress << 8;
+        this.v = this.v << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
-        this.dataAddress = (this.dataAddress | value) & 0xffff;
+        this.v = (this.v | value) & 0xffff;
       } else if (address == 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-        this.vram.set(this.dataAddress, value);
+        this.vram.set(this.v, value);
         let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
-        this.dataAddress = (this.dataAddress + increase) & 0xffff;
+        this.v = (this.v + increase) & 0xffff;
       }
     },
     get(address) {
       if (address == 0x0007) {
         // Then we actually want to return from the VRAM address requested
-        let result = this.vram.get(this.dataAddress);
+        let result = this.vram.get(this.v);
         if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
           // @todo Increase VRAM address
-          this.dataAddress = (this.dataAddress + increase) & 0xffff;
+          this.v = (this.v + increase) & 0xffff;
         }
         return result;
       } else if (address == 0x0002) {
+        // Reading of status
         let result = this.registers[address];
-        if (!this.console.$refs.cpu.inDebug) {
+        if (!this.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
-
           this.setVBlank(false);
 
           this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
           // Reset address latch used by PPUADDR and PPUSCROLL
           // See: https://wiki.nesdev.com/w/index.php/PPU_registers#Notes
-          this.dataAddress = 0x00;
+          this.v = 0x00;
+          // Reset the w write toggle
+          this.w = false;
         }
         return result;
       }
@@ -521,8 +533,6 @@ export default {
 
       // Sprite fetching
       let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(x);
-
-      //return;
 
       // Fetch background tile info only if background rendering is enabled
       let backgroundColorIndex = 0;
