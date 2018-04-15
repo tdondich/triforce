@@ -48,7 +48,7 @@ export default {
                 /**
                  * @bug The following emulates the early 6502 revision JMP bug found in the nes
                  */
-                if(sourceAddress & 0xFF == 0xFF) {
+                if(sourceAddress & 0xFF === 0xFF) {
                     // This is falling on a page boundry!
                     let lsb = this.mem.get(sourceAddress);
                     let msb = this.mem.get(sourceAddress & 0xFF00);
@@ -272,7 +272,7 @@ export default {
                 this.debugger(1, () => 'PLA');
                 this.a = this.stackPop();
                 // Now set the zero flag if A is 0
-                if (this.a == 0x00) {
+                if (this.a === 0x00) {
                     this.p = this.p | 0b10;
                 } else {
                     this.p = this.p & 0b11111101;
@@ -346,7 +346,7 @@ export default {
                 // Increment, but mask to a 8 bit value
                 this.y = (this.y + 1) & 0xFF;
 
-                this.setZero((this.y == 0x00));
+                this.setZero((this.y === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
@@ -362,7 +362,7 @@ export default {
                 // Increment, but mask to a 8 bit value
                 this.x = (this.x + 1) & 0xFF;
 
-                this.setZero((this.x == 0));
+                this.setZero((this.x === 0));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
@@ -378,7 +378,7 @@ export default {
                 // Increment, but mask to a 8 bit value
                 this.x = (this.x - 1) & 0xFF;
 
-                this.setZero((this.x == 0));
+                this.setZero((this.x === 0));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
@@ -394,7 +394,7 @@ export default {
                 // Increment, but mask to a 8 bit value
                 this.y = (this.y - 1) & 0xFF;
 
-                this.setZero((this.y == 0x00));
+                this.setZero((this.y === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
@@ -409,7 +409,7 @@ export default {
 
                 this.y = this.a;
 
-                this.setZero((this.y == 0x00));
+                this.setZero((this.y === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
@@ -424,7 +424,7 @@ export default {
 
                 this.x = this.a;
 
-                this.setZero((this.x == 0x00));
+                this.setZero((this.x === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.x & 0b10000000);
@@ -439,7 +439,7 @@ export default {
 
                 this.a = this.y;
 
-                this.setZero((this.a == 0x00));
+                this.setZero((this.a === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
@@ -454,7 +454,7 @@ export default {
 
                 this.a = this.x;
 
-                this.setZero((this.a == 0x00));
+                this.setZero((this.a === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.a & 0b10000000);
@@ -469,7 +469,7 @@ export default {
 
                 this.x = this.sp;
 
-                this.setZero((this.x == 0x00));
+                this.setZero((this.x === 0x00));
 
                 // Set Negative
                 this.p = (this.p & 0b01111111) | (this.x & 0b10000000);

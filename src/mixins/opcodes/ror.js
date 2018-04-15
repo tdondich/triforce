@@ -11,7 +11,7 @@ export default {
                 let bit7 = this.isCarry() ? 0x80 : 0x00;
 
                 // First, set the carry
-                this.setCarry(((value & 0b00000001) == 0b00000001));
+                this.setCarry(((value & 0b00000001) === 0b00000001));
 
                 // Now, shift right one
                 this.a = (this.a >>> 1) & 0xFF;
@@ -20,17 +20,17 @@ export default {
                 this.a = this.a | bit7;
 
                 // Set zero
-                this.setZero((this.a == 0x00));
+                this.setZero((this.a === 0x00));
 
                 // Set negative
-                this.setNegative((this.a & 0b10000000) == 0b10000000);
+                this.setNegative((this.a & 0b10000000) === 0b10000000);
 
             } else {
                 value = this.mem.get(location);
                 let bit7 = this.isCarry() ? 0x80 : 0x00;
 
                 // First, set the carry
-                this.setCarry(((value & 0b00000001) == 0b00000001));
+                this.setCarry(((value & 0b00000001) === 0b00000001));
 
                 // Now, shift right one
                 value = (this.a >>> 1) & 0xFF;
@@ -42,10 +42,10 @@ export default {
                 this.mem.set(location, value);
 
                 // Set zero
-                this.setZero((value == 0x00));
+                this.setZero((value === 0x00));
 
                 // Set negative
-                this.setNegative((value & 0b10000000) == 0b10000000);
+                this.setNegative((value & 0b10000000) === 0b10000000);
             }
 
 

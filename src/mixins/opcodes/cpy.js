@@ -11,7 +11,7 @@ export default {
             this.setCarry((this.y >= value));
 
             // Set zero
-            this.setZero((result == 0x00));
+            this.setZero((result === 0x00));
 
             // Set Negative
             // @todo: Check if this is calculated correct. It says if bit 7 is set.

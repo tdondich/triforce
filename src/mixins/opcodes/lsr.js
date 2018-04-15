@@ -9,22 +9,22 @@ export default {
                 // Perform it on the accumulator
                 value = this.a;
                 // First, set the carry
-                this.setCarry(((value & 0b0001) == 0b0001));
+                this.setCarry(((value & 0b0001) === 0b0001));
 
                 // Now, shift right
                 this.a = this.a >>> 1;
 
                 // Set zero
-                this.setZero((this.a == 0x00));
+                this.setZero((this.a === 0x00));
 
             } else {
                 value = this.mem.get(location);
                 this.mem.set(location, value >>> 1);
                 // First, set the carry
-                this.setCarry(((value & 0b0001) == 0b0001));
+                this.setCarry(((value & 0b0001) === 0b0001));
 
                 // Set zero
-                this.setZero((this.mem.get(location) == 0x00));
+                this.setZero((this.mem.get(location) === 0x00));
             }
             this.setNegative(false);
 

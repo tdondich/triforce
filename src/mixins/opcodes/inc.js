@@ -6,7 +6,7 @@ export default {
             let value = this.mem.get(location);
             value = (value + 1) & 0xFF;
 
-            this.setZero((value == 0x00));
+            this.setZero((value === 0x00));
 
             this.mem.set(location, value);
 

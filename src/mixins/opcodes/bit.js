@@ -10,7 +10,7 @@ export default {
         bit: function (location) {
             let value = this.mem.get(location);
             // First, let's AND with the accumulator
-            if ((this.a & value) == 0x00) {
+            if ((this.a & value) === 0x00) {
                 this.p = this.p | 0b0010;
             } else {
                 this.p = this.p & 0b11111101;

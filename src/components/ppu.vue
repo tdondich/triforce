@@ -103,8 +103,8 @@ export default {
       let cycle = this.cycle;
 
       if (scanline <= 239 && cycle <= 257) {
-          if(cycle == 0) {
-            if(scanline == 0) {
+          if(cycle === 0) {
+            if(scanline === 0) {
               // Fetch a local copy of data needed for performing caching of data for rendering
 
               // Create a local copy of of the pattern table relevant to this scanline
@@ -116,7 +116,7 @@ export default {
            // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache
             this.buildScanlineSpriteCache(scanline);
-          } else if (cycle % 8 == 1) {
+          } else if (cycle % 8 === 1) {
             // fetch the nametable and attribute byte for background
 
             // Get the base nametable address
@@ -144,7 +144,7 @@ export default {
           // after this fact
           ++this.cycle;
           return;
-      } else if (scanline == 241 && cycle == 1) {
+      } else if (scanline === 241 && cycle === 1) {
         // Fire off Vblank
         this.registers[0x02] = this.registers[0x02] | 0b10000000;
 
@@ -154,7 +154,7 @@ export default {
         }
         ++this.cycle;
         return;
-      } else if (scanline == 261 && cycle == 0) {
+      } else if (scanline === 261 && cycle === 0) {
       // Clearing VBlank and sprite 0
         this.registers[0x02] = this.registers[0x02] & 0b00111111;
         ++this.cycle;
@@ -247,7 +247,7 @@ export default {
    baseSpritePatternTableAddress() {
       // @todo check for sprite size, if 8x8 or 8x16
       let base = this.ppuctrl() & 0x08;
-      return base == 0x08 ? 0x1000 : 0x0000;
+      return base === 0x08 ? 0x1000 : 0x0000;
     },
     // The following fill/set/get is for our registers, accessed by memory
     // Fill a memory range with a specific value
@@ -256,56 +256,59 @@ export default {
     },
     set(address, value) {
 
-      if (address == 0x0002) {
+      if (address === 0x0002) {
         // Do not do anything.  PPUSTATUS is read only
         return;
       }
       let oldValue = this.registers[address];
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
-      if(address == 0x0000) {
+      if(address === 0x0000) {
         // Check if nmi is set by checking bit 7
-        this.NMIEnabled = (value & 0b10000000) == 0b10000000;
+        this.NMIEnabled = (value & 0b10000000) === 0b10000000;
         // PPUCTRL write
         // Check to see if NMI is set while during vblank, if so, fire off an nmi immediately
         if ((this.NMIEnabled) 
-        && ((oldValue & 0b10000000) == 0b00000000)
-        && (this.ppustatus() & 0b10000000) == 0b10000000) {
+        && ((oldValue & 0b10000000) === 0b00000000)
+        && (this.ppustatus() & 0b10000000) === 0b10000000) {
           // NMI set, fire off nmi
           this.console.$refs.cpu.fireNMI();
         }
-      } else if(address == 0x0001) {
+        // Set the t internal register, bits
+
+
+      } else if(address === 0x0001) {
         // Writing to MASK
         // So let's determine if backgroundAndSpriteRendering is enabled
-        this.backgroundAndSpriteRendering = ((value & 0b00011000) == 0b00011000);
+        this.backgroundAndSpriteRendering = ((value & 0b00011000) === 0b00011000);
         // This determines if BOTH background and sprite rendering is allowed in the leftmost 8 pixels
         // Used for sprite 0 checks
-        this.leftSideBackgroundAndSpriteFlag = ((value & 0b00000110) == 0b00000110);
+        this.leftSideBackgroundAndSpriteFlag = ((value & 0b00000110) === 0b00000110);
         // Store if we should be rendering either sprite or background, so rendering should be enabled
-        this.renderingEnabled = !((value & 0b00011000) == 0)
-      } else if (address == 0x0006) {
+        this.renderingEnabled = !((value & 0b00011000) === 0)
+      } else if (address === 0x0006) {
         this.v = this.v << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.v = (this.v | value) & 0xffff;
-      } else if (address == 0x0007) {
+      } else if (address === 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
         this.vram.set(this.v, value);
-        let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
+        let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
         this.v = (this.v + increase) & 0xffff;
       }
     },
     get(address) {
-      if (address == 0x0007) {
+      if (address === 0x0007) {
         // Then we actually want to return from the VRAM address requested
         let result = this.vram.get(this.v);
         if (!this.console.$refs.cpu.inDebug) {
-          let increase = (this.ppuctrl() & 0b00000100) == 0b00000100 ? 32 : 1;
+          let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
           // @todo Increase VRAM address
           this.v = (this.v + increase) & 0xffff;
         }
         return result;
-      } else if (address == 0x0002) {
+      } else if (address === 0x0002) {
         // Reading of status
         let result = this.registers[address];
         if (!this.cpu.inDebug) {
@@ -394,7 +397,7 @@ export default {
 
         // Assume 8x8 sprites for the time being
         // @todo Handle 8x16 sprite configuration
-        if (spriteY == 0xef || spriteY == 0xff) {
+        if (spriteY === 0xef || spriteY === 0xff) {
           // Skip this sprite
           continue;
         }
@@ -413,7 +416,7 @@ export default {
 
           let tileBase = tileIndex << 4;
           // Find the relative y position of the sprite
-          let tileY = ((attributeByte & 0b10000000) == 0b10000000) ? 7 - (y - spriteY) : y - spriteY;
+          let tileY = ((attributeByte & 0b10000000) === 0b10000000) ? 7 - (y - spriteY) : y - spriteY;
 
           tileBase = tileBase | this.baseSpritePatternTableAddress();
           // Get first plane
@@ -430,15 +433,15 @@ export default {
             second: second,
             palette: desiredPalette,
             priority:
-              (attributeByte & 0b00100000) == 0b00100000
+              (attributeByte & 0b00100000) === 0b00100000
                 ? PRIORITY_BACKGROUND
                 : PRIORITY_FOREGROUND,
-            flipHorizontal: (attributeByte & 0b01000000) == 0b01000000,
-            flipVertical: (attributeByte & 0b10000000) == 0b10000000
+            flipHorizontal: (attributeByte & 0b01000000) === 0b01000000,
+            flipVertical: (attributeByte & 0b10000000) === 0b10000000
           };
           matches = matches + 1;
           // We only cache the first 8 matching sprites on the scanline
-          if (matches == 8) {
+          if (matches === 8) {
             return;
           }
         }
@@ -494,7 +497,7 @@ export default {
       let base = index << 4;
 
       // This ors against the base pattern table address for background
-      base = base | ((this.registers[0x00] & 0x10) == 0x10 ? 0x1000 : 0x0000);
+      base = base | ((this.registers[0x00] & 0x10) === 0x10 ? 0x1000 : 0x0000);
 
       // Get first plane
       let first = this.copyOfPatternTables[base + y];
@@ -537,10 +540,10 @@ export default {
       // Fetch background tile info only if background rendering is enabled
       let backgroundColorIndex = 0;
       // This if checks for background tile rendering enabled
-      if((this.registers[0x01] & 0x08) == 0x08) {
+      if((this.registers[0x01] & 0x08) === 0x08) {
         backgroundColorIndex = this.fetchTilePixelColor(
           this.nametableByte,
-          x == 0 ? 0 : (x  - 1) % 8,
+          x === 0 ? 0 : (x  - 1) % 8,
           y % 8
         );
       }
@@ -553,7 +556,7 @@ export default {
         // If we have an active sprite, do sprite detail
        if ( activeSpritePixelInformation && activeSpritePixelInformation.colorIndex) {
           // Check for sprite 0
-          if(activeSpritePixelInformation.oamAddress == 0x00 &&
+          if(activeSpritePixelInformation.oamAddress === 0x00 &&
           this.backgroundAndSpriteRendering &&
           // Check for left clipping
           (this.leftSideBackgroundAndSpriteFlag || x > 7) &&

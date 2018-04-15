@@ -5,7 +5,7 @@ export default {
         dec: function(location) {
             let value = unsignedByteToSignedByte(this.mem.get(location));
             value = (value - 1) & 0xFF;
-            this.setZero((value == 0x00));
+            this.setZero((value === 0x00));
             this.mem.set(location, value);
             // Now set negative
             this.p = (this.p & 0b01111111) | (value & 0b10000000);

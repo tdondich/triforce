@@ -5,7 +5,7 @@ export default {
         ldx: function (location) {
             this.x = this.mem.get(location);
             // Now set the zero flag if X is 0
-            if (this.x == 0x00) {
+            if (this.x === 0x00) {
                 this.p = this.p | 0b10;
             } else {
                 this.p = this.p & 0b11111101;

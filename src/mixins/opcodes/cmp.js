@@ -7,7 +7,7 @@ export default {
             let value = this.mem.get(location);
             let result = this.a - value;
             this.setCarry((value <= this.a));
-            this.setZero((result == 0x00));
+            this.setZero((result === 0x00));
 
             // Set Negative
             // @todo: Check if this is calculated correct. It says if bit 7 is set.

@@ -23,7 +23,7 @@ export default {
             this.a = result & 0xFF;
 
             // Evaluate to zero, only after the accumulator has been set
-            this.setZero((this.a == 0x00));
+            this.setZero((this.a === 0x00));
 
             // Now set negative
             this.p = (this.p & 0b01111111) | (this.a & 0b10000000);

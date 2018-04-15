@@ -7,7 +7,7 @@ export default {
             // Load value directly into y register
             this.y = this.mem.get(location);
             // Now set the zero flag if Y is 0
-            this.setZero((this.y == 0x00));
+            this.setZero((this.y === 0x00));
             // Now set negative
             this.p = (this.p & 0b01111111) | (this.y & 0b10000000);
         },

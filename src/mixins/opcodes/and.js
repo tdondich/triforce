@@ -6,7 +6,7 @@ export default {
         and: function (location) {
             this.a = this.a & this.mem.get(location);
             // Now set the zero flag if A is 0
-            if (this.a == 0x00) {
+            if (this.a === 0x00) {
                 this.p = this.p | 0b10;
             } else {
                 this.p = this.p & 0b11111101;
