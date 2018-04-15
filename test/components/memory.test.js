@@ -12,7 +12,10 @@ describe('memory', () => {
             }
         })
     })
-
+    /**
+     * Disabled exception handling tests due to performance reasons
+     */
+    /*
     test('it should throw exception when accessing out of bounds', () => {
        expect(() => {
             wrapper.vm.get(33)
@@ -23,6 +26,8 @@ describe('memory', () => {
             wrapper.vm.set(33, 'invalid')
         }).toThrow('Address exceeds memory size');
     })
+    */
+
     test('it should properly set memory value', () => {
         wrapper.vm.set(31, 0x01);
         expect(wrapper.vm.get(31)).toBe(0x01)
@@ -37,11 +42,16 @@ describe('memory', () => {
         expect(value).toBeInstanceOf(Uint8Array);
         expect(wrapper.vm.getRange(5,5)).toEqual(Uint8Array.from([0x01, 0x02, 0x03, 0x04, 0x05]))
     })
+    /**
+     * Temp remove checks for exceptions due to performance reasons
+     */
+    /*
     test('it should throw exception when fetching a range out of bounds', () => {
         expect(() => {
             wrapper.vm.getRange(5,30);
         }).toThrow('Address range exceeds memory size')
     })
+    */
     test('it should reset properly', () => {
         for(let i = 0; i < 32; i++) {
             wrapper.vm.set(i, i);

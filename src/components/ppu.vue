@@ -161,6 +161,16 @@ export default {
         return;
       }
 
+      if ((++this.cycle == 340 && this.odd && this.renderingEnabled) || (this.cycle == 341)) {
+          this.cycle = 0;
+          if(++this.scanline == 262){
+              this.scanline = 0;
+              this.odd = !this.odd;
+              this.console.frameNotCompleted = false;    
+          }
+      }
+
+      /*
 
       // Handle new scanline possibly
       if(++this.cycle >= 340) {
@@ -171,7 +181,7 @@ export default {
             return;
           } else {
             this.scanline = this.cycle = 0;
-            this.odd = false;
+            this.odd = !this.odd;
             this.console.frameNotCompleted = false;
             return;
           }
@@ -181,12 +191,14 @@ export default {
             this.cycle = 0;
           } else {
             this.scanline = this.cycle = 0;
-            this.odd = true;
+            this.odd = !this.odd;
             this.console.frameNotCompleted = false;
             return;
           }
         }
       }
+
+      */
      // We still have work to do on our frame
       return;
     };
@@ -272,10 +284,19 @@ export default {
         && ((oldValue & 0b10000000) === 0b00000000)
         && (this.ppustatus() & 0b10000000) === 0b10000000) {
           // NMI set, fire off nmi
-          this.console.$refs.cpu.fireNMI();
+          this.cpu.nmi = 1;
         }
-        // Set the t internal register, bits
-
+        // Set the t internal register, bits 10,11 to correspond to incoming bit 0,1
+        if((value & 0b1) == 0b1) {
+          this.t = this.t | 0b10000000000;
+        } else {
+          this.t = this.t & 0b111101111111111;
+        }
+        if((value & 0b10) == 0b10) {
+          this.t = this.t | 0b100000000000;
+        } else {
+          this.t = this.t & 0b111011111111111;
+        }
 
       } else if(address === 0x0001) {
         // Writing to MASK

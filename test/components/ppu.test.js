@@ -5,14 +5,14 @@ import memory from '../../src/components/memory'
 let wrapper = null;
 let mainbus = null;
 
-let console = {
-    frameComplete: false
+let nesConsole = {
+    frameNotCompleted: false
 }
 
-describe('memory', () => {
+describe('ppu', () => {
     beforeEach(() => {
-        console = {
-            frameComplete: false
+        nesConsole = {
+            frameNotCompleted: true
         }
 
         mainbus = mount(memory, {
@@ -22,14 +22,14 @@ describe('memory', () => {
             }
         })
 
-        console.$refs = {
+        nesConsole.$refs = {
             ppumainbus: mainbus.vm
         }
 
 
         wrapper = mount(ppu, {
             propsData: {
-                console
+                console: nesConsole
             }
         })
     })
@@ -39,18 +39,19 @@ describe('memory', () => {
     })
     it('the renderingEnabled check should return false when background/sprite rendering is disabled', () => {
         wrapper.vm.registers[0x01] = 0b00000000;
-        expect(wrapper.vm.renderingEnabled()).toBe(false)
+        expect(wrapper.vm.renderingEnabled).toBe(false)
     })
     it('the renderedEnabled check should return true when either background or sprite or both is enabled', () => {
-        // First set background
-        wrapper.vm.registers[0x01] = 0b00010000;
-        expect(wrapper.vm.renderingEnabled()).toBe(true)
-        // Reset to only sprite enabled
-        wrapper.vm.registers[0x01] = 0b00001000;
-        expect(wrapper.vm.renderingEnabled()).toBe(true)
+        // First set sprites
+        wrapper.vm.set(0x0001, 0b00010000);
+
+        expect(wrapper.vm.renderingEnabled).toBe(true)
+        // Reset to only background enabled
+        wrapper.vm.set(0x0001, 0b00001000);
+        expect(wrapper.vm.renderingEnabled).toBe(true)
         // Reset to both bg and sprite enabled
-        wrapper.vm.registers[0x01] = 0b00011000;
-        expect(wrapper.vm.renderingEnabled()).toBe(true)
+        wrapper.vm.set(0x0001, 0b00011000);
+        expect(wrapper.vm.renderingEnabled).toBe(true)
     })
     it('should have odd and even frames toggled for each frame', () => {
         // Get the first initial value
@@ -58,22 +59,23 @@ describe('memory', () => {
         for (let i = 0; i < 20; i++) {
             do {
                 wrapper.vm.tick()
-            } while (!console.frameComplete)
+            } while (nesConsole.frameNotCompleted)
             expect(wrapper.vm.odd).toBe(expected)
             expected = !expected
-            console.frameComplete = false
+            nesConsole.frameNotCompleted = true
         }
     })
     it('it should have 89342 cycles when rendering is disabled per frame', () => {
         // Reset the ppu
         wrapper.vm.cycle = 0;
         wrapper.vm.scanline = 0;
+        nesConsole.frameNotCompleted = true
 
         let count = 0;
         do {
             wrapper.vm.tick();
             count++;
-        } while (!wrapper.vm.console.frameComplete);
+        } while (nesConsole.frameNotCompleted);
         expect(count).toBe(89342);
     })
     it('should clear VBlank after 6820 (or 6819 if odd) cycles from being set', () => {
@@ -114,23 +116,21 @@ describe('memory', () => {
     })
     it('should fire off an nmi on the CPU when setting nmi and during vblank', () => {
         // Mock the cpu nmi call
-        let nmiMock = jest.fn()
-        console.$refs.cpu = {
-            fireNMI: nmiMock
+        wrapper.vm.cpu = {
+            nmi: 0
         }
         // Render until we hit a VBlank
         do {
             wrapper.vm.tick();
         } while ((wrapper.vm.registers[0x0002] & 0b10000000) != 0b10000000)
         wrapper.vm.set(0x0000, 0b10000000);
-        expect(nmiMock.mock.calls.length).toBe(1)
+        expect(wrapper.vm.cpu.nmi).toBe(1)
     })
     it('should not fire another nmi when setting bit after its already been set at start of vblank', () => {
         // Enable NMI from start
         wrapper.vm.set(0x0000, 0b10000000);
-        let nmiMock = jest.fn()
-        console.$refs.cpu = {
-            fireNMI: nmiMock
+        wrapper.vm.cpu = {
+            nmi: 0
         }
         // Render until we hit a VBlank
         do {
@@ -139,7 +139,7 @@ describe('memory', () => {
         // Call again, setting the NMI flag
         wrapper.vm.set(0x0000, 0b10000000);
         // ensure the nmi was fired only once
-        expect(nmiMock.mock.calls.length).toBe(1)
+        expect(wrapper.vm.cpu.nmi).toBe(1)
     })
 })
 
