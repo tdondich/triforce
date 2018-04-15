@@ -141,5 +141,48 @@ describe('ppu', () => {
         // ensure the nmi was fired only once
         expect(wrapper.vm.cpu.nmi).toBe(1)
     })
+    it('should appropriately set bits 11 and 10 of internal t register when setting nametable address via ppuctrl', () => {
+        expect(wrapper.vm.t).toBe(0x00);
+        // Set only bit 0
+        wrapper.vm.set(0x0000, 0b1);
+        expect(wrapper.vm.t).toBe(0b1 << 10);
+        // Now reset
+        wrapper.vm.set(0x0000, 0b00);
+        expect(wrapper.vm.t).toBe(0x00);
+        // Set bit 1
+        wrapper.vm.set(0x0000, 0b10);
+        expect(wrapper.vm.t).toBe(0b1 << 11);
+         // Now reset
+        wrapper.vm.set(0x0000, 0b00);
+        expect(wrapper.vm.t).toBe(0x00);
+        // Now set both
+         wrapper.vm.set(0x0000, 0b11);
+        expect(wrapper.vm.t).toBe(0b11 << 10);
+    })
+    it('should reset write toggle when reading PPUSTATUS', () => {
+        wrapper.vm.w = true;
+        wrapper.vm.cpu = {
+            inDebug: false
+        }
+        // Now read
+        wrapper.vm.get(0x0002);
+        expect(wrapper.vm.w).toBe(false)
+    })
+    it('should set t,x,w registers properly when writing to 2005', () => {
+        wrapper.vm.t = 0x00;
+        wrapper.vm.w = false;
+        wrapper.vm.set(0x0005, 0b10101010);
+        expect(wrapper.vm.x).toBe(0b010);
+        expect(wrapper.vm.w).toBe(true);
+        expect(wrapper.vm.t).toBe(0b10101);
+        // Do the second write test
+        wrapper.vm.set(0x0005, 0b10101011);
+        // expect that the x value does NOT change from previous
+        expect(wrapper.vm.x).toBe(0b010);
+        expect(wrapper.vm.w).toBe(false);
+        expect(wrapper.vm.t).toBe(0b011001010110101);
+        
+
+    })
 })
 

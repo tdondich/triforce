@@ -161,6 +161,9 @@ export default {
         return;
       }
 
+      /**
+       * This code is thanks to ahak from twitch.  Thanks!
+       */
       if ((++this.cycle == 340 && this.odd && this.renderingEnabled) || (this.cycle == 341)) {
           this.cycle = 0;
           if(++this.scanline == 262){
@@ -170,35 +173,6 @@ export default {
           }
       }
 
-      /*
-
-      // Handle new scanline possibly
-      if(++this.cycle >= 340) {
-        // This first if will fire at cycle 340, if the frame is odd
-        if(this.odd && this.renderingEnabled) {
-          if(++this.scanline < 262) {
-            this.cycle = 0;
-            return;
-          } else {
-            this.scanline = this.cycle = 0;
-            this.odd = !this.odd;
-            this.console.frameNotCompleted = false;
-            return;
-          }
-        } else {
-          // This else fires if on even frame
-          if(++this.scanline < 262) {
-            this.cycle = 0;
-          } else {
-            this.scanline = this.cycle = 0;
-            this.odd = !this.odd;
-            this.console.frameNotCompleted = false;
-            return;
-          }
-        }
-      }
-
-      */
      // We still have work to do on our frame
       return;
     };
@@ -287,16 +261,9 @@ export default {
           this.cpu.nmi = 1;
         }
         // Set the t internal register, bits 10,11 to correspond to incoming bit 0,1
-        if((value & 0b1) == 0b1) {
-          this.t = this.t | 0b10000000000;
-        } else {
-          this.t = this.t & 0b111101111111111;
-        }
-        if((value & 0b10) == 0b10) {
-          this.t = this.t | 0b100000000000;
-        } else {
-          this.t = this.t & 0b111011111111111;
-        }
+
+        let tempValue = value << 10 & 0x7FFF;
+        this.t = (this.t & 0b111001111111111) | (tempValue & 0b000110000000000);
 
       } else if(address === 0x0001) {
         // Writing to MASK
@@ -307,6 +274,25 @@ export default {
         this.leftSideBackgroundAndSpriteFlag = ((value & 0b00000110) === 0b00000110);
         // Store if we should be rendering either sprite or background, so rendering should be enabled
         this.renderingEnabled = !((value & 0b00011000) === 0)
+      } else if(address == 0x0005) {
+        if(this.w === false) {
+          // Set scroll
+          let tempValue = (value >>> 3) & 0x7FFF;
+          this.t = (this.t & 0b111111111100000) | (tempValue & 0b000000000011111);
+          this.x = (value & 0b111);
+          this.w = true;
+        } else {
+          // Copy over CBA
+          let tempValue = (value << 12) & 0x7FFF;
+          this.t = (this.t & 0b000111111111111) | (tempValue & 0b111000000000000);
+          // Now copy over HG
+          tempValue = (value << 2) & 0x7FFF;
+          this.t = (this.t & 0b111110011111111) | (tempValue & 0b000001100000000);
+          // Now copy over FED
+          tempValue = (value << 4) & 0x7FFF;
+          this.t = (this.t & 0b111111100011111) | (tempValue & 0b000000011100000);
+          this.w = false;
+        }
       } else if (address === 0x0006) {
         this.v = this.v << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
