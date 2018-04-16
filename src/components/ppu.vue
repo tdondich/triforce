@@ -102,7 +102,7 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
 
-      if (scanline <= 239 && cycle <= 257) {
+      if (scanline <= 239 && cycle <= 256) {
           if(cycle === 0) {
             if(scanline === 0) {
               // Fetch a local copy of data needed for performing caching of data for rendering
@@ -116,7 +116,9 @@ export default {
            // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache
             this.buildScanlineSpriteCache(scanline);
+
           } else if (cycle % 8 === 1) {
+            // @TODO THIS MAY NO LONGER BE REQUIRED SINCE WE'RE USING APPROPRIATE SCROLLING RENDERING PIPELINE
             // fetch the nametable and attribute byte for background
 
             // Get the base nametable address
@@ -126,12 +128,14 @@ export default {
             // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
       
             let baseAddress = (0x2000 + (this.registers[0x00] & 0b00000011) * 0x400);
+            //let baseAddress = 0x2000 | (this.v & 0x0FFF);
             let address = baseAddress + 
               (Math.floor(scanline / 8) * 32 + Math.floor(cycle / 8));
             this.nametableByte = this.vram.get(address);
 
             // Now get attribute byte
             address = baseAddress + 0x3c0;
+            //address = 0x23C0 | (this.v & 0x0C00) | ((this.v >> 4) & 0x38) | ((this.v >> 2) & 0x07);
 
             let y = Math.floor(scanline / 32);
             let x = Math.floor(cycle / 32);
@@ -140,11 +144,54 @@ export default {
           }
           this.renderPixel(cycle, scanline);
 
+          // Increment v on cycle 256 on every scanline if rendering is enabled
+          if(cycle == 256 && this.renderingEnabled) {
+              // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
+              if ((this.v & 0x7000) != 0x7000) {        // if fine Y < 7
+                this.v += 0x1000                      // increment fine Y
+              } else {
+                this.v &= ~0x7000                     // fine Y = 0
+              }
+              let y = (this.v & 0x03E0) >> 5        // let y = coarse Y
+              if (y == 29) {
+                y = 0                          // coarse Y = 0
+                this.v ^= 0x0800                    // switch vertical nametable
+              } else if (y == 31) {
+                y = 0                          // coarse Y = 0, nametable not switched
+              } else {
+                y += 1                         // increment coarse Y
+              }
+              this.v = (this.v & ~0x03E0) | (y << 5)     // put coarse Y back into v
+          }
+
           // We don't need to evaluate further if statements since we know there are additional cycles
           // after this fact
           ++this.cycle;
           return;
-      } else if (scanline === 241 && cycle === 1) {
+      }
+
+      if(scanline < 241 || scanline > 260) {
+        if(cycle == 257 && this.renderingEnabled) {
+          // copy over hortizontal information from t to v
+          // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
+          this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
+        }
+        if(this.renderingEnabled &&  
+        (
+          (cycle == 328 || cycle == 336) || 
+          (this.scanline > 0 && this.cycle > 0 && this.cycle <= 256 && this.cycle % 8 == 0)
+        )) {
+          //  increment horizontal position in v
+          if ((this.v & 0x001F) == 31) { // if coarse X == 31
+            this.v &= ~0x001F          // coarse X = 0
+            this.v ^= 0x0400           // switch horizontal nametable
+          } else {
+            this.v += 1                // increment coarse X
+          }
+        }
+      }
+
+      if (scanline === 241 && cycle === 1) {
         // Fire off Vblank
         this.registers[0x02] = this.registers[0x02] | 0b10000000;
 
@@ -154,11 +201,19 @@ export default {
         }
         ++this.cycle;
         return;
-      } else if (scanline === 261 && cycle === 0) {
-      // Clearing VBlank and sprite 0
-        this.registers[0x02] = this.registers[0x02] & 0b00111111;
-        ++this.cycle;
-        return;
+      } 
+      if (scanline === 261) {
+         if(cycle === 0) {
+          // Clearing VBlank and sprite 0
+          this.registers[0x02] = this.registers[0x02] & 0b00111111;
+          ++this.cycle;
+          return;
+         } else if(cycle >= 280 && cycle <= 304 && this.renderingEnabled) {
+          // copy over horizontal bits from this.t to this.v
+          this.v = (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
+          ++this.cycle;
+          return;
+         }
       }
 
       /**
@@ -297,6 +352,15 @@ export default {
         this.v = this.v << 8;
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.v = (this.v | value) & 0xffff;
+        // Now modify the t internal register
+        if(this.w === false) {
+          let tempValue = value << 8;
+          this.t = (this.t & 0b000000011111111) | (tempValue & 0b011111100000000);
+          this.w = true;
+        } else {
+          this.v = this.t = (this.t & 0b111111100000000) | (value & 0b000000011111111);
+          this.w = false;
+        }
       } else if (address === 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
@@ -311,8 +375,9 @@ export default {
         let result = this.vram.get(this.v);
         if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
-          // @todo Increase VRAM address
-          this.v = (this.v + increase) & 0xffff;
+          this.v = (this.v + increase) & 0x7fff;
+          // @todo Handle weird behavior if during render and we change, it should
+          // do a coarse y and x increment.  See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
         }
         return result;
       } else if (address === 0x0002) {

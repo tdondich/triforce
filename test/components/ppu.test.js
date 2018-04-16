@@ -181,8 +181,18 @@ describe('ppu', () => {
         expect(wrapper.vm.x).toBe(0b010);
         expect(wrapper.vm.w).toBe(false);
         expect(wrapper.vm.t).toBe(0b011001010110101);
-        
-
+    })
+    it('should property set t registers when writing to 2006', () => {
+        wrapper.vm.t = 0x00;
+        wrapper.vm.w = false;
+        wrapper.vm.set(0x0006, 0b10101010);
+        expect(wrapper.vm.w).toBe(true);
+        expect(wrapper.vm.t).toBe(0b010101000000000);
+        // Now do second write test
+        wrapper.vm.set(0x0006, 0b10101010);
+        expect(wrapper.vm.w).toBe(false);
+        expect(wrapper.vm.t).toBe(0b010101010101010);
+        expect(wrapper.vm.v).toBe(wrapper.vm.t);
     })
 })
 
