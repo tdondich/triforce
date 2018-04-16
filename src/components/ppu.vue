@@ -117,7 +117,7 @@ export default {
             // cache
             this.buildScanlineSpriteCache(scanline);
 
-          } else if (cycle % 8 === 1) {
+          } else if (cycle % 8 === 0) {
             // @TODO THIS MAY NO LONGER BE REQUIRED SINCE WE'RE USING APPROPRIATE SCROLLING RENDERING PIPELINE
             // fetch the nametable and attribute byte for background
 
@@ -127,19 +127,14 @@ export default {
             // Base will be 0 - 3
             // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
       
-            let baseAddress = (0x2000 + (this.registers[0x00] & 0b00000011) * 0x400);
-            //let baseAddress = 0x2000 | (this.v & 0x0FFF);
-            let address = baseAddress + 
-              (Math.floor(scanline / 8) * 32 + Math.floor(cycle / 8));
+            let address = 0x2000 | (this.v & 0x0FFF);
+
             this.nametableByte = this.vram.get(address);
 
             // Now get attribute byte
-            address = baseAddress + 0x3c0;
-            //address = 0x23C0 | (this.v & 0x0C00) | ((this.v >> 4) & 0x38) | ((this.v >> 2) & 0x07);
+            //address = baseAddress + 0x3c0;
+            address = 0x23C0 | (this.v & 0x0C00) | ((this.v >> 4) & 0x38) | ((this.v >> 2) & 0x07);
 
-            let y = Math.floor(scanline / 32);
-            let x = Math.floor(cycle / 32);
-            address = address + ((y * 8) + x);
             this.attributeTableByte = this.vram.get(address);
           }
           this.renderPixel(cycle, scanline);
@@ -151,23 +146,23 @@ export default {
                 this.v += 0x1000                      // increment fine Y
               } else {
                 this.v &= ~0x7000                     // fine Y = 0
+                let y = (this.v & 0x03E0) >> 5        // let y = coarse Y
+                if (y == 29) {
+                  y = 0                          // coarse Y = 0
+                  this.v ^= 0x0800                    // switch vertical nametable
+                } else if (y == 31) {
+                  y = 0                          // coarse Y = 0, nametable not switched
+                } else {
+                  y += 1                         // increment coarse Y
+                }
+                this.v = (this.v & ~0x03E0) | (y << 5)     // put coarse Y back into v
               }
-              let y = (this.v & 0x03E0) >> 5        // let y = coarse Y
-              if (y == 29) {
-                y = 0                          // coarse Y = 0
-                this.v ^= 0x0800                    // switch vertical nametable
-              } else if (y == 31) {
-                y = 0                          // coarse Y = 0, nametable not switched
-              } else {
-                y += 1                         // increment coarse Y
-              }
-              this.v = (this.v & ~0x03E0) | (y << 5)     // put coarse Y back into v
           }
 
           // We don't need to evaluate further if statements since we know there are additional cycles
           // after this fact
-          ++this.cycle;
-          return;
+          //++this.cycle;
+          //return;
       }
 
       if(scanline < 241 || scanline > 260) {
@@ -179,7 +174,7 @@ export default {
         if(this.renderingEnabled &&  
         (
           (cycle == 328 || cycle == 336) || 
-          (this.scanline > 0 && this.cycle > 0 && this.cycle <= 256 && this.cycle % 8 == 0)
+          (this.scanline >= 0 && this.cycle >= 7 && this.cycle <= 256 && (this.cycle + 1) % 8 == 0)
         )) {
           //  increment horizontal position in v
           if ((this.v & 0x001F) == 31) { // if coarse X == 31

@@ -194,5 +194,77 @@ describe('ppu', () => {
         expect(wrapper.vm.t).toBe(0b010101010101010);
         expect(wrapper.vm.v).toBe(wrapper.vm.t);
     })
+    it('should maintain fine y and coarse y through visible scanlines', () => {
+        // Enable rendering via enabling sprites
+        wrapper.vm.set(0x0001, 0b00010000);
+        // We're already at scanline 0 and cycle 0
+        do {
+            wrapper.vm.tick();
+            // Grab value of v
+            let v = wrapper.vm.v;
+            // Now get out fine Y, bits 14 and 15
+            let fineY = v >>> 12;
+            expect(fineY).toBe(0);
+            let coarseY = (v & 0b000001111100000) >>> 5;
+            expect(coarseY).toBe(0);
+        } while (wrapper.vm.scanline == 0 && wrapper.vm.cycle <= 255);
+        // Scanline should now be 1, so fine Y should also be 1
+        do {
+            wrapper.vm.tick();
+            // Grab value of v
+            let v = wrapper.vm.v;
+            // Now get out fine Y, bits 12,13,14
+            let fineY = v >>> 12;
+            expect(fineY).toBe(0x01);
+            let coarseY = (v & 0b000001111100000) >>> 5;
+            expect(coarseY).toBe(0);
+        } while (wrapper.vm.scanline == 1 && wrapper.vm.cycle <= 255);
+        do { 
+            wrapper.vm.tick()
+        } while(wrapper.vm.scanline < 8);
+        // Now, see if coarse y is 1 and fine y is back to 0
+        // Grab value of v
+        let v = wrapper.vm.v;
+        // Now get out fine Y, bits 12,13,14
+        let fineY = v >>> 12;
+        expect(fineY).toBe(0x00);
+        let coarseY = (v & 0b000001111100000) >>> 5;
+        expect(coarseY).toBe(1);
+        do { 
+            wrapper.vm.tick()
+        } while(wrapper.vm.scanline != 0);
+         // Now, see if coarse y is is set to 0 and fine y is back to 0
+        // Grab value of v
+        v = wrapper.vm.v;
+        // Now get out fine Y, bits 12,13,14
+        fineY = v >>> 12;
+        expect(fineY).toBe(0x00);
+        coarseY = (v & 0b000001111100000) >>> 5;
+        expect(coarseY).toBe(0);
+    })
+    it("should manage coarse x in v register throughout visible scanline 0", () => {
+        // Enable rendering via enabling sprites
+        wrapper.vm.set(0x0001, 0b00010000);
+        do {
+            wrapper.vm.tick();
+            let v = wrapper.vm.v;
+            let coarseX = (v & 0b000000000011111);
+            expect(coarseX).toBe(0x00);
+        } while(wrapper.vm.cycle < 7);
+        // Do 1 more tick, and see if it rolls over
+        wrapper.vm.tick();
+        let v = wrapper.vm.v;
+        let coarseX = (v & 0b000000000011111);
+        expect(coarseX).toBe(0x01);
+        do {
+            wrapper.vm.tick();
+        } while(wrapper.vm.scanline == 0);
+        v = wrapper.vm.v;
+        coarseX = (v & 0b000000000011111);
+        //console.log("CoarseX: " + coarseX + "  at cycle " + wrapper.vm.cycle)
+        expect(coarseX).toBe(0x00);
+ 
+
+    })
 })
 
