@@ -243,6 +243,7 @@ describe('ppu', () => {
         expect(coarseY).toBe(0);
     })
     it("should manage coarse x in v register throughout visible scanline 0", () => {
+        return;
         // Enable rendering via enabling sprites
         wrapper.vm.set(0x0001, 0b00010000);
         do {
@@ -263,7 +264,23 @@ describe('ppu', () => {
         coarseX = (v & 0b000000000011111);
         //console.log("CoarseX: " + coarseX + "  at cycle " + wrapper.vm.cycle)
         expect(coarseX).toBe(0x00);
- 
+    })
+    it("should have $2000 as the nametable byte address when at pixel 0,0", () => {
+        // Enable rendering via enabling sprites
+        wrapper.vm.set(0x0001, 0b00010000);
+       console.log("ADDRESS: " + (0x2000 | (wrapper.vm.v & 0x0FFF)).toString(16));
+
+        nesConsole.frameNotCompleted = true
+        do {
+            wrapper.vm.tick();
+        } while (nesConsole.frameNotCompleted);
+       console.log("ADDRESS: " + (0x2000 | (wrapper.vm.v & 0x0FFF)).toString(16));
+        // Do another iteration of screen and then grab it again
+        nesConsole.frameNotCompleted = true
+        do {
+            wrapper.vm.tick();
+        } while (nesConsole.frameNotCompleted);
+        console.log("ADDRESS: " + (0x2000 | (wrapper.vm.v & 0x0FFF)).toString(16));
 
     })
 })

@@ -37,15 +37,16 @@ export default {
     this.oam = new Uint8Array(256);
 
 
-    // There are 341 cycles in each scanline
+    // There are 341 cycles in each scanline, except for odd and renderEnabled
     this.cycle = 0;
     // There are 262 scanlines, starting with 0, they refrence 261 as -1 as well in the following link
     // See: https://wiki.nesdev.com/w/index.php/PPU_rendering
     this.scanline = 0;
     // Toggle even/odd frame
     this.odd = true;
-    // The nametable "latch"
-    this.nametableByte = null;
+    // Our background tile shift registers. They act as 16-bit registers that get read from bit 0 and then zero fill right shift
+    this.backgroundTileFirstShiftRegister = 0;
+    this.backgroundTileSecondShiftRegister = 0;
     // The attribute "latch"
     this.attributeTableByte = null;
 
@@ -81,6 +82,8 @@ export default {
     this.oldCycleCount = 0;
     this.oldScanline = 0;
 
+    this.fetchTick = 0;
+
     this.previousCycleCount = () => {
       let value = this.oldCycleCount;
       this.oldCycleCount = this.cycle;
@@ -101,46 +104,57 @@ export default {
       // Setting up local vars to avoid property lookup costs
       let scanline = this.scanline;
       let cycle = this.cycle;
-
-      if (scanline <= 239 && cycle <= 256) {
-          if(cycle === 0) {
-            if(scanline === 0) {
-              // Fetch a local copy of data needed for performing caching of data for rendering
-
-              // Create a local copy of of the pattern table relevant to this scanline
-              this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
-
-              // Set the cache data for this frame
-              this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
-            }
-           // Build the scanline sprite cache for this scanline by reading OAM data and compiling
-            // cache
-            this.buildScanlineSpriteCache(scanline);
-
-          } else if (cycle % 8 === 0) {
-            // @TODO THIS MAY NO LONGER BE REQUIRED SINCE WE'RE USING APPROPRIATE SCROLLING RENDERING PIPELINE
-            // fetch the nametable and attribute byte for background
-
-            // Get the base nametable address
-            // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
-
-            // Base will be 0 - 3
-            // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
-      
-            let address = 0x2000 | (this.v & 0x0FFF);
-
-            this.nametableByte = this.vram.get(address);
-
-            // Now get attribute byte
-            //address = baseAddress + 0x3c0;
-            address = 0x23C0 | (this.v & 0x0C00) | ((this.v >> 4) & 0x38) | ((this.v >> 2) & 0x07);
-
-            this.attributeTableByte = this.vram.get(address);
-          }
+      let renderingEnabled = this.renderingEnabled;
+      if (scanline <= 239 || scanline == 261) {
+        if(scanline <= 239) {
           this.renderPixel(cycle, scanline);
+        }
+        if(cycle === 0) {
+          if(scanline === 0) {
+            // Create a local copy of of the pattern table relevant to this scanline
+            this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
+            // Set the cache data for this frame
+            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
+          }
+          // Build the scanline sprite cache for this scanline by reading OAM data and compiling
+          // cache
+          this.buildScanlineSpriteCache(scanline);
+        } else if (cycle % 8 === 0 && (cycle <= 256 || (cycle >= 328 && cycle < 340))) {
+          // This only happens every 8 cycles 
 
-          // Increment v on cycle 256 on every scanline if rendering is enabled
-          if(cycle == 256 && this.renderingEnabled) {
+          // Get the base nametable address
+          // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
+
+          // Base will be 0 - 3
+          // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
+    
+          let address = 0x2000 | (this.v & 0x0FFF);
+
+          // Grab tile data for where we are pointing
+          let backgroundTileIndex = this.vram.get(address);
+          let base = backgroundTileIndex << 4;
+
+          // This ors against the base pattern table address for background
+          // @todo Cache this when writing to the register
+          base = base | ((this.registers[0x00] & 0x10) === 0x10 ? 0x1000 : 0x0000);
+
+          // Now add fine y
+          base = base + (this.v >>> 12)
+
+          // Load it into our register
+          // We get the copy of the tile data, and then we load it into the high 8 bits of our shift registers
+          this.backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister | this.copyOfPatternTables[base] 
+          this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister | this.copyOfPatternTables[base + 8]
+
+          // Now get attribute byte
+          //address = baseAddress + 0x3c0;
+          address = 0x23C0 | (this.v & 0x0C00) | ((this.v >> 4) & 0x38) | ((this.v >> 2) & 0x07);
+
+          this.attributeTableByte = this.vram.get(address);
+
+          if(cycle == 256) {
+            // Increase vert(v) but only if rendering is enabled
+            if(renderingEnabled) {
               // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
               if ((this.v & 0x7000) != 0x7000) {        // if fine Y < 7
                 this.v += 0x1000                      // increment fine Y
@@ -157,36 +171,36 @@ export default {
                 }
                 this.v = (this.v & ~0x03E0) | (y << 5)     // put coarse Y back into v
               }
+            }
+          } else if(renderingEnabled) {
+            // increase hori(v)
+            if ((this.v & 0x001F) == 31) { // if coarse X == 31
+              this.v &= ~0x001F          // coarse X = 0
+              this.v ^= 0x0400           // switch horizontal nametable
+            } else {
+              this.v += 1                // increment coarse X
+            }
           }
-
-          // We don't need to evaluate further if statements since we know there are additional cycles
-          // after this fact
-          //++this.cycle;
-          //return;
-      }
-
-      if(scanline < 241 || scanline > 260) {
-        if(cycle == 257 && this.renderingEnabled) {
+        } else if(cycle == 257 && renderingEnabled) {
           // copy over hortizontal information from t to v
           // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
           this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
         }
-        if(this.renderingEnabled &&  
-        (
-          (cycle == 328 || cycle == 336) || 
-          (this.scanline >= 0 && this.cycle >= 7 && this.cycle <= 256 && (this.cycle + 1) % 8 == 0)
-        )) {
-          //  increment horizontal position in v
-          if ((this.v & 0x001F) == 31) { // if coarse X == 31
-            this.v &= ~0x001F          // coarse X = 0
-            this.v ^= 0x0400           // switch horizontal nametable
-          } else {
-            this.v += 1                // increment coarse X
-          }
+        if (scanline === 261) {
+         if(cycle === 0) {
+          // Clearing VBlank and sprite 0
+          this.registers[0x02] = this.registers[0x02] & 0b00111111;
+          ++this.cycle;
+          return;
+         } else if(cycle === 304 && renderingEnabled) {
+          // copy over horizontal bits from this.t to this.v
+          this.v = (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
+          ++this.cycle;
+          return;
+         }
         }
-      }
 
-      if (scanline === 241 && cycle === 1) {
+     } else if (scanline === 241 && cycle === 1) {
         // Fire off Vblank
         this.registers[0x02] = this.registers[0x02] | 0b10000000;
 
@@ -197,24 +211,11 @@ export default {
         ++this.cycle;
         return;
       } 
-      if (scanline === 261) {
-         if(cycle === 0) {
-          // Clearing VBlank and sprite 0
-          this.registers[0x02] = this.registers[0x02] & 0b00111111;
-          ++this.cycle;
-          return;
-         } else if(cycle >= 280 && cycle <= 304 && this.renderingEnabled) {
-          // copy over horizontal bits from this.t to this.v
-          this.v = (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
-          ++this.cycle;
-          return;
-         }
-      }
 
       /**
        * This code is thanks to ahak from twitch.  Thanks!
        */
-      if ((++this.cycle == 340 && this.odd && this.renderingEnabled) || (this.cycle == 341)) {
+      if ((++this.cycle == 340 && this.odd && renderingEnabled) || (this.cycle == 341)) {
           this.cycle = 0;
           if(++this.scanline == 262){
               this.scanline = 0;
@@ -554,11 +555,19 @@ export default {
       }
       return null;
     },
-    // Index represents the tile number to fetch
-    // This is used purely in background tile rendering
-    // X is x coordinate of the tile
-    // Y is y coordinate
-    fetchTilePixelColor(index, x, y) {
+    /**
+     * Fetches the next color info from the background shift registers
+     */
+    fetchTilePixelColor() {
+      //let value = ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14);
+      let value = ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14) + ((this.backgroundTileFirstShiftRegister & 0x8000) >>> 15);
+      //console.log(value);
+      // Now right shift both registers
+      this.backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister << 1;
+      this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister << 1;
+      return value;
+
+      /*
       // Remember to flip x in order to get the tile in the right order
       x = 7 - x;
       let base = index << 4;
@@ -584,6 +593,7 @@ export default {
         // Color value is 2
         return 2;
       }
+      */
     },
     // Fetch the color hex code for the requested palette and colorIndex combo
     // See: mixins/colors.js
@@ -608,11 +618,7 @@ export default {
       let backgroundColorIndex = 0;
       // This if checks for background tile rendering enabled
       if((this.registers[0x01] & 0x08) === 0x08) {
-        backgroundColorIndex = this.fetchTilePixelColor(
-          this.nametableByte,
-          x === 0 ? 0 : (x  - 1) % 8,
-          y % 8
-        );
+        backgroundColorIndex = this.fetchTilePixelColor();
       }
 
       // Now do pixel evaluation
