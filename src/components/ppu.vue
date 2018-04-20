@@ -19,6 +19,14 @@ const PRIORITY_BACKGROUND = 1;
 
 window.colors = colors;
 
+function crunchV(v) {
+  let fineY = v >>> 12;
+  let nameTableSelect = (v & 0xFFF) >> 10;
+  let coarseY = (v & 0x3FF) >> 5;
+  let coarseX = (v & 0x1F);
+  return "fineY: " + fineY + " ntS: " + nameTableSelect + " coarseY: " + coarseY + " coarseX: " + coarseX;
+}
+
 export default {
   components: {
     databus,
@@ -105,9 +113,34 @@ export default {
       let scanline = this.scanline;
       let cycle = this.cycle;
       let renderingEnabled = this.renderingEnabled;
+
+      if (scanline === 241 && cycle === 1) {
+        // Fire off Vblank
+        this.registers[0x02] |= 0b10000000;
+
+        // And fire VBlank NMI if PPUCTRL bit 7 is set
+        if (this.NMIEnabled) {
+          this.cpu.nmi = 1;
+        }
+        ++this.cycle;
+        return;
+      } 
+
+      /**
+       * This code is thanks to ahak from twitch.  Thanks!
+       */
+      if ((++this.cycle == 340 && this.odd && renderingEnabled) || (this.cycle == 341)) {
+          this.cycle = 0;
+          if(++this.scanline == 262){
+              this.scanline = 0;
+              this.odd = !this.odd;
+          }
+      }
+
+      return;
       if (scanline <= 239 || scanline == 261) {
-        if(scanline <= 239) {
-          this.renderPixel(cycle, scanline);
+        if(scanline <= 239 && cycle > 0 && cycle <= 256) {
+          this.renderPixel(cycle -1, scanline);
         }
         if(cycle === 0) {
           if(scanline === 0) {
@@ -119,7 +152,9 @@ export default {
           // Build the scanline sprite cache for this scanline by reading OAM data and compiling
           // cache
           this.buildScanlineSpriteCache(scanline);
-        } else if (cycle % 8 === 0 && (cycle <= 256 || (cycle >= 328 && cycle < 340))) {
+          ++this.cycle;
+          return;
+        } else if (cycle % 8 === 0 && (cycle <= 256 || (cycle >= 328 && cycle <= 336))) {
           // This only happens every 8 cycles 
 
           // Get the base nametable address
@@ -141,10 +176,31 @@ export default {
           // Now add fine y
           base = base + (this.v >>> 12)
 
+          if(cycle == 336) {
+            // !!!
+            this.backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister << 8;
+            this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister << 8;
+          }
+
+          /*
+          if((cycle == 328 || cycle == 336) && scanline == 261) {
+            // This is the pre-render and cycle 328, it SHOULD be address 0x2000
+            console.log("In pre-prender, cycle " + cycle + ": " + address.toString(16));
+            console.log("value: " + base.toString(16).padStart(4, '0'));
+            console.log("herp: " + this.copyOfPatternTables[base].toString(16).padStart(2));
+            console.log(this.backgroundTileFirstShiftRegister.toString(2).padStart(16, '0'));
+            console.log(((this.backgroundTileFirstShiftRegister & 0xFF00) | this.vram.get(base)).toString(2).padStart(16, '0'));
+          }
+          */
+
+
+
+
           // Load it into our register
           // We get the copy of the tile data, and then we load it into the high 8 bits of our shift registers
-          this.backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister | this.copyOfPatternTables[base] 
+          this.backgroundTileFirstShiftRegister = (this.backgroundTileFirstShiftRegister & 0xFF00) | this.copyOfPatternTables[base] 
           this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister | this.copyOfPatternTables[base + 8]
+
 
           // Now get attribute byte
           //address = baseAddress + 0x3c0;
@@ -172,7 +228,7 @@ export default {
                 this.v = (this.v & ~0x03E0) | (y << 5)     // put coarse Y back into v
               }
             }
-          } else if(renderingEnabled) {
+          } if(renderingEnabled) {
             // increase hori(v)
             if ((this.v & 0x001F) == 31) { // if coarse X == 31
               this.v &= ~0x001F          // coarse X = 0
@@ -180,11 +236,19 @@ export default {
             } else {
               this.v += 1                // increment coarse X
             }
+            /*
+            if(cycle > 256) {
+              console.log("Working on : " + cycle + " with: " + crunchV(this.v));
+            }
+            */
           }
+          ++this.cycle;
+          return;
         } else if(cycle == 257 && renderingEnabled) {
           // copy over hortizontal information from t to v
           // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
           this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
+          //console.log("After Cycle 275: " + crunchV(this.v))
         }
         if (scanline === 261) {
          if(cycle === 0) {
@@ -211,18 +275,6 @@ export default {
         ++this.cycle;
         return;
       } 
-
-      /**
-       * This code is thanks to ahak from twitch.  Thanks!
-       */
-      if ((++this.cycle == 340 && this.odd && renderingEnabled) || (this.cycle == 341)) {
-          this.cycle = 0;
-          if(++this.scanline == 262){
-              this.scanline = 0;
-              this.odd = !this.odd;
-              this.console.frameNotCompleted = false;    
-          }
-      }
 
      // We still have work to do on our frame
       return;
