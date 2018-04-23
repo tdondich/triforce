@@ -1,6 +1,9 @@
 <template>
     <div>
         <h4>Input: Player 1</h4>
+        <select v-model="selectedGamepad">
+            <option v-for="(name, index) in gamepads" :value="index">{{name}}</option>
+        </select>
         <table class="table">
             <thead>
                 <tr>
@@ -71,6 +74,10 @@ export default {
   ],
   data: function() {
     return {
+        gamepads: {
+            'keyboard': 'Keyboard'
+        },
+        selectedGamepad: 'keyboard',
         one: {
             a: 0x00,
             b: 0x00,
@@ -98,27 +105,39 @@ export default {
     };
   },
   mounted() {
+      window.addEventListener("gamepadconnected", (e) => {
+        console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+            e.gamepad.index, e.gamepad.id,
+            e.gamepad.buttons.length, e.gamepad.axes.length);
+
+        // Add the gamepads
+        this.$set(this.gamepads, e.gamepad.index, e.gamepad.id);
+      });
       window.addEventListener("keydown", (event) => {
           // Handle player 1
-          if(event.keyCode in this.config.one) {
-              this.one[this.config.one[event.keyCode]] = 0x01;
-              event.preventDefault();
-          } else if(event.keyCode in this.config.two) {
-              // Handle Player 2
-              this.two[this.config.two[event.keyCode]] = 0x01;
-              event.preventDefault();
+          if(this.selectedGamepad == 'keyboard') {
+            if(event.keyCode in this.config.one) {
+                this.one[this.config.one[event.keyCode]] = 0x01;
+                event.preventDefault();
+            } else if(event.keyCode in this.config.two) {
+                // Handle Player 2
+                this.two[this.config.two[event.keyCode]] = 0x01;
+                event.preventDefault();
+            }
           }
       });
       window.addEventListener("keyup", () => {
            // Handle player 1
-          if(event.keyCode in this.config.one) {
-              this.one[this.config.one[event.keyCode]] = 0x00;
-              event.preventDefault();
-          } else if(event.keyCode in this.config.two) {
-              // Handle Player 2
-              this.two[this.config.two[event.keyCode]] = 0x00;
-              event.preventDefault();
-          }
+           if(this.selectedGamepad == 'keyboard') {
+            if(event.keyCode in this.config.one) {
+                this.one[this.config.one[event.keyCode]] = 0x00;
+                event.preventDefault();
+            } else if(event.keyCode in this.config.two) {
+                // Handle Player 2
+                this.two[this.config.two[event.keyCode]] = 0x00;
+                event.preventDefault();
+            }
+           }
      });
 
   },
@@ -188,6 +207,24 @@ export default {
                 this.two.streamPointer = 0;
             }
         }
+    },
+    tick: function() {
+        // Scans the gamepads for keypresses
+        if(this.selectedGamepad != 'keyboard') {
+            // Scan our gamepad
+            let pad = navigator.getGamepads()[this.selectedGamepad];
+            // This is right
+            this.one.right = pad.axes[0] > 0.5 ? 0x01 : 0x00;
+            this.one.left = pad.axes[0] < -0.5 ? 0x01: 0x00;
+            this.one.down = pad.axes[1] > 0.5 ? 0x01 : 0x00;
+            this.one.up = pad.axes[1] < -0.5 ? 0x01: 0x00;
+            this.one.a = pad.buttons[1].pressed ? 0x01: 0x00;
+            this.one.b = pad.buttons[0].pressed ? 0x01: 0x00;
+            this.one.select = pad.buttons[8].pressed ? 0x01: 0x00;
+            this.one.start = pad.buttons[9].pressed ? 0x01: 0x00;
+
+        }
+
     }
   }
 };

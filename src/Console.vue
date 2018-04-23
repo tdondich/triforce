@@ -259,6 +259,7 @@ export default {
         this.ppu.tick();
         this.ppu.tick();
       } while (this.frameNotCompleted && !this.stepEnabled);
+      this.joypads.tick();
       this.ppu.render();
       if (!this.stepEnabled) {
         requestAnimationFrame(this.tick);
@@ -273,6 +274,7 @@ export default {
         this.ppu.tick();
         this.ppu.tick();
       } while (this.frameNotCompleted);
+      this.joypads.tick();
       this.ppu.render();
       requestAnimationFrame(this.tick);
     };
@@ -283,6 +285,7 @@ export default {
   mounted() {
     this.cpu = this.$refs.cpu;
     this.ppu = this.$refs.ppu;
+    this.joypads = this.$refs.joypads;
   },
   methods: {
     toggleStep() {
