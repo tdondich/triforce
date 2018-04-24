@@ -83,41 +83,6 @@ export default {
       inspectCharCodeEnabled: false
     };
   },
-  created() {
-    for (let count = 0; count < this.sections.length; count++) {
-      let node = this.sections[count];
-      for (let address = node.min; address <= node.max; address++) {
-        this[address] = {
-          min: node.min,
-          max: node.max,
-          size: node.size,
-          bus: node.bus ? node.bus : undefined,
-          target: this.$parent.$refs[node.ref]
-        };
-      }
-    }
-
-    this.get = function(address) {
-      let { min, size, bus, target } = this[address];
-      // We found the memory module we need to reference, plus dealing with memory that repeats
-      return target.get((address - min) % size, bus);
-    };
-
-    // Get's a value for a requested address, calling the target's get value, but translated from that target's
-    // base address range
-    this.getRange = (address, length) => {
-      let { bus, target } = this[address];
-
-      /*
-      // Disable boundry checking for performance reasons
-      let endNode = this.configuration[address + (length - 1)];
-      if (node.target != endNode.target) {
-        throw "Databus does not support fetching range across different targets";
-      }
-      */
-      return target.getRange(address, length, bus);
-    };
-  },
 
   mounted() {
     // Copy sections prop to a property of this object, avoiding proxyGet cost
@@ -156,7 +121,7 @@ export default {
       let result = [];
       let end = this.inspectStartCalculated + 256;
       for (let idx = this.inspectStartCalculated; idx < end; idx++) {
-        result[result.length] = this.get(idx);
+        result[result.length] = this.target[idx];
       }
       return result;
     }
@@ -192,7 +157,7 @@ export default {
       }
     },
     set(address, value) {
-      let { min, size, bus, target } = this[address];
+      let {min, size, bus, target} = this[address];
       /** Disable if check for performance reasons */
       /*
       if (!node) {
@@ -202,6 +167,20 @@ export default {
       // We found the memory module we need to reference, plus dealing with memory that repeats
       target.set((address - min) % size, value, bus);
       return;
+    },
+    // Get's a value for a requested address, calling the target's get value, but translated from that target's
+    // base address range
+   getRange(address, length) {
+      let {bus, target} = this[address];
+
+      /*
+      // Disable boundry checking for performance reasons
+      let endNode = this.configuration[address + (length - 1)];
+      if (node.target != endNode.target) {
+        throw "Databus does not support fetching range across different targets";
+      }
+      */
+      return target.getRange(address, length, bus);
     }
   }
 };
@@ -224,6 +203,3 @@ p.success {
   color: green;
 }
 </style>
-
-
-

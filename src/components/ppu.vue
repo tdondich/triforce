@@ -21,10 +21,19 @@ window.colors = colors;
 
 function crunchV(v) {
   let fineY = v >>> 12;
-  let nameTableSelect = (v & 0xFFF) >> 10;
-  let coarseY = (v & 0x3FF) >> 5;
-  let coarseX = (v & 0x1F);
-  return "fineY: " + fineY + " ntS: " + nameTableSelect + " coarseY: " + coarseY + " coarseX: " + coarseX;
+  let nameTableSelect = (v & 0xfff) >> 10;
+  let coarseY = (v & 0x3ff) >> 5;
+  let coarseX = v & 0x1f;
+  return (
+    "fineY: " +
+    fineY +
+    " ntS: " +
+    nameTableSelect +
+    " coarseY: " +
+    coarseY +
+    " coarseX: " +
+    coarseX
+  );
 }
 
 export default {
@@ -43,7 +52,6 @@ export default {
 
     // Create our OAM array
     this.oam = new Uint8Array(256);
-
 
     // There are 341 cycles in each scanline, except for odd and renderEnabled
     this.cycle = 0;
@@ -68,9 +76,6 @@ export default {
     // First/second write toggle
     this.w = false;
 
-
-
-
     this.canvas = null;
     this.canvasCtx = null;
 
@@ -81,6 +86,8 @@ export default {
     this.leftSideBackgroundAndSpriteFlag = false;
     this.NMIEnabled = false;
     this.renderingEnabled = false;
+
+    this.basePatternTableAddress = 0x1000;
 
     // Rendering optimizations aka hacks
     this.frameBuffer = null;
@@ -108,15 +115,304 @@ export default {
       this.canvasCtx.putImageData(this.frameBuffer, 0, 0);
     };
 
+    this.shiftBackgroundRegisters = () => {
+      let v = this.v;
+      // Get the base nametable address
+      // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
+
+      // Base will be 0 - 3
+      // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
+
+      // Grab tile data for where we are pointing
+      let backgroundTileIndex = this.vram.get(0x2000 | (v & 0x0FFF));
+
+      // This ors against the base pattern table address for background
+      // And adds fine-y from v
+      let base = ((backgroundTileIndex << 4) | this.basePatternTableAddress) + (v >>> 12);
+
+      // Load it into our register
+      // We get the copy of the tile data, and then we load it into the high 8 bits of our shift registers
+      this.backgroundTileFirstShiftRegister =
+        (this.backgroundTileFirstShiftRegister & 0xff00) |
+        this.copyOfPatternTables[base];
+      this.backgroundTileSecondShiftRegister =
+        this.backgroundTileSecondShiftRegister |
+        this.copyOfPatternTables[base + 8];
+
+      // Now get attribute byte
+      //address = baseAddress + 0x3c0;
+      let address = 0x23c0 | (v & 0x0c00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+
+      // Shift top 8 bits to the right
+      this.attributeTableByte = (this.attributeTableByte >>> 8) | (this.vram.get(address) << 8);
+
+    };
+
     this.tick = () => {
       // Setting up local vars to avoid property lookup costs
       let scanline = this.scanline;
       let cycle = this.cycle;
       let renderingEnabled = this.renderingEnabled;
 
+      if (scanline <= 239) {
+        if (cycle <= 256 && cycle > 0) {
+          this.renderPixel(cycle - 1, scanline);
+        }
+        switch (cycle) {
+          case 0:
+            this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
+            // Set the cache data for this frame
+            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
+
+           ++this.cycle;
+            return;
+          case 8:
+          case 16:
+          case 24:
+          case 32:
+          case 40:
+          case 48:
+          case 56:
+          case 64:
+          case 72:
+          case 80:
+          case 88:
+          case 96:
+          case 104:
+          case 112:
+          case 120:
+          case 128:
+          case 136:
+          case 144:
+          case 152:
+          case 160:
+          case 168:
+          case 176:
+          case 184:
+          case 192:
+          case 200:
+          case 208:
+          case 216:
+          case 224:
+          case 232:
+          case 240:
+          case 248:
+            this.shiftBackgroundRegisters();
+            // increase hori(v)
+            if(renderingEnabled) {
+              if ((this.v & 0x001F) == 31) { // if coarse X == 31
+                this.v &= ~0x001F          // coarse X = 0
+                this.v ^= 0x0400           // switch horizontal nametable
+              } else {
+                this.v += 1                // increment coarse X
+              }
+            }
+            ++this.cycle;
+            return;
+          case 256:
+            // inc vert(v)
+            // Increase vert(v) but only if rendering is enabled
+            if (renderingEnabled) {
+              // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
+              if ((this.v & 0x7000) != 0x7000) {
+                // if fine Y < 7
+                this.v += 0x1000; // increment fine Y
+              } else {
+                this.v &= ~0x7000; // fine Y = 0
+                let y = (this.v & 0x03e0) >> 5; // let y = coarse Y
+                if (y == 29) {
+                  y = 0; // coarse Y = 0
+                  this.v ^= 0x0800; // switch vertical nametable
+                } else if (y == 31) {
+                  y = 0; // coarse Y = 0, nametable not switched
+                } else {
+                  y += 1; // increment coarse Y
+                }
+                this.v = (this.v & ~0x03e0) | (y << 5); // put coarse Y back into v
+              }
+            }
+            // Build the scanline sprite cache for this scanline by reading OAM data and compiling
+            // cache which is like secondary OAM
+            this.buildScanlineSpriteCache(scanline);
+ 
+            ++this.cycle;
+            return;
+          case 257:
+            // hori(v) = hori(t)
+            // copy over hortizontal information from t to v
+            // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
+            if(renderingEnabled) {
+              this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
+            }
+            ++this.cycle;
+            return;
+         case 328:
+            this.shiftBackgroundRegisters();
+            // increase hori(v)
+            if(renderingEnabled) {
+              if ((this.v & 0x001F) == 31) { // if coarse X == 31
+                this.v &= ~0x001F          // coarse X = 0
+                this.v ^= 0x0400           // switch horizontal nametable
+              } else {
+                this.v += 1                // increment coarse X
+              }
+            }
+            ++this.cycle;
+            return;
+          case 336:
+            // Since there was no rendering, we need to make sure to shift background registers
+            this.backgroundTileFirstShiftRegister =
+            this.backgroundTileFirstShiftRegister << 8;
+            this.backgroundTileSecondShiftRegister =
+            this.backgroundTileSecondShiftRegister << 8;
+            this.shiftBackgroundRegisters();
+            // increase hori(v)
+            if(renderingEnabled) {
+              if ((this.v & 0x001F) == 31) { // if coarse X == 31
+                this.v &= ~0x001F          // coarse X = 0
+                this.v ^= 0x0400           // switch horizontal nametable
+              } else {
+                this.v += 1                // increment coarse X
+              }
+            }
+ 
+            ++this.cycle;
+            return;
+        }
+    } else if(scanline == 261) {
+        switch (cycle) {
+          case 0:
+            // Clearing VBlank and sprite 0
+            this.registers[0x02] = this.registers[0x02] & 0b00111111;
+            ++this.cycle;
+            return;
+          case 8:
+          case 16:
+          case 24:
+          case 32:
+          case 40:
+          case 48:
+          case 56:
+          case 64:
+          case 72:
+          case 80:
+          case 88:
+          case 96:
+          case 104:
+          case 112:
+          case 120:
+          case 128:
+          case 136:
+          case 144:
+          case 152:
+          case 160:
+          case 168:
+          case 176:
+          case 184:
+          case 192:
+          case 200:
+          case 208:
+          case 216:
+          case 224:
+          case 232:
+          case 240:
+          case 248:
+            this.shiftBackgroundRegisters();
+            // increase hori(v)
+            if(renderingEnabled) {
+              if ((this.v & 0x001F) == 31) { // if coarse X == 31
+                this.v &= ~0x001F          // coarse X = 0
+                this.v ^= 0x0400           // switch horizontal nametable
+              } else {
+                this.v += 1                // increment coarse X
+              }
+            }
+            ++this.cycle;
+            return;
+          case 256:
+            // inc vert(v)
+            // Increase vert(v) but only if rendering is enabled
+            if (renderingEnabled) {
+              // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
+              if ((this.v & 0x7000) != 0x7000) {
+                // if fine Y < 7
+                this.v += 0x1000; // increment fine Y
+              } else {
+                this.v &= ~0x7000; // fine Y = 0
+                let y = (this.v & 0x03e0) >> 5; // let y = coarse Y
+                if (y == 29) {
+                  y = 0; // coarse Y = 0
+                  this.v ^= 0x0800; // switch vertical nametable
+                } else if (y == 31) {
+                  y = 0; // coarse Y = 0, nametable not switched
+                } else {
+                  y += 1; // increment coarse Y
+                }
+                this.v = (this.v & ~0x03e0) | (y << 5); // put coarse Y back into v
+              }
+            }
+            // Build the scanline sprite cache for this scanline by reading OAM data and compiling
+            // cache which is like secondary OAM
+            this.buildScanlineSpriteCache(scanline);
+ 
+            ++this.cycle;
+            return;
+          case 257:
+            // hori(v) = hori(t)
+            // copy over hortizontal information from t to v
+            // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
+            if(renderingEnabled) {
+              this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
+            }
+            ++this.cycle;
+            return;
+          case 304:
+            // vert(v) = vert(t)
+            // This would normally be done on cycles 280 to 304, but we do it on the last
+            if(renderingEnabled) {
+              this.v =
+                (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
+            }
+            ++this.cycle;
+            return;
+          case 328:
+            this.shiftBackgroundRegisters();
+            // increase hori(v)
+            if(renderingEnabled) {
+              if ((this.v & 0x001F) == 31) { // if coarse X == 31
+                this.v &= ~0x001F          // coarse X = 0
+                this.v ^= 0x0400           // switch horizontal nametable
+              } else {
+                this.v += 1                // increment coarse X
+              }
+            }
+            ++this.cycle;
+            return;
+          case 336:
+            // Since there was no rendering, we need to make sure to shift background registers
+            this.backgroundTileFirstShiftRegister =
+            this.backgroundTileFirstShiftRegister << 8;
+            this.backgroundTileSecondShiftRegister =
+            this.backgroundTileSecondShiftRegister << 8;
+            this.shiftBackgroundRegisters();
+            if(renderingEnabled) {
+              // increase hori(v)
+              if ((this.v & 0x001F) == 31) { // if coarse X == 31
+                this.v &= ~0x001F          // coarse X = 0
+                this.v ^= 0x0400           // switch horizontal nametable
+              } else {
+                this.v += 1                // increment coarse X
+              }
+            }
+            ++this.cycle;
+            return;
+        }
+      }
+
       if (scanline === 241 && cycle === 1) {
         // Fire off Vblank
         this.registers[0x02] |= 0b10000000;
+        this.$parent.frameNotCompleted = false;
 
         // And fire VBlank NMI if PPUCTRL bit 7 is set
         if (this.NMIEnabled) {
@@ -124,160 +420,22 @@ export default {
         }
         ++this.cycle;
         return;
-      } 
+      }
 
       /**
        * This code is thanks to ahak from twitch.  Thanks!
        */
-      if ((++this.cycle == 340 && this.odd && renderingEnabled) || (this.cycle == 341)) {
-          this.cycle = 0;
-          if(++this.scanline == 262){
-              this.scanline = 0;
-              this.odd = !this.odd;
-          }
+      if (
+        (++this.cycle == 340 && this.odd && renderingEnabled) ||
+        this.cycle == 341
+      ) {
+        this.cycle = 0;
+        if (++this.scanline == 262) {
+          this.scanline = 0;
+          this.odd = !this.odd;
+          return;
+        }
       }
-
-      return;
-      if (scanline <= 239 || scanline == 261) {
-        if(scanline <= 239 && cycle > 0 && cycle <= 256) {
-          this.renderPixel(cycle -1, scanline);
-        }
-        if(cycle === 0) {
-          if(scanline === 0) {
-            // Create a local copy of of the pattern table relevant to this scanline
-            this.copyOfPatternTables = this.vram.getRange(0x0000, 8192);
-            // Set the cache data for this frame
-            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
-          }
-          // Build the scanline sprite cache for this scanline by reading OAM data and compiling
-          // cache
-          this.buildScanlineSpriteCache(scanline);
-          ++this.cycle;
-          return;
-        } else if (cycle % 8 === 0 && (cycle <= 256 || (cycle >= 328 && cycle <= 336))) {
-          // This only happens every 8 cycles 
-
-          // Get the base nametable address
-          // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
-
-          // Base will be 0 - 3
-          // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
-    
-          let address = 0x2000 | (this.v & 0x0FFF);
-
-          // Grab tile data for where we are pointing
-          let backgroundTileIndex = this.vram.get(address);
-          let base = backgroundTileIndex << 4;
-
-          // This ors against the base pattern table address for background
-          // @todo Cache this when writing to the register
-          base = base | ((this.registers[0x00] & 0x10) === 0x10 ? 0x1000 : 0x0000);
-
-          // Now add fine y
-          base = base + (this.v >>> 12)
-
-          if(cycle == 336) {
-            // !!!
-            this.backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister << 8;
-            this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister << 8;
-          }
-
-          /*
-          if((cycle == 328 || cycle == 336) && scanline == 261) {
-            // This is the pre-render and cycle 328, it SHOULD be address 0x2000
-            console.log("In pre-prender, cycle " + cycle + ": " + address.toString(16));
-            console.log("value: " + base.toString(16).padStart(4, '0'));
-            console.log("herp: " + this.copyOfPatternTables[base].toString(16).padStart(2));
-            console.log(this.backgroundTileFirstShiftRegister.toString(2).padStart(16, '0'));
-            console.log(((this.backgroundTileFirstShiftRegister & 0xFF00) | this.vram.get(base)).toString(2).padStart(16, '0'));
-          }
-          */
-
-
-
-
-          // Load it into our register
-          // We get the copy of the tile data, and then we load it into the high 8 bits of our shift registers
-          this.backgroundTileFirstShiftRegister = (this.backgroundTileFirstShiftRegister & 0xFF00) | this.copyOfPatternTables[base] 
-          this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister | this.copyOfPatternTables[base + 8]
-
-
-          // Now get attribute byte
-          //address = baseAddress + 0x3c0;
-          address = 0x23C0 | (this.v & 0x0C00) | ((this.v >> 4) & 0x38) | ((this.v >> 2) & 0x07);
-
-          this.attributeTableByte = this.vram.get(address);
-
-          if(cycle == 256) {
-            // Increase vert(v) but only if rendering is enabled
-            if(renderingEnabled) {
-              // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
-              if ((this.v & 0x7000) != 0x7000) {        // if fine Y < 7
-                this.v += 0x1000                      // increment fine Y
-              } else {
-                this.v &= ~0x7000                     // fine Y = 0
-                let y = (this.v & 0x03E0) >> 5        // let y = coarse Y
-                if (y == 29) {
-                  y = 0                          // coarse Y = 0
-                  this.v ^= 0x0800                    // switch vertical nametable
-                } else if (y == 31) {
-                  y = 0                          // coarse Y = 0, nametable not switched
-                } else {
-                  y += 1                         // increment coarse Y
-                }
-                this.v = (this.v & ~0x03E0) | (y << 5)     // put coarse Y back into v
-              }
-            }
-          } if(renderingEnabled) {
-            // increase hori(v)
-            if ((this.v & 0x001F) == 31) { // if coarse X == 31
-              this.v &= ~0x001F          // coarse X = 0
-              this.v ^= 0x0400           // switch horizontal nametable
-            } else {
-              this.v += 1                // increment coarse X
-            }
-            /*
-            if(cycle > 256) {
-              console.log("Working on : " + cycle + " with: " + crunchV(this.v));
-            }
-            */
-          }
-          ++this.cycle;
-          return;
-        } else if(cycle == 257 && renderingEnabled) {
-          // copy over hortizontal information from t to v
-          // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
-          this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
-          //console.log("After Cycle 275: " + crunchV(this.v))
-        }
-        if (scanline === 261) {
-         if(cycle === 0) {
-          // Clearing VBlank and sprite 0
-          this.registers[0x02] = this.registers[0x02] & 0b00111111;
-          ++this.cycle;
-          return;
-         } else if(cycle === 304 && renderingEnabled) {
-          // copy over horizontal bits from this.t to this.v
-          this.v = (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
-          ++this.cycle;
-          return;
-         }
-        }
-
-     } else if (scanline === 241 && cycle === 1) {
-        // Fire off Vblank
-        this.registers[0x02] = this.registers[0x02] | 0b10000000;
-
-        // And fire VBlank NMI if PPUCTRL bit 7 is set
-        if (this.NMIEnabled) {
-          this.cpu.nmi = 1;
-        }
-        ++this.cycle;
-        return;
-      } 
-
-     // We still have work to do on our frame
-      return;
     };
   },
   mounted() {
@@ -292,7 +450,6 @@ export default {
 
     // Prefill frameBuffer.data with 255's to pre-populate alpha value
     this.frameBuffer.data.fill(255);
-
   },
   methods: {
     ppumainbus() {
@@ -333,7 +490,7 @@ export default {
       let base = this.baseNameTableAddress() + 0x3c0;
       return base;
     },
-   baseSpritePatternTableAddress() {
+    baseSpritePatternTableAddress() {
       // @todo check for sprite size, if 8x8 or 8x16
       let base = this.ppuctrl() & 0x08;
       return base === 0x08 ? 0x1000 : 0x0000;
@@ -344,7 +501,6 @@ export default {
       this.registers.fill(value, start, end);
     },
     set(address, value) {
-
       if (address === 0x0002) {
         // Do not do anything.  PPUSTATUS is read only
         return;
@@ -352,48 +508,58 @@ export default {
       let oldValue = this.registers[address];
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
-      if(address === 0x0000) {
+      if (address === 0x0000) {
         // Check if nmi is set by checking bit 7
         this.NMIEnabled = (value & 0b10000000) === 0b10000000;
         // PPUCTRL write
         // Check to see if NMI is set while during vblank, if so, fire off an nmi immediately
-        if ((this.NMIEnabled) 
-        && ((oldValue & 0b10000000) === 0b00000000)
-        && (this.ppustatus() & 0b10000000) === 0b10000000) {
+        if (
+          this.NMIEnabled &&
+          (oldValue & 0b10000000) === 0b00000000 &&
+          (this.ppustatus() & 0b10000000) === 0b10000000
+        ) {
           // NMI set, fire off nmi
           this.cpu.nmi = 1;
         }
         // Set the t internal register, bits 10,11 to correspond to incoming bit 0,1
 
-        let tempValue = value << 10 & 0x7FFF;
+        let tempValue = (value << 10) & 0x7fff;
         this.t = (this.t & 0b111001111111111) | (tempValue & 0b000110000000000);
 
-      } else if(address === 0x0001) {
+        // Set basePatternTableAddress
+        this.basePatternTableAddress = (value & 0x10) === 0x10 ? 0x1000: 0x0000;
+
+      } else if (address === 0x0001) {
         // Writing to MASK
         // So let's determine if backgroundAndSpriteRendering is enabled
-        this.backgroundAndSpriteRendering = ((value & 0b00011000) === 0b00011000);
+        this.backgroundAndSpriteRendering = (value & 0b00011000) === 0b00011000;
         // This determines if BOTH background and sprite rendering is allowed in the leftmost 8 pixels
         // Used for sprite 0 checks
-        this.leftSideBackgroundAndSpriteFlag = ((value & 0b00000110) === 0b00000110);
+        this.leftSideBackgroundAndSpriteFlag =
+          (value & 0b00000110) === 0b00000110;
         // Store if we should be rendering either sprite or background, so rendering should be enabled
-        this.renderingEnabled = !((value & 0b00011000) === 0)
-      } else if(address == 0x0005) {
-        if(this.w === false) {
+        this.renderingEnabled = !((value & 0b00011000) === 0);
+      } else if (address == 0x0005) {
+        if (this.w === false) {
           // Set scroll
-          let tempValue = (value >>> 3) & 0x7FFF;
-          this.t = (this.t & 0b111111111100000) | (tempValue & 0b000000000011111);
-          this.x = (value & 0b111);
+          let tempValue = (value >>> 3) & 0x7fff;
+          this.t =
+            (this.t & 0b111111111100000) | (tempValue & 0b000000000011111);
+          this.x = value & 0b111;
           this.w = true;
         } else {
           // Copy over CBA
-          let tempValue = (value << 12) & 0x7FFF;
-          this.t = (this.t & 0b000111111111111) | (tempValue & 0b111000000000000);
+          let tempValue = (value << 12) & 0x7fff;
+          this.t =
+            (this.t & 0b000111111111111) | (tempValue & 0b111000000000000);
           // Now copy over HG
-          tempValue = (value << 2) & 0x7FFF;
-          this.t = (this.t & 0b111110011111111) | (tempValue & 0b000001100000000);
+          tempValue = (value << 2) & 0x7fff;
+          this.t =
+            (this.t & 0b111110011111111) | (tempValue & 0b000001100000000);
           // Now copy over FED
-          tempValue = (value << 4) & 0x7FFF;
-          this.t = (this.t & 0b111111100011111) | (tempValue & 0b000000011100000);
+          tempValue = (value << 4) & 0x7fff;
+          this.t =
+            (this.t & 0b111111100011111) | (tempValue & 0b000000011100000);
           this.w = false;
         }
       } else if (address === 0x0006) {
@@ -401,12 +567,14 @@ export default {
         // Now, bring in the value to the left and mask it to a 16-bit address
         this.v = (this.v | value) & 0xffff;
         // Now modify the t internal register
-        if(this.w === false) {
+        if (this.w === false) {
           let tempValue = value << 8;
-          this.t = (this.t & 0b000000011111111) | (tempValue & 0b011111100000000);
+          this.t =
+            (this.t & 0b000000011111111) | (tempValue & 0b011111100000000);
           this.w = true;
         } else {
-          this.v = this.t = (this.t & 0b111111100000000) | (value & 0b000000011111111);
+          this.v = this.t =
+            (this.t & 0b111111100000000) | (value & 0b000000011111111);
           this.w = false;
         }
       } else if (address === 0x0007) {
@@ -536,7 +704,10 @@ export default {
 
           let tileBase = tileIndex << 4;
           // Find the relative y position of the sprite
-          let tileY = ((attributeByte & 0b10000000) === 0b10000000) ? 7 - (y - spriteY) : y - spriteY;
+          let tileY =
+            (attributeByte & 0b10000000) === 0b10000000
+              ? 7 - (y - spriteY)
+              : y - spriteY;
 
           tileBase = tileBase | this.baseSpritePatternTableAddress();
           // Get first plane
@@ -576,21 +747,25 @@ export default {
         spriteNumber++
       ) {
         // Destructuring the sprite info
-        let {spriteX, oamAddress, palette, flipHorizontal, first, second} = this.scanlineSpriteCache[spriteNumber];
-       if (x >= spriteX && x < spriteX + 8) {
+        let {
+          spriteX,
+          oamAddress,
+          palette,
+          flipHorizontal,
+          first,
+          second
+        } = this.scanlineSpriteCache[spriteNumber];
+        if (x >= spriteX && x < spriteX + 8) {
           // This sprite falls within our X requested coordinate
           // Now pull the first/second byte for the tile for this scanline
           // Check for flipping horizontally
-          let tileX = flipHorizontal ? (x - spriteX) : 7 - (x - spriteX);
+          let tileX = flipHorizontal ? x - spriteX : 7 - (x - spriteX);
 
           let colorIndex = 2;
           if (!isBitSet(first, tileX) && !isBitSet(second, tileX)) {
             // Color value is 0
             colorIndex = 0;
-          } else if (
-            isBitSet(first, tileX) &&
-            isBitSet(second, tileX)
-          ) {
+          } else if (isBitSet(first, tileX) && isBitSet(second, tileX)) {
             // color value is 3
             colorIndex = 3;
           } else if (isBitSet(first, tileX)) {
@@ -612,40 +787,17 @@ export default {
      */
     fetchTilePixelColor() {
       //let value = ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14);
-      let value = ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14) + ((this.backgroundTileFirstShiftRegister & 0x8000) >>> 15);
+      let value =
+        ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14) +
+        ((this.backgroundTileFirstShiftRegister & 0x8000) >>> 15);
       //console.log(value);
       // Now right shift both registers
-      this.backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister << 1;
-      this.backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister << 1;
+      this.backgroundTileFirstShiftRegister =
+        this.backgroundTileFirstShiftRegister << 1;
+      this.backgroundTileSecondShiftRegister =
+        this.backgroundTileSecondShiftRegister << 1;
       return value;
 
-      /*
-      // Remember to flip x in order to get the tile in the right order
-      x = 7 - x;
-      let base = index << 4;
-
-      // This ors against the base pattern table address for background
-      base = base | ((this.registers[0x00] & 0x10) === 0x10 ? 0x1000 : 0x0000);
-
-      // Get first plane
-      let first = this.copyOfPatternTables[base + y];
-      // Get second plane
-      let second = this.copyOfPatternTables[base + y + 8];
-
-      if (!isBitSet(first, x) && !isBitSet(second, x)) {
-        // Color value is 0
-        return 0;
-      } else if (isBitSet(first, x) && isBitSet(second, x)) {
-        // color value is 3
-        return 3;
-      } else if (isBitSet(first, x)) {
-        // Color value is 1
-        return 1;
-      } else {
-        // Color value is 2
-        return 2;
-      }
-      */
     },
     // Fetch the color hex code for the requested palette and colorIndex combo
     // See: mixins/colors.js
@@ -664,12 +816,14 @@ export default {
       let color = this.universalBackgroundColor;
 
       // Sprite fetching
-      let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(x);
+      let activeSpritePixelInformation = this.fetchVisibleSpritePixelInformation(
+        x
+      );
 
       // Fetch background tile info only if background rendering is enabled
       let backgroundColorIndex = 0;
       // This if checks for background tile rendering enabled
-      if((this.registers[0x01] & 0x08) === 0x08) {
+      if ((this.registers[0x01] & 0x08) === 0x08) {
         backgroundColorIndex = this.fetchTilePixelColor();
       }
 
@@ -677,16 +831,24 @@ export default {
       let palette = null;
       let colorIndex = null;
 
-      if(backgroundColorIndex != 0 || (activeSpritePixelInformation && activeSpritePixelInformation.colorIndex != 0)) {
+      if (
+        backgroundColorIndex != 0 ||
+        (activeSpritePixelInformation &&
+          activeSpritePixelInformation.colorIndex != 0)
+      ) {
         // If we have an active sprite, do sprite detail
-       if ( activeSpritePixelInformation && activeSpritePixelInformation.colorIndex) {
+        if (
+          activeSpritePixelInformation &&
+          activeSpritePixelInformation.colorIndex
+        ) {
           // Check for sprite 0
-          if(activeSpritePixelInformation.oamAddress === 0x00 &&
-          this.backgroundAndSpriteRendering &&
-          // Check for left clipping
-          (this.leftSideBackgroundAndSpriteFlag || x > 7) &&
-          // End left clip check
-          backgroundColorIndex
+          if (
+            activeSpritePixelInformation.oamAddress === 0x00 &&
+            this.backgroundAndSpriteRendering &&
+            // Check for left clipping
+            (this.leftSideBackgroundAndSpriteFlag || x > 7) &&
+            // End left clip check
+            backgroundColorIndex
           ) {
             this.setSprite0Hit(true);
           }
@@ -696,21 +858,21 @@ export default {
           colorIndex = backgroundColorIndex;
           // @todo Find proper palette number for background attribute byte and x/y offset
           //palette = 0;
-          if(x % 32 < 16) {
-            if(y % 32 < 16) {
+          if (x % 32 < 16) {
+            if (y % 32 < 16) {
               // top left
-              palette = (this.attributeTableByte & 0b00000011);
+              palette = this.attributeTableByte & 0b00000011;
             } else {
               // bottom left
-              palette = ((this.attributeTableByte & 0b00110000) >>> 4);
+              palette = (this.attributeTableByte & 0b00110000) >>> 4;
             }
           } else {
-            if(y % 32 < 16) {
+            if (y % 32 < 16) {
               // top right
-              palette = ((this.attributeTableByte & 0b00001100) >>> 2);
+              palette = (this.attributeTableByte & 0b00001100) >>> 2;
             } else {
               // bottom right
-              palette = ((this.attributeTableByte & 0b11000000) >>> 6);
+              palette = (this.attributeTableByte & 0b11000000) >>> 6;
             }
           }
         }
