@@ -132,6 +132,12 @@ export default {
     }
   },
   methods: {
+    resolveRead(address, bus = "prg") {
+      return this.$refs.mapper.resolveRead(address, bus);
+    },
+    resolveWrite(address, bus = "prg") {
+      return this.$refs.mapper.resolveWrite(address, bus);
+    },
     // Our getters and setters will pass through to our mapper
     get(address, bus = "prg") {
       return this.$refs.mapper.get(address, bus);

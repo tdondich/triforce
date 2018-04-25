@@ -64,6 +64,22 @@ export default {
       this.$_memory = new Uint8Array(49120);
   },
   methods: {
+    resolveRead(address, bus = "prg") {
+        if(bus == 'prg') {
+            return () => {
+                return this.$_memory[address];
+            }
+        }
+        return this.$refs[bus].resolveRead(address, bus);
+    },
+    resolveWrite(address, bus = "prg") {
+        if(bus == 'prg') {
+            return (value) => {
+                this.$_memory[address] = value;
+            }
+        }
+        return this.$refs[bus].resolveWrite(address, bus);
+    },
     get(address, bus = "prg") {
       // Pass it on to one of our data buses
       if(bus == 'prg') {

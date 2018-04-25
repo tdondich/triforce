@@ -142,6 +142,16 @@ export default {
 
   },
   methods: {
+    resolveWrite(address) {
+      return (value) => {
+        this.set(address, value);
+      };
+    },
+    resolveRead(address) {
+      return () => {
+        return this.get(address);
+      };
+    },
     // These are meant to only handle one "address"
     // Ignore address parameter, we only deal with one address
     // @todo Properly implement open bus behavior

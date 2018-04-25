@@ -191,11 +191,11 @@ export default {
 
     this.copyOAM = function() {
       // Copy all data from $XX00-$XXFF to ppu OAM
-      let base = this.mem.get(0x4014);
+      let base = this.mem.read[0x4014]();
       // Now, let's create the base address
       base = base << 8;
       for (let i = 0; i < 256; i++) {
-        let value = this.mem.get(base + i);
+        let value = this.mem.read[base + i]();
         // Copy over to address
         this.ppu.copyToOAM(i, value);
       }
@@ -261,7 +261,16 @@ export default {
     get(address) {
       return this.$refs.registers.get(address);
     },
-
+    resolveRead(address) {
+      return () => {
+        return this.$refs.registers.get(address);
+      }
+    },
+    resolveWrite(address) {
+      return (value) => {
+        this.set(address, value);
+      }
+    },
     setCarry(val) {
       if (val) {
         // Set carry flag
@@ -327,9 +336,9 @@ export default {
       this.a = this.x = this.y = 0;
       this.sp = 0xfd;
       // Frame IRQ enabled
-      this.mem.set(0x4017, 0x00);
+      this.mem.write[0x4017](0x00);
       // All channels enabled
-      this.mem.set(0x4015, 0x00);
+      this.mem.write[0x4015](0x00);
       this.mem.fill(0x00, 0x4000, 0x400f);
       // Begin to execute
       this.pc = this.getResetVector();
@@ -356,7 +365,7 @@ export default {
     },
     // Handling various addressing modes the cpu supports
     getZeroPageAddress(address) {
-      return this.mem.get(address);
+      return this.mem.read[address]();
     },
     getZeroPageXAddress(address) {
       return (this.getZeroPageAddress(address) + this.x) & 0x00ff;
@@ -367,25 +376,25 @@ export default {
     getRelativeAddress(address) {
       // Get the signed integer value
       // See: http://blog.vjeux.com/2013/javascript/conversion-from-uint8-to-int8-x-24.html
-      return this.pc + ((this.mem.get(address) << 24) >> 24);
+      return this.pc + ((this.mem.read[address]() << 24) >> 24);
     },
     getAbsoluteAddress(address, zeroPage = false) {
       // Will fetch an address value from address and address + 1, but flip it so you get the true 2 byte address location
-      let first = this.mem.get(address);
+      let first = this.mem.read[address]();
       let second = 0x00;
       // Check to see if we're meant to be pulling from zero page.  If so, we need to wrap
       if (zeroPage && address == 0xff) {
-        second = this.mem.get(0x00);
+        second = this.mem.read[0x00]();
       } else {
-        second = this.mem.get(address + 1);
+        second = this.mem.read[address + 1]();
       }
       // Now, we need to return the number that is second + first
       return (second << 8) | first;
     },
     // Sets an absolute address at memory location
     setAbsoluteAddress(address, value) {
-      this.mem.set(address, value & 0xff);
-      this.mem.set(address + 1, value >> 8);
+      this.mem.write[address](value & 0xff);
+      this.mem.write[address + 1](value >> 8);
     },
     getAbsoluteXAddress(address) {
       return (this.getAbsoluteAddress(address) + this.x) & 0xffff;
@@ -406,7 +415,7 @@ export default {
     },
     getIndirectIndexedAddress(address) {
       // First, get the absolute address
-      let first = this.getAbsoluteAddress(this.mem.get(address), true);
+      let first = this.getAbsoluteAddress(this.mem.read[address](), true);
       return (first + this.y) & 0xffff;
     },
     // Performs a CPU tick, going through an operation
@@ -441,7 +450,7 @@ export default {
         */
 
 
-        let instr = this.mem.get(this.pc);
+        let instr = this.mem.read[this.pc]();
         if (typeof this[instr] == "undefined") {
           this.error =
             "Failed to find instruction handler for " + instr.toString(16);
@@ -475,7 +484,7 @@ export default {
     },
     // Pushes to the top of the stack then modified the stack pointer
     stackPush(val) {
-      this.mem.set(0x0100 | this.sp, val);
+      this.mem.write[0x0100 | this.sp](val);
       // Go 'up' a stack
       this.sp = (this.sp - 1) & 0xff;
       return true;
@@ -483,7 +492,7 @@ export default {
     // Pops off the stack, returning the address
     stackPop() {
       this.sp = (this.sp + 1) & 0xff;
-      return this.mem.get(0x0100 | this.sp);
+      return this.mem.read[0x0100 | this.sp]();
     }
   }
 };

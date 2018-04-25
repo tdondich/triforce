@@ -27,7 +27,7 @@ export default {
             */
            this.$_memory[address] = value;
         }
-        this.get = (address) => {
+       this.get = (address) => {
             // Disabled check for performance reasons
             /*
             if(address >= this.realSize) {
@@ -50,6 +50,16 @@ export default {
 
     },
    methods: {
+        resolveRead(address) {
+            return () => {
+                return this.$_memory[address];
+            }
+        },
+        resolveWrite(address) {
+            return (value) => {
+                this.$_memory[address] = value;
+            }
+        },
         reset: function() {
             this.$_memory.fill(0);
         },

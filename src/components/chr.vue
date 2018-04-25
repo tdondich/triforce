@@ -27,7 +27,12 @@ export default {
     return {};
   },
   created() {
+    // To avoid proxyGetter
+    this.realSize = this.size
     this.$_memory = new Uint8Array(this.size);
+    this.get = (address) => {
+     return this.$_memory[address];
+    };
   },
   methods: {
     reset: function() {
@@ -37,25 +42,27 @@ export default {
     fill(value = 0x00, start = 0, end = this.$_memory.length) {
       this.$_memory.fill(value, start, end + 1);
     },
-    set(address, value) {
-      if (address >= this.size) {
-        // Should never happen
-        throw "Address exceeds memory size";
+    resolveRead(address) {
+      return () => {
+        return this.$_memory[address];
       }
-      this.$_memory[address] = value;
+
     },
-    get(address) {
-      if (address >= this.size) {
-        // Should never happen
-        throw "Address exceeds memory size";
-      }
-      return this.$_memory[address];
+    resolveWrite(address) {
+      return (value) => {
+        this.$_memory[address] = value;
+      };
+    },
+    resolveRead(address) {
+      return () => {
+        return this.get(address);
+      };
+    },
+    set(address, value) {
+     this.$_memory[address] = value;
     },
     getRange(address, length) {
-      if (address + (length - 1) >= this.realSize) {
-        throw "Address range exceeds memory size";
-      }
-      return this.$_memory.slice(address, address + length);
+     return this.$_memory.slice(address, address + length);
     },
 
     redraw(pane = "left") {
