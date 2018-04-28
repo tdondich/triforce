@@ -19,22 +19,6 @@ const PRIORITY_BACKGROUND = 1;
 
 window.colors = colors;
 
-function crunchV(v) {
-  let fineY = v >>> 12;
-  let nameTableSelect = (v & 0xfff) >> 10;
-  let coarseY = (v & 0x3ff) >> 5;
-  let coarseX = v & 0x1f;
-  return (
-    "fineY: " +
-    fineY +
-    " ntS: " +
-    nameTableSelect +
-    " coarseY: " +
-    coarseY +
-    " coarseX: " +
-    coarseX
-  );
-}
 
 export default {
   components: {
@@ -124,6 +108,10 @@ export default {
 
       // Grab tile data for where we are pointing
       let backgroundTileIndex = this.vram.read[0x2000 | (v & 0x0FFF)]();
+
+      if((0x2000 | (v & 0x0FFF)) == 0x2061) {
+        console.log("VALUE TO READ: " + backgroundTileIndex.toString(16));
+      }
 
       // This ors against the base pattern table address for background
       // And adds fine-y from v
@@ -450,6 +438,22 @@ export default {
     this.frameBuffer.data.fill(255);
   },
   methods: {
+    crunchV(v) {
+      let fineY = v >>> 12;
+      let nameTableSelect = (v & 0xfff) >> 10;
+      let coarseY = (v & 0x3ff) >> 5;
+      let coarseX = v & 0x1f;
+      return (
+        "fineY: " +
+        fineY +
+        " ntS: " +
+        nameTableSelect.toString(16) +
+        " coarseY: " +
+        coarseY.toString(16) +
+        " coarseX: " +
+        coarseX.toString(16)
+      );
+    },
     ppumainbus() {
       return this.vram;
     },
