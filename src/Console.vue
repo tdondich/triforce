@@ -43,10 +43,10 @@
     <memory ref="disabled" size="8" />
 
     <!-- Our nametables -->
-    <memory ref="nametable0" size="1024" />
-    <memory ref="nametable1" size="1024" />
-    <memory ref="nametable2" size="1024" />
-    <memory ref="nametable3" size="1024" />
+    <nametable ref="nametable0" title="$2000" size="1024" />
+    <nametable ref="nametable1" title="$2400" size="1024" />
+    <nametable ref="nametable2" title="$2800" size="1024" />
+    <nametable ref="nametable3" title="$2C00" size="1024" />
     <!-- Our palettes -->
     <palette ref="palette" size="32" />
 
@@ -226,6 +226,7 @@ import databus from "./components/databus.vue";
 import debugmemory from "./components/debugmemory.vue";
 import joypads from "./components/joypads.vue";
 import palette from "./components/palette.vue";
+import nametable from "./components/nametable.vue";
 
 export default {
   name: "app",
@@ -243,7 +244,8 @@ export default {
     databus: databus,
     debugmemory,
     joypads,
-    palette
+    palette,
+    nametable
   },
   created() {
     this.stepEnabled = false;
