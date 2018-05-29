@@ -24,6 +24,10 @@ Vue.component('ppu', {
     // The attribute "latch"
     this.attributeTableByte = null;
 
+    // PPUData read buffer (post-fetch)
+    // See: http://wiki.nesdev.com/w/index.php/PPU_registers#The_PPUDATA_read_buffer_.28post-fetch.29
+    this.readBuffer = 0x00;
+
     // INTERNAL REGISTERS: https://wiki.nesdev.com/w/index.php/PPU_scrolling
     // The current VRAM address
     this.v = 0x0000;
