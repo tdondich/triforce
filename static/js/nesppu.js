@@ -84,10 +84,6 @@ Vue.component('ppu', {
       // Grab tile data for where we are pointing
       let backgroundTileIndex = this.vram.read[0x2000 | (v & 0x0FFF)]();
 
-      if((0x2000 | (v & 0x0FFF)) == 0x2061) {
-        console.log("VALUE TO READ: " + backgroundTileIndex.toString(16));
-      }
-
       // This ors against the base pattern table address for background
       // And adds fine-y from v
       let base = ((backgroundTileIndex << 4) | this.basePatternTableAddress) + (v >>> 12);
@@ -110,7 +106,7 @@ Vue.component('ppu', {
 
     };
 
-    this.tick = () => {
+    this.tick = function() {
       // Setting up local vars to avoid property lookup costs
       let scanline = this.scanline;
       let cycle = this.cycle;
@@ -488,13 +484,14 @@ Vue.component('ppu', {
       }
     },
     set(address, value) {
+
       if (address === 0x0002) {
         // Do not do anything.  PPUSTATUS is read only
         return;
       }
       let oldValue = this.registers[address];
       this.registers[address] = value;
-      // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
+     // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
       if (address === 0x0000) {
         // Check if nmi is set by checking bit 7
         this.NMIEnabled = (value & 0b10000000) === 0b10000000;
@@ -526,6 +523,12 @@ Vue.component('ppu', {
           (value & 0b00000110) === 0b00000110;
         // Store if we should be rendering either sprite or background, so rendering should be enabled
         this.renderingEnabled = !((value & 0b00011000) === 0);
+      } else if(address == 0x0004) {
+        // OAMDATA Write
+        // Write to OAMADDR the value
+        this.oam[this.registers[0x0003]] = value;
+        // Now increment OAMADDR
+        this.registers[0x0003] = this.registers[0x0003] + 1;
       } else if (address == 0x0005) {
         if (this.w === false) {
           // Set scroll
@@ -573,6 +576,11 @@ Vue.component('ppu', {
       }
     },
     get(address) {
+      if (address === 0x0004) {
+        // We're supposed to READ from OAM addr, not from our own registers or memory
+        // Reads do NOT increment OAMADDR.  See: https://wiki.nesdev.com/w/index.php/PPU_registers#OAM_data_.28.242004.29_.3C.3E_read.2Fwrite
+        return this.oam[this.registers[0x0003]];
+      }
       if (address === 0x0007) {
         // Then we actually want to return from the VRAM address requested
         let result = this.vram.get(this.v);
@@ -641,7 +649,13 @@ Vue.component('ppu', {
     },
     copyToOAM(address, value) {
       // Copy the info to the requested OAM address
-      this.oam[address] = value;
+      let offset = this.registers[0x0003];
+      let target = offset + address;
+      // Handle wrapping around memory bounds
+      if(target > 255) {
+        target = target - 256;
+      }
+      this.oam[target] = value;
     },
     // See: http://wiki.nesdev.com/w/index.php/PPU_power_up_state
     reset() {
@@ -777,7 +791,6 @@ Vue.component('ppu', {
       let value =
         ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14) +
         ((this.backgroundTileFirstShiftRegister & 0x8000) >>> 15);
-      //console.log(value);
       // Now right shift both registers
       this.backgroundTileFirstShiftRegister =
         this.backgroundTileFirstShiftRegister << 1;

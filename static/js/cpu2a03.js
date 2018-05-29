@@ -363,9 +363,9 @@ Vue.component('cpu2a03', {
 
         // @Note: This checks for a position in code and set console to debug (BREAKPOINT)
         /*
-        if(this.pc == 0xF522) {
+        if(this.pc == 0xe05e) {
           // Halt before the next cycle
-          this.$parent.stepEnabled = this.$parent.displayStepEnabled = true;
+          this.$parent.toggleStep();
           console.log("Breakpoint reached");
         }
         */

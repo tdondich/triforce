@@ -21,8 +21,8 @@ var instructions = {
             debug = debug + (operation().padEnd(32, ' '));
             // Now add register info
             debug = debug + `A:${fh(this.a)} X:${fh(this.x)} Y:${fh(this.y)} P:${fh(this.p)} SP:${fh(this.sp)} CYC:${this.$parent.$refs.ppu.previousCycleCount().toString().padStart(3)} SL:${this.$parent.$refs.ppu.previousScanline().toString().padStart(3)}\n`;
-            this.debug = this.debug + debug;
-            //this.debug = debug;
+            //this.debug = this.debug + debug;
+            this.debug = debug;
             this.inDebug = false;
         },
         // Disabled debugger

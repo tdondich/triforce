@@ -4,11 +4,12 @@ var nesemu = new Vue({
     data: function() {
       return {
         error: null,
-        displayStepEnabled: false
+        displayStepEnabled: false,
+        stepEnabled: false
       };
     },
     created() {
-      this.stepEnabled = false;
+      //this.stepEnabled = false;
       
       this.frameNotCompleted = true;
   
