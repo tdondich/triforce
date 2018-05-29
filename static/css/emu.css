@@ -1,0 +1,31 @@
+.chr canvas {
+  border: 1px solid red;
+}
+
+.databus .debugger {
+    font-family: monospace;
+}
+  
+.databus .debugger td.target {
+    color: red;
+  }
+  
+.databus .debugger p.error {
+    color: red;
+  }
+  
+ .databus .debugger p.success {
+    color: green;
+  }
+
+.cpu .debug {
+  font-family: "Courier New", Courier, monospace;
+}
+
+.ppu .screen {
+  border: 1px solid gray;
+}
+
+.nametable canvas {
+  border: 1px solid red;
+}
