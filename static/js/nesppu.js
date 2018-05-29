@@ -586,9 +586,24 @@ Vue.component('ppu', {
         return this.oam[this.registers[0x0003]];
       }
       if (address === 0x0007) {
-        // Then we actually want to return from the VRAM address requested
-        let result = this.vram.get(this.v);
-        if (!this.console.$refs.cpu.inDebug) {
+        // Then we actually want to return from the VRAM address requested, however, use the internal
+        // read buffer if range is in 0 - $3EFF
+        let result = null;
+        if(this.v <= 0x3EFF) {
+          // Read from buffer
+          result = this.readBuffer;
+          // Update buffer
+          this.readBuffer = this.vram.get(this.v);
+        } else {
+          // Read from vram
+          result = this.vram.get(this.v);
+          // When you update the buffer, you have to use the pseudo-mirrored nametable data
+          // So, need to understand the delta address.  This would be the mirrored data in nametable 3
+          let newAddress = this.v;
+          newAddress = newAddress - 0x1000;
+          this.readBuffer = this.vram.get(newAddress);
+        }
+       if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
           this.v = (this.v + increase) & 0x7fff;
           // @todo Handle weird behavior if during render and we change, it should
