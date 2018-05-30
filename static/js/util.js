@@ -1,14 +1,14 @@
-function isBitSet(value, index) {
+window.isBitSet = function(value, index) {
   let mask = 1 << index;
   return (value & mask) != 0;
 }
 
 // Constants for PPU
-const PRIORITY_FOREGROUND = 0;
-const PRIORITY_BACKGROUND = 1;
+window.PRIORITY_FOREGROUND = 0;
+window.PRIORITY_BACKGROUND = 1;
 
 
-let colors = [
+window.colors = [
     [124,124,124],
     [0,0,252],
     [0,0,188],

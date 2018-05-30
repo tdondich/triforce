@@ -1,6 +1,6 @@
 Vue.component('ppu', {
   props: ["console"],
-  data: function() {
+  data: function () {
     return {
       //empty
     };
@@ -110,7 +110,7 @@ Vue.component('ppu', {
 
     };
 
-    this.tick = function() {
+    this.tick = function () {
       // Setting up local vars to avoid property lookup costs
       let scanline = this.scanline;
       let cycle = this.cycle;
@@ -125,7 +125,7 @@ Vue.component('ppu', {
             // Set the cache data for this frame
             this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
 
-           ++this.cycle;
+            ++this.cycle;
             return;
           case 8:
           case 16:
@@ -160,7 +160,7 @@ Vue.component('ppu', {
           case 248:
             this.shiftBackgroundRegisters();
             // increase hori(v)
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               if ((this.v & 0x001F) == 31) { // if coarse X == 31
                 this.v &= ~0x001F          // coarse X = 0
                 this.v ^= 0x0400           // switch horizontal nametable
@@ -195,22 +195,22 @@ Vue.component('ppu', {
             // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache which is like secondary OAM
             this.buildScanlineSpriteCache(scanline);
- 
+
             ++this.cycle;
             return;
           case 257:
             // hori(v) = hori(t)
             // copy over hortizontal information from t to v
             // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
             }
             ++this.cycle;
             return;
-         case 328:
+          case 328:
             this.shiftBackgroundRegisters();
             // increase hori(v)
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               if ((this.v & 0x001F) == 31) { // if coarse X == 31
                 this.v &= ~0x001F          // coarse X = 0
                 this.v ^= 0x0400           // switch horizontal nametable
@@ -223,12 +223,12 @@ Vue.component('ppu', {
           case 336:
             // Since there was no rendering, we need to make sure to shift background registers
             this.backgroundTileFirstShiftRegister =
-            this.backgroundTileFirstShiftRegister << 8;
+              this.backgroundTileFirstShiftRegister << 8;
             this.backgroundTileSecondShiftRegister =
-            this.backgroundTileSecondShiftRegister << 8;
+              this.backgroundTileSecondShiftRegister << 8;
             this.shiftBackgroundRegisters();
             // increase hori(v)
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               if ((this.v & 0x001F) == 31) { // if coarse X == 31
                 this.v &= ~0x001F          // coarse X = 0
                 this.v ^= 0x0400           // switch horizontal nametable
@@ -236,11 +236,11 @@ Vue.component('ppu', {
                 this.v += 1                // increment coarse X
               }
             }
- 
+
             ++this.cycle;
             return;
         }
-    } else if(scanline == 261) {
+      } else if (scanline == 261) {
         switch (cycle) {
           case 0:
             // Clearing VBlank and sprite 0
@@ -280,7 +280,7 @@ Vue.component('ppu', {
           case 248:
             this.shiftBackgroundRegisters();
             // increase hori(v)
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               if ((this.v & 0x001F) == 31) { // if coarse X == 31
                 this.v &= ~0x001F          // coarse X = 0
                 this.v ^= 0x0400           // switch horizontal nametable
@@ -315,14 +315,14 @@ Vue.component('ppu', {
             // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache which is like secondary OAM
             this.buildScanlineSpriteCache(scanline);
- 
+
             ++this.cycle;
             return;
           case 257:
             // hori(v) = hori(t)
             // copy over hortizontal information from t to v
             // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
             }
             ++this.cycle;
@@ -330,7 +330,7 @@ Vue.component('ppu', {
           case 304:
             // vert(v) = vert(t)
             // This would normally be done on cycles 280 to 304, but we do it on the last
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               this.v =
                 (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
             }
@@ -339,7 +339,7 @@ Vue.component('ppu', {
           case 328:
             this.shiftBackgroundRegisters();
             // increase hori(v)
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               if ((this.v & 0x001F) == 31) { // if coarse X == 31
                 this.v &= ~0x001F          // coarse X = 0
                 this.v ^= 0x0400           // switch horizontal nametable
@@ -352,11 +352,11 @@ Vue.component('ppu', {
           case 336:
             // Since there was no rendering, we need to make sure to shift background registers
             this.backgroundTileFirstShiftRegister =
-            this.backgroundTileFirstShiftRegister << 8;
+              this.backgroundTileFirstShiftRegister << 8;
             this.backgroundTileSecondShiftRegister =
-            this.backgroundTileSecondShiftRegister << 8;
+              this.backgroundTileSecondShiftRegister << 8;
             this.shiftBackgroundRegisters();
-            if(renderingEnabled) {
+            if (renderingEnabled) {
               // increase hori(v)
               if ((this.v & 0x001F) == 31) { // if coarse X == 31
                 this.v &= ~0x001F          // coarse X = 0
@@ -400,6 +400,7 @@ Vue.component('ppu', {
     };
   },
   mounted() {
+    console.log(Object.keys(this.console.$refs));
     this.vram = this.console.$refs.ppumainbus;
     this.cpu = this.console.$refs.cpu;
 
@@ -495,7 +496,7 @@ Vue.component('ppu', {
       }
       let oldValue = this.registers[address];
       this.registers[address] = value;
-     // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
+      // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
       if (address === 0x0000) {
         // Check if nmi is set by checking bit 7
         this.NMIEnabled = (value & 0b10000000) === 0b10000000;
@@ -515,7 +516,7 @@ Vue.component('ppu', {
         this.t = (this.t & 0b111001111111111) | (tempValue & 0b000110000000000);
 
         // Set basePatternTableAddress
-        this.basePatternTableAddress = (value & 0x10) === 0x10 ? 0x1000: 0x0000;
+        this.basePatternTableAddress = (value & 0x10) === 0x10 ? 0x1000 : 0x0000;
 
       } else if (address === 0x0001) {
         // Writing to MASK
@@ -527,7 +528,7 @@ Vue.component('ppu', {
           (value & 0b00000110) === 0b00000110;
         // Store if we should be rendering either sprite or background, so rendering should be enabled
         this.renderingEnabled = !((value & 0b00011000) === 0);
-      } else if(address == 0x0004) {
+      } else if (address == 0x0004) {
         // OAMDATA Write
         // Write to OAMADDR the value
         this.oam[this.registers[0x0003]] = value;
@@ -589,7 +590,7 @@ Vue.component('ppu', {
         // Then we actually want to return from the VRAM address requested, however, use the internal
         // read buffer if range is in 0 - $3EFF
         let result = null;
-        if(this.v <= 0x3EFF) {
+        if (this.v <= 0x3EFF) {
           // Read from buffer
           result = this.readBuffer;
           // Update buffer
@@ -603,7 +604,7 @@ Vue.component('ppu', {
           newAddress = newAddress - 0x1000;
           this.readBuffer = this.vram.get(newAddress);
         }
-       if (!this.console.$refs.cpu.inDebug) {
+        if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
           this.v = (this.v + increase) & 0x7fff;
           // @todo Handle weird behavior if during render and we change, it should
@@ -671,13 +672,27 @@ Vue.component('ppu', {
       let offset = this.registers[0x0003];
       let target = offset + address;
       // Handle wrapping around memory bounds
-      if(target > 255) {
+      if (target > 255) {
         target = target - 256;
       }
       this.oam[target] = value;
     },
     // See: http://wiki.nesdev.com/w/index.php/PPU_power_up_state
     reset() {
+      // Set our initial Palette data based on power_up_palette test rom
+      let initialPalette = [0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08, 0x24, 0x00, 0x00,
+        0x04, 0x2C, 0x09, 0x01, 0x34, 0x03, 0x00, 0x04, 0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08];
+      let base = 0x3f00;
+      let count = 0;
+      while (base <= 0x3fff) {
+        this.vram.set(base, initialPalette[count]);
+        count++;
+        if (count == initialPalette.length) {
+          count = 0;
+        }
+        base++;
+      }
+
       // We set our registers after ~29658 cpu clicks (which we run 3x faster)
       // Set VBlank flag
       this.frameComplete = false;
