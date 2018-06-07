@@ -11,7 +11,7 @@ require('../../static/js/util')
 let wrapper = null;
 
 let nesConsole = {
-    frameNotCompleted: false
+    frameNotCompleted: true
 }
 
 describe('ppu', () => {
@@ -19,7 +19,7 @@ describe('ppu', () => {
 
         nesConsole = new Vue({
             data: {
-                frameNotCompleted: false
+                frameNotCompleted: true
             },
             template: `
             <div>
@@ -61,7 +61,7 @@ describe('ppu', () => {
     })
     it('should have odd and even frames toggled for each frame', () => {
         // Get the first initial value
-        let expected = false
+        let expected = true
         for (let i = 0; i < 20; i++) {
             do {
                 wrapper.tick()
@@ -78,6 +78,11 @@ describe('ppu', () => {
         nesConsole.frameNotCompleted = true
 
         let count = 0;
+        // Throw away the first vblank, because we're counting cycles between vblanks
+        do {
+            wrapper.tick();
+        } while(nesConsole.frameNotCompleted);
+        nesConsole.frameNotCompleted = true;
         do {
             wrapper.tick();
             count++;
@@ -92,7 +97,7 @@ describe('ppu', () => {
         do {
             wrapper.tick();
         } while ((wrapper.registers[0x0002] & 0b10000000) != 0b10000000)
-        let count = 1;
+        let count = 0;
         // FOLLOWING FRAME WILL BE EVEN
         do {
             wrapper.tick();
