@@ -2,6 +2,10 @@ Vue.component('ppu', {
   props: ["console"],
   data: function () {
     return {
+      v: 0x000,
+      t: 0x000,
+      cycle: 0,
+      scanline: 0
       //empty
     };
   },
@@ -31,6 +35,19 @@ Vue.component('ppu', {
     // INTERNAL REGISTERS: https://wiki.nesdev.com/w/index.php/PPU_scrolling
     // The current VRAM address
     this.v = 0x0000;
+
+    // V Register, blown out to individual variables
+    this.vFineYScroll = 0;
+    this.vNameTableSelect = 0;
+    this.vCoarseYScroll = 0;
+    this.vCoarseXScroll = 0;
+
+    // T Register, blown out to individual variables
+    this.tFineYScroll = 0;
+    this.tNameTableSelect = 0;
+    this.tCoarseYScroll = 0;
+    this.tCoarseXScroll = 0;
+
     // The pointer to the nametable tile that is for the top-left of the screen
     this.t = 0x0000;
     // Fine x-scroll, set by PPUSCROLL
@@ -949,7 +966,7 @@ methods: {
 },
 template: `
     <div class="ppu">
-    <canvas id="screen" class="screen" width="256" height="240"></canvas>
+    <canvas id="screen" class="screen" width="256" height="240"></canvas>Cycle: {{cycle}} Scanline: {{scanline}} V: {{v.toString(2)}} T: {{t.toString(2)}}
 
   </div>
   `

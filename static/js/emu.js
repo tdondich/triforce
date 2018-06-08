@@ -5,7 +5,9 @@ var nesemu = new Vue({
       return {
         error: null,
         displayStepEnabled: false,
-        stepEnabled: false
+        stepEnabled: false,
+        stepInterval: 1,
+        stepsRemaining: 1
       };
     },
     created() {
@@ -21,7 +23,9 @@ var nesemu = new Vue({
           this.ppu.tick();
           this.ppu.tick();
           this.ppu.tick();
-        } while (this.frameNotCompleted && !this.stepEnabled);
+          this.stepsRemaining = this.stepsRemaining - 1;
+        } while (this.frameNotCompleted && this.stepsRemaining); // && !this.stepEnabled);
+        this.stepsRemaining = this.stepInterval;
         this.joypads.tick();
         this.ppu.render();
         if (!this.stepEnabled) {
