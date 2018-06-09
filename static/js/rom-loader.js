@@ -115,6 +115,9 @@ Vue.component('rom-loader', {
             // Now assign to our data
             this.data = new Uint8Array(response.data);
             this.transfer();
+            // Modify nametable databus to do appropriate mirroring
+            this.$parent.$refs.nametablebus.setMirroring(this.mirroring);
+
             // Tell the console to turn on
             setTimeout(this.$parent.power, 1000);
             this.loadSuccess = "Loaded " + this.romName + " ROM";

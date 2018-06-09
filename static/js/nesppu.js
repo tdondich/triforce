@@ -2,12 +2,26 @@ Vue.component('ppu', {
   props: ["console"],
   data: function () {
     return {
-      v: 0x000,
-      t: 0x000,
+      //v: 0x000,
+      //t: 0x000,
       cycle: 0,
-      scanline: 0
-      //empty
+      scanline: 0,
+      inDebug: false
     };
+  },
+  computed: {
+    vFineYScroll() {
+      return this.v >>> 12;
+    },
+    vNameTableSelect() {
+      return this.v & 0b0000110000000000 >>> 10;
+    },
+    vCoarseYScroll() {
+      return this.v & 0b0000001111100000 >>> 5;
+    },
+    vCoarseXScroll() {
+      return this.v & 0b0000000000011111;
+    }
   },
   created() {
     this.registers = new Uint8Array(8);
@@ -189,9 +203,16 @@ Vue.component('ppu', {
             if (this.renderingEnabled) {
               // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
               if ((this.v & 0x7000) != 0x7000) {
+                if(this.inDebug) {
+                  console.log("Incrementing vertv because fine Y is less than 7");
+                }
                 // if fine Y < 7
                 this.v += 0x1000; // increment fine Y
               } else {
+                if(this.inDebug) {
+                  console.log("Need to reset Y.");
+                }
+ 
                 this.v &= ~0x7000; // fine Y = 0
                 let y = (this.v & 0x03e0) >> 5; // let y = coarse Y
                 if (y == 29) {
@@ -662,7 +683,9 @@ methods: {
         this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
         // Reset address latch used by PPUADDR and PPUSCROLL
         // See: https://wiki.nesdev.com/w/index.php/PPU_registers#Notes
+
         this.v = 0x00;
+
         // Reset the w write toggle
         this.w = false;
       }
@@ -965,8 +988,24 @@ methods: {
   }
 },
 template: `
-    <div class="ppu">
-    <canvas id="screen" class="screen" width="256" height="240"></canvas>Cycle: {{cycle}} Scanline: {{scanline}} V: {{v.toString(2)}} T: {{t.toString(2)}}
+    <div class="row ppu">
+    <div class="col-sm-12 col-md-6">
+    <canvas id="screen" class="screen" width="256" height="240"></canvas>
+    </div>
+    <div class="col-sm-12 col-md-6">
+    <table v-if="inDebug">
+      <tr><th>Cycle</th><td>{{cycle}}</td></tr>
+      <tr><th>Scanline</th><td>{{scanline}}</td></tr>
+      <tr><th>V Raw</th><td>{{v.toString(2).padStart(16, '0')}}</td></tr>
+      <tr><th>V-FineY Scroll</th><td>{{vFineYScroll}}</td></tr>
+      <tr><th>V-Nametable Select</th><td>{{vNameTableSelect}}</td></tr>
+      <tr><th>V-Coarse Y Scroll</th><td>{{vCoarseYScroll}}</td></tr>
+      <tr><th>V-Coarse X Scroll</th><td>{{vCoarseXScroll}}</td></tr>
+      <tr><th>T Raw</th><td>{{t.toString(2).padStart(16, '0')}}</td></tr>
+      <tr><th>T Hex Address</th><td>\${{t.toString(16).padStart(4, '0')}}</td></tr>
+
+    </table>
+    </div>
 
   </div>
   `

@@ -112,7 +112,7 @@ Vue.component('nametable', {
   template: `
       <div class="nametable">
         <h2>Nametable {{title}}</h2>
-        <select v-model="base">
+        Pattern Table: <select v-model="base">
             <option :value="0x0000">0x0000</option>
             <option :value="0x1000">0x1000</option>
         </select> <button @click="redraw">Render</button><br>
