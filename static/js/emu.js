@@ -25,6 +25,8 @@ var nesemu = new Vue({
         this.ppu.tick();
         this.stepsRemaining = this.stepsRemaining - 1;
       } while (this.frameNotCompleted && this.stepsRemaining); // && !this.stepEnabled);
+      // Force the PPU to rerender it's contents, to show updated debug data
+      this.ppu.$forceUpdate();
       this.stepsRemaining = this.stepInterval;
       this.joypads.tick();
       this.ppu.render();

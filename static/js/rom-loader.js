@@ -179,7 +179,6 @@ Vue.component('rom-loader', {
     template: `
        <div class="row">
         <div class="col-sm-12">
-            <h2>ROM Cartridge Loader</h2>
             <div class="alert alert-danger" v-if="loadError">
                 {{loadError}}
             </div>

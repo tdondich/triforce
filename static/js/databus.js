@@ -188,7 +188,7 @@ Vue.component('databus', {
               <input class="form-control" v-model="inspectAddress">
             </div>
             <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-if="inspectCharCodeEnabled">Switch To Hex View</button>
-            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To Char Code View</button>
+            <button @click="inspectCharCodeEnabled = !inspectCharCodeEnabled" v-else>Switch To ASCII View</button>
 
             <hr>
             <h4>Memory Fill</h4>

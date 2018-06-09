@@ -253,28 +253,7 @@ describe('ppu', () => {
         coarseY = (v & 0b000001111100000) >>> 5;
         expect(coarseY).toBe(0);
     })
-    it("should manage coarse x in v register throughout visible scanline 0", () => {
-        // Enable rendering via enabling sprites
-        wrapper.set(0x0001, 0b00010000);
-        do {
-            wrapper.tick();
-            let v = wrapper.v;
-            let coarseX = (v & 0b000000000011111);
-            expect(coarseX).toBe(0x00);
-        } while(wrapper.cycle < 7);
-        // Do 1 more tick, and see if it rolls over
-        wrapper.tick();
-        let v = wrapper.v;
-        let coarseX = (v & 0b000000000011111);
-        expect(coarseX).toBe(0x01);
-        do {
-            wrapper.tick();
-        } while(wrapper.scanline == 0);
-        v = wrapper.v;
-        coarseX = (v & 0b000000000011111);
-        expect(coarseX).toBe(0x00);
-    })
-    it("should have $2000 as the nametable byte address when at pixel 0,0", () => {
+   it("should have $2000 as the nametable byte address when at pixel 0,0", () => {
         // Enable rendering via enabling sprites
         wrapper.set(0x0001, 0b00010000);
 
