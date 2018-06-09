@@ -3,9 +3,16 @@ Vue.component('ppu', {
   data: function () {
     return {
       inDebug: false,
+      fullscreen: false
     };
   },
   created() {
+    window.addEventListener("keydown", (event) => {
+      // Listen for escape
+        if(event.keyCode == 27) {
+          this.fullscreen = false;
+        }
+      });
     this.registers = new Uint8Array(8);
 
     // Create our OAM array
@@ -977,7 +984,10 @@ methods: {
 template: `
     <div class="row ppu">
     <div class="col-sm-12 col-md-6">
+    <div class="screen-container" :class="{fullscreen: fullscreen}">
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
+    </div>
+    <button @click="fullscreen = true" class="btn">Toggle Fullscreen</button>
     </div>
     <div class="col-sm-12 col-md-6">
     <table v-if="inDebug">
