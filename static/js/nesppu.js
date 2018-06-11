@@ -178,39 +178,42 @@ Vue.component('ppu', {
     }
 
     this.tick = function () {
+      // Create local vars to reduce scope chain crawling
+      let cycle = this.cycle;
+      let scanline = this.scanline;
 
-      if (this.scanline <= 239) {
-        if (this.cycle <= 256 && this.cycle > 0) {
-          this.renderPixel(this.cycle - 1, this.scanline);
+      if (scanline <= 239) {
+        if (cycle <= 256 && cycle > 0) {
+          this.renderPixel(cycle - 1, scanline);
         }
-        if (!(this.cycle % 8)) {
-          if (this.cycle == 0) {
+        if (!(cycle % 8)) {
+          if (cycle == 0) {
             // Set the cache data for this frame
             this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
 
             ++this.cycle;
             return;
           }
-          if (this.cycle <= 248) {
+          if (cycle <= 248) {
             this.shiftBackgroundRegisters();
             this.increaseHoriV();
             ++this.cycle;
             return;
-          } else if (this.cycle == 256) {
+          } else if (cycle == 256) {
             // inc vert(v)
             this.increaseVertV();
             // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache which is like secondary OAM
-            this.buildScanlineSpriteCache(this.scanline);
+            this.buildScanlineSpriteCache(scanline);
 
             ++this.cycle;
             return;
-          } else if (this.cycle == 328) {
+          } else if (cycle == 328) {
             this.shiftBackgroundRegisters();
             this.increaseHoriV();
             ++this.cycle;
             return;
-          } else if (this.cycle == 336) {
+          } else if (cycle == 336) {
             // Since there was no rendering, we need to make sure to shift background registers
             this.backgroundTileFirstShiftRegister =
               this.backgroundTileFirstShiftRegister << 8;
@@ -222,12 +225,12 @@ Vue.component('ppu', {
             ++this.cycle;
             return;
           }
-        } else if (this.cycle == 257) {
+        } else if (cycle == 257) {
           this.copyHoriTtoHoriV();
           ++this.cycle;
           return;
         }
-      } else if (this.scanline === 241 && this.cycle === 1) {
+      } else if (scanline === 241 && cycle === 1) {
         // Fire off Vblank
         this.registers[0x02] |= 0b10000000;
         this.$parent.frameNotCompleted = false;
@@ -238,133 +241,92 @@ Vue.component('ppu', {
         }
         ++this.cycle;
         return;
-      } else if (this.scanline == 261) {
-        // @todo Convert to if style from up above?
-        switch (this.cycle) {
-          case 1:
-            // Clearing VBlank and sprite 0
-            this.registers[0x02] = this.registers[0x02] & 0b00111111;
-            ++this.cycle;
-            return;
-          case 8:
-          case 16:
-          case 24:
-          case 32:
-          case 40:
-          case 48:
-          case 56:
-          case 64:
-          case 72:
-          case 80:
-          case 88:
-          case 96:
-          case 104:
-          case 112:
-          case 120:
-          case 128:
-          case 136:
-          case 144:
-          case 152:
-          case 160:
-          case 168:
-          case 176:
-          case 184:
-          case 192:
-          case 200:
-          case 208:
-          case 216:
-          case 224:
-          case 232:
-          case 240:
-          case 248:
-            this.shiftBackgroundRegisters();
-            this.increaseHoriV();
-            ++this.cycle;
-            return;
-          case 256:
-            this.increaseVertV();
-            // Build the scanline sprite cache for this scanline by reading OAM data and compiling
-            // cache which is like secondary OAM
-            this.buildScanlineSpriteCache(this.scanline);
+      } else if (scanline == 261) {
+        if (cycle >= 280 && cycle <= 304) {
+          // vert(v) = vert(t)
+          // This would normally be done on cycles 280 to 304, but we do it on the last
+          if (this.renderingEnabled) {
+            this.v =
+              (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
+          }
+          ++this.cycle;
+          return;
+        }
+        if (!(cycle % 8)) {
+          if (cycle == 0) {
+            // Set the cache data for this frame
+            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
 
             ++this.cycle;
             return;
-          case 257:
-            this.copyHoriTtoHoriV();
-            ++this.cycle;
-            return;
-          case 280:
-          case 281:
-          case 282:
-          case 283:
-          case 284:
-          case 285:
-          case 286:
-          case 287:
-          case 288:
-          case 289:
-          case 290:
-          case 291:
-          case 292:
-          case 293:
-          case 294:
-          case 295:
-          case 296:
-          case 297:
-          case 298:
-          case 299:
-          case 300:
-          case 301:
-          case 302:
-          case 303:
-          case 304:
-            // vert(v) = vert(t)
-            // This would normally be done on cycles 280 to 304, but we do it on the last
-            if (this.renderingEnabled) {
-              this.v =
-                (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
-            }
-            ++this.cycle;
-            return;
-          case 328:
+          }
+          if (cycle <= 248) {
             this.shiftBackgroundRegisters();
             this.increaseHoriV();
             ++this.cycle;
             return;
-          case 336:
+          } else if (cycle == 256) {
+            this.increaseVertV();
+            // Build the scanline sprite cache for this scanline by reading OAM data and compiling
+            // cache which is like secondary OAM
+            this.buildScanlineSpriteCache(scanline);
+
+            ++this.cycle;
+            return;
+          } else if (cycle == 328) {
+            this.shiftBackgroundRegisters();
+            this.increaseHoriV();
+            ++this.cycle;
+            return;
+          } else if (cycle == 336) {
             // Since there was no rendering, we need to make sure to shift background registers
             this.backgroundTileFirstShiftRegister =
               this.backgroundTileFirstShiftRegister << 8;
             this.backgroundTileSecondShiftRegister =
               this.backgroundTileSecondShiftRegister << 8;
             this.shiftBackgroundRegisters();
+
             this.increaseHoriV();
             ++this.cycle;
             return;
+          }
+
+        } // end if mod 8
+        if (cycle == 1) {
+          // Clearing VBlank and sprite 0
+          this.registers[0x02] = this.registers[0x02] & 0b00111111;
+          ++this.cycle;
+          return;
         }
+        if (cycle == 257) {
+          this.copyHoriTtoHoriV();
+          ++this.cycle;
+          return;
+        }
+
       }
-      if (this.cycle == 339) {
+      if (cycle == 339) {
         if (this.odd && this.renderingEnabled) {
           // It's an odd frame, so we will skip it
           // We only do this if rendering is enabled btw
           this.cycle = 0;
-          this.scanline = this.scanline == 261 ? 0 : this.scanline + 1;
+          this.scanline = scanline == 261 ? 0 : scanline + 1;
           if (this.scanline == 0) {
             this.odd = !this.odd;
           }
           return;
         }
-        this.cycle = this.cycle + 1;
+        ++this.cycle;
         return;
-      } else if (this.cycle == 340) {
+      } else if (cycle == 340) {
         this.cycle = 0;
-        this.scanline = this.scanline == 261 ? 0 : this.scanline + 1;
+        this.scanline = scanline == 261 ? 0 : scanline + 1;
         if (this.scanline == 0) {
           this.odd = !this.odd;
         }
         return;
       }
-      this.cycle = this.cycle + 1;
+      ++this.cycle;
     };
   },
   mounted() {
