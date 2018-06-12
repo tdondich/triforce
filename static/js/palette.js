@@ -55,17 +55,7 @@ Vue.component('palette', {
     };
   },
   methods: {
-    resolveWrite(address) {
-      return (value) => {
-        this.set(address, value);
-      };
-    },
-    resolveRead(address) {
-      return () => {
-        return this.get(address);
-      };
-    },
-    reset: function() {
+   reset: function() {
       this.$_memory.fill(0);
     },
     // Fill a memory range with a specific value

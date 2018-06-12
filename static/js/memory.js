@@ -44,17 +44,7 @@ Vue.component('memory', {
 
     },
    methods: {
-        resolveRead(address) {
-            return () => {
-                return this.$_memory[address];
-            }
-        },
-        resolveWrite(address) {
-            return (value) => {
-                this.$_memory[address] = value;
-            }
-        },
-        reset: function() {
+       reset: function() {
             this.$_memory.fill(0);
         },
         // Fill a memory range with a specific value

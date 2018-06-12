@@ -94,11 +94,7 @@ Vue.component('ppu', {
       // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
 
       // Grab tile data for where we are pointing
-      let targetNametableAddress = 0x2000 | (v & 0x0FFF);
-      let backgroundTileIndex = this.vram.read[0x2000 | (v & 0x0FFF)]();
-
-      // !!!!! BELIEVE BUG FOR SCROLLING IS HERE @TODO FIX IT FELIX
-
+      let backgroundTileIndex = this.vram.get(0x2000 | (v & 0x0FFF));
 
       // This ors against the base pattern table address for background
       // And adds fine-y from v
@@ -108,18 +104,18 @@ Vue.component('ppu', {
       // We get the copy of the tile data, and then we load it into the high 8 bits of our shift registers
       this.backgroundTileFirstShiftRegister =
         (this.backgroundTileFirstShiftRegister & 0xff00) |
-        this.vram.read[base]();
+        this.vram.get(base);
 
       this.backgroundTileSecondShiftRegister =
         this.backgroundTileSecondShiftRegister |
-        this.vram.read[base + 8]();
+        this.vram.get(base + 8);
 
       // Now get attribute byte
       //address = baseAddress + 0x3c0;
       let address = 0x23c0 | (v & 0x0c00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
 
       // Shift top 8 bits to the right
-      this.attributeTableByte = (this.attributeTableByte >>> 8) | (this.vram.read[address]() << 8);
+      this.attributeTableByte = (this.attributeTableByte >>> 8) | (this.vram.get(address) << 8);
 
     };
 
@@ -410,17 +406,7 @@ Vue.component('ppu', {
     fill(value = 0x00, start = 0, end = this.memory.length) {
       this.registers.fill(value, start, end);
     },
-    resolveWrite(address) {
-      return (value) => {
-        this.set(address, value);
-      }
-    },
-    resolveRead(address) {
-      return () => {
-        return this.get(address);
-      }
-    },
-    set(address, value) {
+   set(address, value) {
 
       if (address === 0x0002) {
         // Do not do anything.  PPUSTATUS is read only

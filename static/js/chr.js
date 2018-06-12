@@ -19,23 +19,7 @@ Vue.component('chr', {
     fill(value = 0x00, start = 0, end = this.$_memory.length) {
       this.$_memory.fill(value, start, end + 1);
     },
-    resolveRead(address) {
-      return () => {
-        return this.$_memory[address];
-      }
-
-    },
-    resolveWrite(address) {
-      return (value) => {
-        this.$_memory[address] = value;
-      };
-    },
-    resolveRead(address) {
-      return () => {
-        return this.get(address);
-      };
-    },
-    set(address, value) {
+   set(address, value) {
      this.$_memory[address] = value;
     },
     getRange(address, length) {

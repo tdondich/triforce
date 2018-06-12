@@ -19,8 +19,6 @@ Vue.component('databus', {
   },
 
   created() {
-    this.read = [];
-    this.write = [];
     for (let count = 0; count < this.sections.length; count++) {
       let node = this.sections[count];
       for (let address = node.min; address <= node.max; address++) {
@@ -31,8 +29,6 @@ Vue.component('databus', {
           bus: node.bus ? node.bus : undefined,
           target: this.$parent.$refs[node.ref]
         };
-        this.read[address] = this.resolveRead(address);
-        this.write[address] = this.resolveWrite(address);
       }
     }
 
@@ -101,17 +97,7 @@ Vue.component('databus', {
     }
   },
   methods: {
-    resolveRead(address) {
-      // Go to the end and resolve immediate function to read from memory
-      let { min, size, bus, target } = this[address];
-      return target.resolveRead((address - min) % size, bus);
-    },
-    resolveWrite(address) {
-      // Go to the end and resolve immediate function to write to memory
-      let { min, size, bus, target } = this[address];
-      return target.resolveWrite((address - min) % size, bus);
-    },
-    inspectFill() {
+   inspectFill() {
       this.inspectFillError = this.inspectFillSuccess = false;
       let start = parseInt(this.inspectFillStart, 16);
       if (isNaN(start)) {
