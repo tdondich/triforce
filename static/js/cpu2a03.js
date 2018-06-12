@@ -39,6 +39,8 @@ Vue.component('cpu2a03', {
       // Stepping means that the CPU should step through each operation instead of continuous run
       // This flag will show the CPU and debugged instructions
       debugEnabled: false,
+      // Flag to collect debug data into our download buffer
+      debugDownloadEnable: false,
       forceResetVector: "",
       debug: "",
       // If the CPU encountered a critical error
@@ -46,6 +48,8 @@ Vue.component('cpu2a03', {
     };
   },
   created() {
+    this.debugDownloadLog = '';
+
     // For registers, see: http://wiki.nesdev.com/w/index.php/CPU_registers
     // Accumulator (Single Byte Wide)
     this.a = 0;
@@ -169,6 +173,22 @@ Vue.component('cpu2a03', {
         this.debugger = this.disabledDebugger;
       }
 
+    },
+
+    toggleDownloadEnable() {
+      if(this.debugDownloadEnable = !this.debugDownloadEnable) {
+        // Download enabled
+        // Clear our current log
+        this.debugDownloadLog = '';
+      } else {
+        // Download disabled
+        // @todo Anything to do here?
+      }
+    },
+    downloadDebugLog() {
+      // Use FileSaver.js to send the blob as a file to the user
+      let blob = new Blob([this.debugDownloadLog], {type: "text/plain;charset=utf-8"});
+      saveAs(blob, "debug.txt");
     },
     // These are sets and gets for our memory mapped registers
     set(address, value) {
@@ -423,6 +443,10 @@ Vue.component('cpu2a03', {
       <button class="btn btn-primary" v-else @click="toggleDebug">Disable CPU Debug View</button>
     </div>
     <div v-if="debugEnabled" class="col-sm-12">
+      <button class="btn btn-primary" v-if="debugDownloadEnable" @click="toggleDownloadEnable">Disable Debug Logging</button>
+      <button class="btn btn-primary" v-else @click="toggleDownloadEnable">Enable Debug Logging</button>
+      <button class="btn btn-primary" v-if="debugDownloadEnable" @click="downloadDebugLog">Download Debug Log</button>
+
       <div class="form-group">
         <label>Force Reset Vector</label>
         <input v-model="forceResetVector" class="form-control col-sm-1">
