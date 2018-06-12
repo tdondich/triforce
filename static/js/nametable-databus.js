@@ -11,6 +11,10 @@ Vue.component('nametable-databus', {
             // Memory represents our memory sized by the size property
             uid: `memorybus-${nameTableDatabusUid}`,
             mirroring: 'horizontal',
+            base2000InspectAddress: '',
+            base2400InspectAddress: '',
+            base2800InspectAddress: '',
+            base2C00InspectAddress: '',
             base2000: 0x0000,
             base2400: 0x0000,
             base2800: 0x0000,
@@ -75,6 +79,14 @@ Vue.component('nametable-databus', {
         // Populate the targets
     },
     methods: {
+        hoverAddress(event, segment) {
+            let c = document.getElementById("nametable-" + segment);
+            let canvasCoords = c.getBoundingClientRect();
+            // The plus 1 handles the border
+            let x = Math.floor(event.clientX) - (Math.floor(canvasCoords.x) + 1); 
+            let y = Math.floor(event.clientY) - (Math.floor(canvasCoords.y) + 1); 
+            this['base' + segment + 'InspectAddress'] = x + ':' + y
+        },
         initMemoryMap() {
         this.read = [];
         this.write = [];
@@ -206,7 +218,8 @@ Vue.component('nametable-databus', {
             <option :value="0x0000">0x0000</option>
             <option :value="0x1000">0x1000</option>
         </select> <button @click="redraw('2000')">Render</button><br>
-        <canvas id="nametable-2000" width="256" height="240" />
+        <canvas @mousemove="hoverAddress($event, '2000')" id="nametable-2000" width="256" height="240" /><br>
+        <strong>Nametable:</strong> {{base2000InspectAddress}}
     </td>
     <td>
          <h2>Nametable $2400</h2>

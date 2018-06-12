@@ -108,7 +108,11 @@ Vue.component('ppu', {
       // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
 
       // Grab tile data for where we are pointing
+      let targetNametableAddress = 0x2000 | (v & 0x0FFF);
       let backgroundTileIndex = this.vram.read[0x2000 | (v & 0x0FFF)]();
+
+      // !!!!! BELIEVE BUG FOR SCROLLING IS HERE @TODO FIX IT FELIX
+
 
       // This ors against the base pattern table address for background
       // And adds fine-y from v
@@ -119,6 +123,7 @@ Vue.component('ppu', {
       this.backgroundTileFirstShiftRegister =
         (this.backgroundTileFirstShiftRegister & 0xff00) |
         this.vram.read[base]();
+
       this.backgroundTileSecondShiftRegister =
         this.backgroundTileSecondShiftRegister |
         this.vram.read[base + 8]();
@@ -883,6 +888,7 @@ Vue.component('ppu', {
       <tr><th>V-Nametable Select</th><td>{{vNameTableSelect()}}</td></tr>
       <tr><th>V-Coarse Y Scroll</th><td>{{vCoarseYScroll()}}</td></tr>
       <tr><th>V-Coarse X Scroll</th><td>{{vCoarseXScroll()}}</td></tr>
+      <tr><th>V Hex Address</th><td>\${{v.toString(16).padStart(4, '0')}}</td></tr>
       <tr><th>T Raw</th><td>{{t.toString(2).padStart(16, '0')}}</td></tr>
       <tr><th>T Hex Address</th><td>\${{t.toString(16).padStart(4, '0')}}</td></tr>
     </table>
