@@ -802,6 +802,9 @@ Vue.component('ppu', {
             // Check for left clipping
             (this.leftSideBackgroundAndSpriteFlag || x > 7) &&
             // End left clip check
+            // Chek to ensure x is less than 255 (does not hit on the last right pixel)
+            x < 255
+            &&
             backgroundColorIndex
           ) {
             this.setSprite0Hit(true);
