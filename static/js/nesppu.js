@@ -39,6 +39,9 @@ Vue.component('ppu', {
     // The current VRAM address
     this.v = 0x0000;
 
+    // The fine Y scroll position that is meant to be in our V register
+    this.fineYScroll = 0;
+
     // The pointer to the nametable tile that is for the top-left of the screen
     this.t = 0x0000;
     // Fine x-scroll, set by PPUSCROLL
@@ -429,8 +432,11 @@ Vue.component('ppu', {
           this.cpu.nmi = 1;
         }
         // Set the t internal register, bits 10,11 to correspond to incoming bit 0,1
-
+        // Setting nametable select
         let tempValue = (value << 10) & 0x7fff;
+        this.tNameTableSelect = tempValue & 0b11;
+
+        // @todo Delete this
         this.t = (this.t & 0b111001111111111) | (tempValue & 0b000110000000000);
 
         // Set basePatternTableAddress
@@ -454,18 +460,28 @@ Vue.component('ppu', {
         this.registers[0x0003] = this.registers[0x0003] + 1;
       } else if (address == 0x0005) {
         if (this.w === false) {
-          // Set scroll
+          // Set CoarseXScroll
           let tempValue = (value >>> 3) & 0x7fff;
+          this.tCoarseXScroll = tempValue;
+
+          // @todo Remove this
           this.t =
             (this.t & 0b111111111100000) | (tempValue & 0b000000000011111);
+
           this.x = value & 0b111;
           this.w = true;
         } else {
-          // Copy over CBA
+          // Copy over CBA (Fine Y Scroll)
+          this.tFineYScroll = value & 0b111;
           let tempValue = (value << 12) & 0x7fff;
+          // Remove the t assignments
           this.t =
             (this.t & 0b000111111111111) | (tempValue & 0b111000000000000);
-          // Now copy over HG
+
+          // Now copy over Coarse Y Scroll
+          this.tCoarseYScroll = value >>> 3;
+          // OLD , remove the t assignemnts
+          // Now copy over HG 
           tempValue = (value << 2) & 0x7fff;
           this.t =
             (this.t & 0b111110011111111) | (tempValue & 0b000001100000000);
@@ -476,9 +492,9 @@ Vue.component('ppu', {
           this.w = false;
         }
       } else if (address === 0x0006) {
-        this.v = this.v << 8;
-        // Now, bring in the value to the left and mask it to a 16-bit address
-        this.v = (this.v | value) & 0xffff;
+        this.ppuAddress = this.ppuAddress << 8;
+        this.ppuAddress = (this.ppuAddress | value) & 0xFFFF;
+
         // Now modify the t internal register
         if (this.w === false) {
           let tempValue = value << 8;
@@ -493,9 +509,9 @@ Vue.component('ppu', {
       } else if (address === 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-        this.vram.set(this.v, value);
+        this.vram.set(this.ppuAddress, value);
         let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
-        this.v = (this.v + increase) & 0xffff;
+        this.ppuAddress = (this.ppuAddress + increase) & 0xffff;
       }
     },
     get(address) {
@@ -508,23 +524,23 @@ Vue.component('ppu', {
         // Then we actually want to return from the VRAM address requested, however, use the internal
         // read buffer if range is in 0 - $3EFF
         let result = null;
-        if (this.v <= 0x3EFF) {
+        if (this.ppuAddress <= 0x3EFF) {
           // Read from buffer
           result = this.readBuffer;
           // Update buffer
-          this.readBuffer = this.vram.get(this.v);
+          this.readBuffer = this.vram.get(this.ppuAddress);
         } else {
           // Read from vram
-          result = this.vram.get(this.v);
+          result = this.vram.get(this.ppuAddress);
           // When you update the buffer, you have to use the pseudo-mirrored nametable data
           // So, need to understand the delta address.  This would be the mirrored data in nametable 3
-          let newAddress = this.v;
+          let newAddress = this.ppuAddress;
           newAddress = newAddress - 0x1000;
           this.readBuffer = this.vram.get(newAddress);
         }
         if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
-          this.v = (this.v + increase) & 0x7fff;
+          this.ppuAddress = (this.ppuAddress + increase) & 0x7fff;
           // @todo Handle weird behavior if during render and we change, it should
           // do a coarse y and x increment.  See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
         }
