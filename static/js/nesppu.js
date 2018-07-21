@@ -364,34 +364,6 @@ Vue.component('ppu', {
     this.frameBuffer.data.fill(255);
   },
   methods: {
-    vFineYScroll() {
-      return this.v >>> 12;
-    },
-    vNameTableSelect() {
-      return this.v & 0b0000110000000000 >>> 10;
-    },
-    vCoarseYScroll() {
-      return this.v & 0b0000001111100000 >>> 5;
-    },
-    vCoarseXScroll() {
-      return this.v & 0b0000000000011111;
-    },
-    crunchV(v) {
-      let fineY = v >>> 12;
-      let nameTableSelect = (v & 0xfff) >> 10;
-      let coarseY = (v & 0x3ff) >> 5;
-      let coarseX = v & 0x1f;
-      return (
-        "fineY: " +
-        fineY +
-        " ntS: " +
-        nameTableSelect.toString(16) +
-        " coarseY: " +
-        coarseY.toString(16) +
-        " coarseX: " +
-        coarseX.toString(16)
-      );
-    },
     ppumainbus() {
       return this.vram;
     },
@@ -502,8 +474,10 @@ Vue.component('ppu', {
       } else if (address === 0x0006) {
         // 0x2006 : https://wiki.nesdev.com/w/index.php/PPU_registers#Address_.28.242006.29_.3E.3E_write_x2
         // PPU Address Register
-        this.ppuAddress = this.ppuAddress << 8;
-        this.ppuAddress = (this.ppuAddress | value) & 0xFFFF;
+        let tempAddress = this.createVFromVariables();
+        tempAddress = tempAddress << 8;
+        tempAddress = (tempAddress | value) & 0xFFFF;
+        this.setVariablesFromV(tempAddress);
 
         // Now modify the t internal register
         if (this.w === false) {
@@ -582,8 +556,6 @@ Vue.component('ppu', {
           this.statusRegisterReadFlag = !this.statusRegisterReadFlag;
           // Reset address latch used by PPUADDR and PPUSCROLL
           // See: https://wiki.nesdev.com/w/index.php/PPU_registers#Notes
-
-          this.v = 0x00;
 
           // Reset the w write toggle
           this.w = false;
@@ -784,10 +756,12 @@ Vue.component('ppu', {
      * Fetches the next color info from the background shift registers
      */
     fetchTilePixelColor() {
-      //let value = ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14);
-      let value =
-        ((this.backgroundTileSecondShiftRegister & 0x8000) >>> 14) +
-        ((this.backgroundTileFirstShiftRegister & 0x8000) >>> 15);
+      let mask = 0x8000 >>> this.x;
+      let value = 
+        (
+          (((this.backgroundTileSecondShiftRegister & mask) >>> (14 - this.x))) +
+          (((this.backgroundTileFirstShiftRegister & mask) >>> (15 - this.x)))
+      );
       // Now right shift both registers
       this.backgroundTileFirstShiftRegister =
         this.backgroundTileFirstShiftRegister << 1;
@@ -828,6 +802,8 @@ Vue.component('ppu', {
       let palette = null;
       let colorIndex = null;
 
+      // Now do priority
+
       if (
         backgroundColorIndex != 0 ||
         (activeSpritePixelInformation &&
@@ -857,6 +833,9 @@ Vue.component('ppu', {
         } else {
           colorIndex = backgroundColorIndex;
           // @todo Find proper palette number for background attribute byte and x/y offset
+
+          // Perform shifting based on fine-x 
+
           //palette = 0;
           if (x % 32 < 16) {
             if (y % 32 < 16) {
@@ -895,20 +874,19 @@ Vue.component('ppu', {
     <div class="screen-container" :class="{fullscreen: fullscreen}">
     <canvas id="screen" class="screen" width="256" height="240"></canvas>
     </div>
+    <button @click="inDebug = !inDebug" class="btn">Toggle PPU Debug</button>
     <button @click="fullscreen = true" class="btn">Toggle Fullscreen</button>
     </div>
     <div class="col-sm-12 col-md-6">
     <table v-if="inDebug">
       <tr><th>Cycle</th><td>{{cycle}}</td></tr>
       <tr><th>Scanline</th><td>{{scanline}}</td></tr>
-      <tr><th>V Raw</th><td>{{v.toString(2).padStart(16, '0')}}</td></tr>
-      <tr><th>V-FineY Scroll</th><td>{{vFineYScroll()}}</td></tr>
-      <tr><th>V-Nametable Select</th><td>{{vNameTableSelect()}}</td></tr>
-      <tr><th>V-Coarse Y Scroll</th><td>{{vCoarseYScroll()}}</td></tr>
-      <tr><th>V-Coarse X Scroll</th><td>{{vCoarseXScroll()}}</td></tr>
-      <tr><th>V Hex Address</th><td>\${{v.toString(16).padStart(4, '0')}}</td></tr>
-      <tr><th>T Raw</th><td>{{t.toString(2).padStart(16, '0')}}</td></tr>
-      <tr><th>T Hex Address</th><td>\${{t.toString(16).padStart(4, '0')}}</td></tr>
+      <tr><th>Fine X</th><td>{{x}}</td></tr>
+      <tr><th>V Raw</th><td>{{createVFromVariables().toString(2).padStart(16, '0')}}</td></tr>
+      <tr><th>V-FineY Scroll</th><td>{{v_fineYScroll.toString(2).padStart(3, '0')}}</td></tr>
+      <tr><th>V-Nametable Select</th><td>{{v_nametableSelect.toString(2).padStart(2, '0')}}</td></tr>
+      <tr><th>V-Coarse Y Scroll</th><td>{{v_coarseYScroll.toString(2).padStart(5, '0')}}</td></tr>
+      <tr><th>V-Coarse X Scroll</th><td>{{v_coarseXScroll.toString(2).padStart(5, '0')}}</td></tr>
     </table>
     </div>
 
