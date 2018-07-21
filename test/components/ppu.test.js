@@ -152,23 +152,23 @@ describe('ppu', () => {
         // ensure the nmi was fired only once
         expect(wrapper.cpu.nmi).toBe(1)
     })
-    it('should appropriately set bits 11 and 10 of internal t register when setting nametable address via ppuctrl', () => {
-        expect(wrapper.t).toBe(0x00);
+    it('should appropriately set nametable of internal t register when setting nametable address via ppuctrl', () => {
+        expect(wrapper.t_nametableSelect).toBe(0b00);
         // Set only bit 0
         wrapper.set(0x0000, 0b1);
-        expect(wrapper.t).toBe(0b1 << 10);
+        expect(wrapper.t_nametableSelect).toBe(0b01);
         // Now reset
         wrapper.set(0x0000, 0b00);
-        expect(wrapper.t).toBe(0x00);
+        expect(wrapper.t_nametableSelect).toBe(0b00);
         // Set bit 1
         wrapper.set(0x0000, 0b10);
-        expect(wrapper.t).toBe(0b1 << 11);
+        expect(wrapper.t_nametableSelect).toBe(0b10);
          // Now reset
         wrapper.set(0x0000, 0b00);
-        expect(wrapper.t).toBe(0x00);
+        expect(wrapper.t_nametableSelect).toBe(0b00);
         // Now set both
          wrapper.set(0x0000, 0b11);
-        expect(wrapper.t).toBe(0b11 << 10);
+        expect(wrapper.t_nametableSelect).toBe(0b11);
     })
     it('should reset write toggle when reading PPUSTATUS', () => {
         wrapper.w = true;
@@ -179,31 +179,50 @@ describe('ppu', () => {
         wrapper.get(0x0002);
         expect(wrapper.w).toBe(false)
     })
-    it('should set t,x,w registers properly when writing to 2005', () => {
-        wrapper.t = 0x00;
+    it('should set t,x,w registers/variables properly when writing to 2005', () => {
+        // Reset our T variables
+        wrapper.t_nametableSelect = 0;
+        wrapper.t_fineYScroll = 0;
+        wrapper.t_coarseYScroll = 0;
+        wrapper.t_coarseXScroll = 0;
+        // Reset our write toggle
         wrapper.w = false;
+        // Now write to $2005
         wrapper.set(0x0005, 0b10101010);
         expect(wrapper.x).toBe(0b010);
         expect(wrapper.w).toBe(true);
-        expect(wrapper.t).toBe(0b10101);
+        expect(wrapper.t_coarseXScroll).toBe(0b10101);
         // Do the second write test
         wrapper.set(0x0005, 0b10101011);
         // expect that the x value does NOT change from previous
         expect(wrapper.x).toBe(0b010);
         expect(wrapper.w).toBe(false);
-        expect(wrapper.t).toBe(0b011001010110101);
+        expect(wrapper.t_fineYScroll).toBe(0b011);
+        expect(wrapper.t_nametableSelect).toBe(0b00);
+        expect(wrapper.t_coarseYScroll).toBe(0b10101);
     })
-    it('should property set t registers when writing to 2006', () => {
-        wrapper.t = 0x00;
+    it('should properly set t variables when writing to 2006', () => {
+        wrapper.t_nametableSelect = 0;
+        wrapper.t_fineYScroll = 0;
+        wrapper.t_coarseYScroll = 0;
+        wrapper.t_coarseXScroll = 0;
+        // Reset write toggle
         wrapper.w = false;
         wrapper.set(0x0006, 0b10101010);
         expect(wrapper.w).toBe(true);
-        expect(wrapper.t).toBe(0b010101000000000);
+        expect(wrapper.t_fineYScroll).toBe(0b010);
+        expect(wrapper.t_nametableSelect).toBe(0b10);
+        expect(wrapper.t_coarseYScroll).toBe(0b10000);
         // Now do second write test
         wrapper.set(0x0006, 0b10101010);
         expect(wrapper.w).toBe(false);
-        expect(wrapper.t).toBe(0b010101010101010);
-        expect(wrapper.v).toBe(wrapper.t);
+        expect(wrapper.t_coarseXScroll).toBe(0b01010);
+        expect(wrapper.t_coarseYScroll).toBe(0b10101);
+        // Ensure T was copied over to V
+        expect(wrapper.v_fineYScroll).toBe(wrapper.t_fineYScroll);
+        expect(wrapper.v_nametableSelect).toBe(wrapper.t_nametableSelect);
+        expect(wrapper.v_coarseYScroll).toBe(wrapper.t_coarseYScroll);
+        expect(wrapper.v_coarseXScroll).toBe(wrapper.t_coarseXScroll);
     })
     it('should maintain fine y and coarse y through visible scanlines', () => {
         // Enable rendering via enabling sprites
@@ -212,23 +231,16 @@ describe('ppu', () => {
         do {
             wrapper.tick();
             // Grab value of v
-            let v = wrapper.v;
             // Now get out fine Y, bits 14 and 15
-            let fineY = v >>> 12;
-            expect(fineY).toBe(0);
-            let coarseY = (v & 0b000001111100000) >>> 5;
-            expect(coarseY).toBe(0);
+            expect(wrapper.v_fineYScroll).toBe(0);
+            expect(wrapper.v_coarseYScroll).toBe(0);
         } while (wrapper.scanline == 0 && wrapper.cycle <= 255);
         // Scanline should now be 1, so fine Y should also be 1
         do {
             wrapper.tick();
-            // Grab value of v
-            let v = wrapper.v;
             // Now get out fine Y, bits 12,13,14
-            let fineY = v >>> 12;
-            expect(fineY).toBe(0x01);
-            let coarseY = (v & 0b000001111100000) >>> 5;
-            expect(coarseY).toBe(0);
+            expect(wrapper.v_fineYScroll).toBe(1);
+            expect(wrapper.v_coarseYScroll).toBe(0);
         } while (wrapper.scanline == 1 && wrapper.cycle <= 255);
         do { 
             wrapper.tick()
@@ -237,21 +249,15 @@ describe('ppu', () => {
         // Grab value of v
         let v = wrapper.v;
         // Now get out fine Y, bits 12,13,14
-        let fineY = v >>> 12;
-        expect(fineY).toBe(0x00);
-        let coarseY = (v & 0b000001111100000) >>> 5;
-        expect(coarseY).toBe(1);
+        expect(wrapper.v_fineYScroll).toBe(0);
+        expect(wrapper.v_coarseYScroll).toBe(1);
+
         do { 
             wrapper.tick()
         } while(wrapper.scanline != 0);
          // Now, see if coarse y is is set to 0 and fine y is back to 0
-        // Grab value of v
-        v = wrapper.v;
-        // Now get out fine Y, bits 12,13,14
-        fineY = v >>> 12;
-        expect(fineY).toBe(0x00);
-        coarseY = (v & 0b000001111100000) >>> 5;
-        expect(coarseY).toBe(0);
+        expect(wrapper.v_fineYScroll).toBe(0);
+        expect(wrapper.v_coarseYScroll).toBe(0);
     })
    it("should have $2000 as the nametable byte address when at pixel 0,0", () => {
         // Enable rendering via enabling sprites

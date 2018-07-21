@@ -35,20 +35,6 @@ Vue.component('ppu', {
     // See: http://wiki.nesdev.com/w/index.php/PPU_registers#The_PPUDATA_read_buffer_.28post-fetch.29
     this.readBuffer = 0x00;
 
-    // INTERNAL REGISTERS: https://wiki.nesdev.com/w/index.php/PPU_scrolling
-    // The current VRAM address
-    this.v = 0x0000;
-
-    // The fine Y scroll position that is meant to be in our V register
-    this.fineYScroll = 0;
-
-    // The pointer to the nametable tile that is for the top-left of the screen
-    this.t = 0x0000;
-    // Fine x-scroll, set by PPUSCROLL
-    this.x = 0;
-    // First/second write toggle
-    this.w = false;
-
     this.canvas = null;
     this.canvasCtx = null;
 
@@ -71,6 +57,42 @@ Vue.component('ppu', {
 
     this.fetchTick = 0;
 
+    /**
+     * The following variables are for internal PPU registers related to scrolling(?)
+     * https://wiki.nesdev.com/w/index.php/PPU_scrolling
+     */
+    // Current VRAM address (15 bits)
+    // Note, we're blowing the V register out into separate registers for better handling without bitwise
+    this.v_fineYScroll = 0x00;
+    this.v_nametableSelect = 0x00;
+    this.v_coarseYScroll = 0x00;
+    this.v_coarseXScroll = 0x00;
+
+    // Temporary VRAM address (15 bits); can also be thought of as the address of the top left onscreen tile.
+    // Note, we're blowing the T register out into separate registers for better handling without bitwise
+    this.t_fineYScroll = 0x00;
+    this.t_nametableSelect = 0x00;
+    this.t_coarseYScroll = 0x00;
+    this.t_coarseXScroll = 0x00;
+
+    // Fine X scroll (3 bits)
+    this.x = 0;
+    // First or second write toggle (1 bit) // Stored as a boolean
+    this.w = false;
+
+    // Creates a 15 bit variable that represents v, built from our V variables
+    this.createVFromVariables = () => {
+      return (this.v_fineYScroll << 12) + (this.v_nametableSelect << 10) + (this.v_coarseYScroll << 5) + this.v_coarseXScroll;
+    }
+
+    // Sets our variables from an address passed in
+    this.setVariablesFromV = (address) => {
+      this.v_fineYScroll = ((address >>> 12) & 0b111);
+      this.v_nametableSelect = ((address >>> 10) & 0b11);
+      this.v_coarseYScroll = ((address >>> 5) & 0b11111);
+      this.v_coarseXScroll = (address & 0b11111);
+    }
+
     this.previousCycleCount = () => {
       let value = this.oldCycleCount;
       this.oldCycleCount = this.cycle;
@@ -89,7 +111,7 @@ Vue.component('ppu', {
     };
 
     this.shiftBackgroundRegisters = () => {
-      let v = this.v;
+      let v = this.createVFromVariables();
       // Get the base nametable address
       // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
 
@@ -126,11 +148,11 @@ Vue.component('ppu', {
     this.increaseHoriV = function () {
       // increase hori(v)
       if (this.renderingEnabled) {
-        if ((this.v & 0x001F) == 31) { // if coarse X == 31
-          this.v &= ~0x001F          // coarse X = 0
-          this.v ^= 0x0400           // switch horizontal nametable
+        if (this.v_coarseXScroll == 31) {
+          this.v_coarseXScroll = 0;
+          this.v_nametableSelect ^= 0b01;
         } else {
-          this.v += 1                // increment coarse X
+          this.v_coarseXScroll++;
         }
       }
     }
@@ -138,22 +160,26 @@ Vue.component('ppu', {
     this.increaseVertV = function () {
       // Increase vert(v) but only if rendering is enabled
       if (this.renderingEnabled) {
-        // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
-        if ((this.v & 0x7000) != 0x7000) {
-          // if fine Y < 7
-          this.v += 0x1000; // increment fine Y
+        // https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
+        // Note, this is for Y increment
+        if (this.v_fineYScroll < 7) {
+          this.v_fineYScroll++;
         } else {
-          this.v &= ~0x7000; // fine Y = 0
-          let y = (this.v & 0x03e0) >> 5; // let y = coarse Y
+          this.v_fineYScroll = 0;
+          let y = this.v_coarseYScroll;
           if (y == 29) {
-            y = 0; // coarse Y = 0
-            this.v ^= 0x0800; // switch vertical nametable
+            // Set coarse Y to 0
+            // @todo - see if this is accurate, the pseudo code is only setting the local var
+            // instead of the actual register.
+            this.v_coarseYScroll = 0;
+            // Switch the nametable
+            this.v_nametableSelect ^= 0b1;
           } else if (y == 31) {
-            y = 0; // coarse Y = 0, nametable not switched
+            this.v_coarseYScroll = 0;
+            // Don't do the nametable switch
           } else {
-            y += 1; // increment coarse Y
+            this.v_coarseYScroll++;
           }
-          this.v = (this.v & ~0x03e0) | (y << 5); // put coarse Y back into v
         }
       }
     }
@@ -163,7 +189,8 @@ Vue.component('ppu', {
       // copy over hortizontal information from t to v
       // See: https://wiki.nesdev.com/w/index.php/PPU_scrolling
       if (this.renderingEnabled) {
-        this.v = (this.v & 0b111101111100000) | (this.t & 0b000010000011111);
+        this.v_coarseXScroll = this.t_coarseXScroll;
+        this.v_nametableSelect = (this.v_nametableSelect & 0b10) ^ (this.t_nametableSelect & 0b01);
       }
     }
 
@@ -232,30 +259,34 @@ Vue.component('ppu', {
         ++this.cycle;
         return;
       } else if (scanline == 261) {
-        if (cycle >= 280 && cycle <= 304) {
+        // OLD
+        //if (cycle >= 280 && cycle <= 304) {
+        if (cycle == 304) {
           // vert(v) = vert(t)
           // This would normally be done on cycles 280 to 304, but we do it on the last
           if (this.renderingEnabled) {
-            this.v =
-              (this.v & 0b000010000011111) | (this.t & 0b111101111100000);
+            // Copy over fine y scroll
+            this.v_fineYScroll = this.t_fineYScroll;
+            this.v_nametableSelect = (this.v_nametableSelect & 0b01) ^ (this.t_nametableSelect & 0b10);
+            this.v_coarseYScroll = this.t_coarseYScroll;
           }
           ++this.cycle;
           return;
         }
         if (!(cycle % 8)) {
           if (cycle == 0) {
-            // Set the cache data for this frame
-            this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
-
+            // No need to set universal background color, just pass this according to 
+            // rendering chart
             ++this.cycle;
             return;
           }
-          if (cycle <= 248) {
+          if (cycle <= 256) {
             this.shiftBackgroundRegisters();
             this.increaseHoriV();
             ++this.cycle;
             return;
-          } else if (cycle == 256) {
+          }
+          if (cycle == 256) {
             this.increaseVertV();
             // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache which is like secondary OAM
@@ -388,12 +419,6 @@ Vue.component('ppu', {
     ppudata() {
       return this.registers[0x0007];
     },
-    baseNameTableAddress() {
-      // Base will be 0 - 3
-      // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
-      let base = this.ppuctrl() & 0b00000011;
-      return 0x2000 + base * 0x400;
-    },
     baseAttributeTableAddress() {
       // Attribute table starts after the nametable
       let base = this.baseNameTableAddress() + 0x3c0;
@@ -409,8 +434,7 @@ Vue.component('ppu', {
     fill(value = 0x00, start = 0, end = this.memory.length) {
       this.registers.fill(value, start, end);
     },
-   set(address, value) {
-
+    set(address, value) {
       if (address === 0x0002) {
         // Do not do anything.  PPUSTATUS is read only
         return;
@@ -418,6 +442,9 @@ Vue.component('ppu', {
       let oldValue = this.registers[address];
       this.registers[address] = value;
       // Now, check if we wrote to PPUADDR, if so, let's shift it into our dataAddress
+
+      // This is 0x2000
+      // https://wiki.nesdev.com/w/index.php/PPU_registers#Controller_.28.242000.29_.3E_write
       if (address === 0x0000) {
         // Check if nmi is set by checking bit 7
         this.NMIEnabled = (value & 0b10000000) === 0b10000000;
@@ -433,11 +460,7 @@ Vue.component('ppu', {
         }
         // Set the t internal register, bits 10,11 to correspond to incoming bit 0,1
         // Setting nametable select
-        let tempValue = (value << 10) & 0x7fff;
-        this.tNameTableSelect = tempValue & 0b11;
-
-        // @todo Delete this
-        this.t = (this.t & 0b111001111111111) | (tempValue & 0b000110000000000);
+        this.t_nametableSelect = (value & 0b11);
 
         // Set basePatternTableAddress
         this.basePatternTableAddress = (value & 0x10) === 0x10 ? 0x1000 : 0x0000;
@@ -459,59 +482,60 @@ Vue.component('ppu', {
         // Now increment OAMADDR
         this.registers[0x0003] = this.registers[0x0003] + 1;
       } else if (address == 0x0005) {
+        // PPU Scrolling: $2005 first write (w is 0) 
         if (this.w === false) {
           // Set CoarseXScroll
-          let tempValue = (value >>> 3) & 0x7fff;
-          this.tCoarseXScroll = tempValue;
-
-          // @todo Remove this
-          this.t =
-            (this.t & 0b111111111100000) | (tempValue & 0b000000000011111);
-
+          this.t_coarseXScroll = (value >>> 3);
+          // Set fine X scroll
           this.x = value & 0b111;
+          // Set write toggle to true
           this.w = true;
         } else {
-          // Copy over CBA (Fine Y Scroll)
-          this.tFineYScroll = value & 0b111;
-          let tempValue = (value << 12) & 0x7fff;
-          // Remove the t assignments
-          this.t =
-            (this.t & 0b000111111111111) | (tempValue & 0b111000000000000);
-
-          // Now copy over Coarse Y Scroll
-          this.tCoarseYScroll = value >>> 3;
-          // OLD , remove the t assignemnts
-          // Now copy over HG 
-          tempValue = (value << 2) & 0x7fff;
-          this.t =
-            (this.t & 0b111110011111111) | (tempValue & 0b000001100000000);
-          // Now copy over FED
-          tempValue = (value << 4) & 0x7fff;
-          this.t =
-            (this.t & 0b111111100011111) | (tempValue & 0b000000011100000);
+          // PPU Scrolling: $2005 second write (w is 1)
+          // Set t Fine Y Scroll
+          this.t_fineYScroll = value & 0b111;
+          // Set nametable select on t
+          this.t_coarseYScroll = (value >>> 3);
+          // Set write toggle back to false
           this.w = false;
         }
       } else if (address === 0x0006) {
+        // 0x2006 : https://wiki.nesdev.com/w/index.php/PPU_registers#Address_.28.242006.29_.3E.3E_write_x2
+        // PPU Address Register
         this.ppuAddress = this.ppuAddress << 8;
         this.ppuAddress = (this.ppuAddress | value) & 0xFFFF;
 
         // Now modify the t internal register
         if (this.w === false) {
-          let tempValue = value << 8;
-          this.t =
-            (this.t & 0b000000011111111) | (tempValue & 0b011111100000000);
+          // $2006 first write (w is 0)
+          this.t_fineYScroll = ((value >>> 4) & 0b11);
+          this.t_nametableSelect = ((value & 0b1100) >>> 2);
+          // @todo : CHECK THIS
+          this.t_coarseYScroll = ((value & 0b11) << 3) | (this.t_coarseYScroll & 0b111);
+          // Set write toggle to true
           this.w = true;
         } else {
-          this.v = this.t =
-            (this.t & 0b111111100000000) | (value & 0b000000011111111);
+          // $2006 second write (w is 1)
+          // Set coarse X Scroll
+          this.t_coarseXScroll = (value & 0b11111);
+          // Set the lower 3 bits of coarse Y scroll
+          this.t_coarseYScroll = ((this.t_coarseYScroll & 0b11000) | (value >>> 5));
+          // Reset write toggle
           this.w = false;
+          // Copy over T to V
+          this.v_fineYScroll = this.t_fineYScroll;
+          this.v_nametableSelect = this.t_nametableSelect;
+          this.v_coarseXScroll = this.t_coarseXScroll;
+          this.v_coarseYScroll = this.t_coarseYScroll;
         }
       } else if (address === 0x0007) {
         // If this is the case, then we write to the address requested by this.dataAddress as well
         // and then increment the address
-        this.vram.set(this.ppuAddress, value);
+        let address = this.createVFromVariables();
+        this.vram.set(address, value);
         let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
-        this.ppuAddress = (this.ppuAddress + increase) & 0xffff;
+        address = (address + increase) & 0x7fff;
+        this.setVariablesFromV(address);
       }
     },
     get(address) {
@@ -523,24 +547,27 @@ Vue.component('ppu', {
       if (address === 0x0007) {
         // Then we actually want to return from the VRAM address requested, however, use the internal
         // read buffer if range is in 0 - $3EFF
+        let address = this.createVFromVariables();
+
         let result = null;
-        if (this.ppuAddress <= 0x3EFF) {
+        if (address <= 0x3EFF) {
           // Read from buffer
           result = this.readBuffer;
           // Update buffer
-          this.readBuffer = this.vram.get(this.ppuAddress);
+          this.readBuffer = this.vram.get(address);
         } else {
           // Read from vram
-          result = this.vram.get(this.ppuAddress);
+          result = this.vram.get(address);
           // When you update the buffer, you have to use the pseudo-mirrored nametable data
           // So, need to understand the delta address.  This would be the mirrored data in nametable 3
-          let newAddress = this.ppuAddress;
+          let newAddress = address;
           newAddress = newAddress - 0x1000;
           this.readBuffer = this.vram.get(newAddress);
         }
         if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
-          this.ppuAddress = (this.ppuAddress + increase) & 0x7fff;
+          address = (address + increase) & 0x7fff;
+          this.setVariablesFromV(address);
           // @todo Handle weird behavior if during render and we change, it should
           // do a coarse y and x increment.  See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
         }
