@@ -112,6 +112,7 @@ Vue.component('ppu', {
 
     this.shiftBackgroundRegisters = () => {
       let v = this.createVFromVariables();
+      let vram = this.vram;
       // Get the base nametable address
       // We need to find out which pixel we're at.  Each byte is a 8x8 pixel tile representation
 
@@ -119,7 +120,7 @@ Vue.component('ppu', {
       // See: http://wiki.nesdev.com/w/index.php/PPU_registers#PPUCTRL
 
       // Grab tile data for where we are pointing
-      let backgroundTileIndex = this.vram.get(0x2000 | (v & 0x0FFF));
+      let backgroundTileIndex = vram.get(0x2000 | (v & 0x0FFF));
 
       // This ors against the base pattern table address for background
       // And adds fine-y from v
@@ -129,57 +130,52 @@ Vue.component('ppu', {
       // We get the copy of the tile data, and then we load it into the high 8 bits of our shift registers
       this.backgroundTileFirstShiftRegister =
         (this.backgroundTileFirstShiftRegister & 0xff00) |
-        this.vram.get(base);
+        vram.get(base);
 
       this.backgroundTileSecondShiftRegister =
         this.backgroundTileSecondShiftRegister |
-        this.vram.get(base + 8);
+        vram.get(base + 8);
 
       // Now get attribute byte
       //address = baseAddress + 0x3c0;
       let address = 0x23c0 | (v & 0x0c00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
 
       // Shift top 8 bits to the right
-      this.attributeTableByte = (this.attributeTableByte >>> 8) | (this.vram.get(address) << 8);
+      this.attributeTableByte = (this.attributeTableByte >>> 8) | (vram.get(address) << 8);
 
     };
 
     // Increase horizontal on V register, basically going to next nametable byte
     this.increaseHoriV = function () {
       // increase hori(v)
-      if (this.renderingEnabled) {
-        if (this.v_coarseXScroll == 31) {
-          this.v_coarseXScroll = 0;
-          this.v_nametableSelect ^= 0b01;
-        } else {
-          this.v_coarseXScroll++;
-        }
+      if (this.v_coarseXScroll == 31) {
+        this.v_coarseXScroll = 0;
+        this.v_nametableSelect ^= 0b01;
+      } else {
+        this.v_coarseXScroll++;
       }
     }
 
     this.increaseVertV = function () {
-      // Increase vert(v) but only if rendering is enabled
-      if (this.renderingEnabled) {
-        // https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
-        // Note, this is for Y increment
-        if (this.v_fineYScroll < 7) {
-          this.v_fineYScroll++;
+      // https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
+      // Note, this is for Y increment
+      if (this.v_fineYScroll < 7) {
+        this.v_fineYScroll++;
+      } else {
+        this.v_fineYScroll = 0;
+        let y = this.v_coarseYScroll;
+        if (y == 29) {
+          // Set coarse Y to 0
+          // @todo - see if this is accurate, the pseudo code is only setting the local var
+          // instead of the actual register.
+          this.v_coarseYScroll = 0;
+          // Switch the nametable
+          this.v_nametableSelect ^= 0b1;
+        } else if (y == 31) {
+          this.v_coarseYScroll = 0;
+          // Don't do the nametable switch
         } else {
-          this.v_fineYScroll = 0;
-          let y = this.v_coarseYScroll;
-          if (y == 29) {
-            // Set coarse Y to 0
-            // @todo - see if this is accurate, the pseudo code is only setting the local var
-            // instead of the actual register.
-            this.v_coarseYScroll = 0;
-            // Switch the nametable
-            this.v_nametableSelect ^= 0b1;
-          } else if (y == 31) {
-            this.v_coarseYScroll = 0;
-            // Don't do the nametable switch
-          } else {
-            this.v_coarseYScroll++;
-          }
+          this.v_coarseYScroll++;
         }
       }
     }
@@ -195,42 +191,45 @@ Vue.component('ppu', {
     }
 
     this.tick = function () {
-      // Create local vars to reduce scope chain crawling
-      let cycle = this.cycle;
-      let scanline = this.scanline;
 
-      if (scanline <= 239) {
-        if (cycle <= 256 && cycle > 0) {
-          this.renderPixel(cycle - 1, scanline);
+      if (this.scanline <= 239) {
+        if (this.cycle <= 256 && this.cycle != 0) {
+          this.renderPixel();
         }
-        if (!(cycle % 8)) {
-          if (cycle == 0) {
+        if (!(this.cycle % 8)) {
+          if (this.cycle == 0) {
             // Set the cache data for this frame
             this.universalBackgroundColor = colors[this.vram.get(0x3f00)];
 
             ++this.cycle;
             return;
           }
-          if (cycle <= 248) {
+          if (this.cycle <= 248) {
             this.shiftBackgroundRegisters();
-            this.increaseHoriV();
+            if (this.renderingEnabled) {
+              this.increaseHoriV();
+            }
             ++this.cycle;
             return;
-          } else if (cycle == 256) {
+          } else if (this.cycle == 256) {
             // inc vert(v)
-            this.increaseVertV();
+            if (this.renderingEnabled) {
+              this.increaseVertV();
+            }
             // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache which is like secondary OAM
-            this.buildScanlineSpriteCache(scanline);
+            this.buildScanlineSpriteCache(this.scanline);
 
             ++this.cycle;
             return;
-          } else if (cycle == 328) {
+          } else if (this.cycle == 328) {
             this.shiftBackgroundRegisters();
-            this.increaseHoriV();
+            if (this.renderingEnabled) {
+              this.increaseHoriV();
+            }
             ++this.cycle;
             return;
-          } else if (cycle == 336) {
+          } else if (this.cycle == 336) {
             // Since there was no rendering, we need to make sure to shift background registers
             this.backgroundTileFirstShiftRegister =
               this.backgroundTileFirstShiftRegister << 8;
@@ -238,16 +237,18 @@ Vue.component('ppu', {
               this.backgroundTileSecondShiftRegister << 8;
             this.shiftBackgroundRegisters();
 
-            this.increaseHoriV();
+            if (this.renderingEnabled) {
+              this.increaseHoriV();
+            }
             ++this.cycle;
             return;
           }
-        } else if (cycle == 257) {
+        } else if (this.cycle == 257) {
           this.copyHoriTtoHoriV();
           ++this.cycle;
           return;
         }
-      } else if (scanline === 241 && cycle === 1) {
+      } else if (this.scanline === 241 && this.cycle === 1) {
         // Fire off Vblank
         this.registers[0x02] |= 0b10000000;
         this.$parent.frameNotCompleted = false;
@@ -258,10 +259,10 @@ Vue.component('ppu', {
         }
         ++this.cycle;
         return;
-      } else if (scanline == 261) {
+      } else if (this.scanline == 261) {
         // OLD
         //if (cycle >= 280 && cycle <= 304) {
-        if (cycle == 304) {
+        if (this.cycle == 304) {
           // vert(v) = vert(t)
           // This would normally be done on cycles 280 to 304, but we do it on the last
           if (this.renderingEnabled) {
@@ -273,33 +274,39 @@ Vue.component('ppu', {
           ++this.cycle;
           return;
         }
-        if (!(cycle % 8)) {
-          if (cycle == 0) {
+        if (!(this.cycle % 8)) {
+          if (this.cycle == 0) {
             // No need to set universal background color, just pass this according to 
             // rendering chart
             ++this.cycle;
             return;
           }
-          if (cycle <= 256) {
+          if (this.cycle <= 256) {
             this.shiftBackgroundRegisters();
-            this.increaseHoriV();
+            if (this.renderingEnabled) {
+              this.increaseHoriV();
+            }
             ++this.cycle;
             return;
           }
-          if (cycle == 256) {
-            this.increaseVertV();
+          if (this.cycle == 256) {
+            if (this.renderingEnabled) {
+              this.increaseVertV();
+            }
             // Build the scanline sprite cache for this scanline by reading OAM data and compiling
             // cache which is like secondary OAM
-            this.buildScanlineSpriteCache(scanline);
+            this.buildScanlineSpriteCache(this.scanline);
 
             ++this.cycle;
             return;
-          } else if (cycle == 328) {
+          } else if (this.cycle == 328) {
             this.shiftBackgroundRegisters();
-            this.increaseHoriV();
+            if (this.renderingEnabled) {
+              this.increaseHoriV();
+            }
             ++this.cycle;
             return;
-          } else if (cycle == 336) {
+          } else if (this.cycle == 336) {
             // Since there was no rendering, we need to make sure to shift background registers
             this.backgroundTileFirstShiftRegister =
               this.backgroundTileFirstShiftRegister << 8;
@@ -307,44 +314,50 @@ Vue.component('ppu', {
               this.backgroundTileSecondShiftRegister << 8;
             this.shiftBackgroundRegisters();
 
-            this.increaseHoriV();
+            if (this.renderingEnabled) {
+              this.increaseHoriV();
+            }
             ++this.cycle;
             return;
           }
 
         } // end if mod 8
-        if (cycle == 1) {
+        if (this.cycle == 1) {
           // Clearing VBlank and sprite 0
           this.registers[0x02] = this.registers[0x02] & 0b00111111;
           ++this.cycle;
           return;
         }
-        if (cycle == 257) {
+        if (this.cycle == 257) {
           this.copyHoriTtoHoriV();
           ++this.cycle;
           return;
         }
 
       }
-      if (cycle == 339) {
+      if (this.cycle == 339) {
         if (this.odd && this.renderingEnabled) {
           // It's an odd frame, so we will skip it
           // We only do this if rendering is enabled btw
           this.cycle = 0;
-          this.scanline = scanline == 261 ? 0 : scanline + 1;
-          if (this.scanline == 0) {
+          if (this.scanline === 261) {
+            this.scanline = 0;
             this.odd = !this.odd;
+            return;
           }
+          this.scanline += 1;
           return;
         }
         ++this.cycle;
         return;
-      } else if (cycle == 340) {
+      } else if (this.cycle == 340) {
         this.cycle = 0;
-        this.scanline = scanline == 261 ? 0 : scanline + 1;
-        if (this.scanline == 0) {
+        if (this.scanline === 261) {
+          this.scanline = 0;
           this.odd = !this.odd;
+          return;
         }
+        this.scanline += 1;
         return;
       }
       ++this.cycle;
@@ -538,7 +551,7 @@ Vue.component('ppu', {
           newAddress = newAddress - 0x1000;
           this.readBuffer = this.vram.get(newAddress);
         }
-        if (!this.console.$refs.cpu.inDebug) {
+        if (!this.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
           address = (address + increase) & 0x7fff;
           this.setVariablesFromV(address);
@@ -756,17 +769,21 @@ Vue.component('ppu', {
      * Fetches the next color info from the background shift registers
      */
     fetchTilePixelColor() {
-      let mask = 0x8000 >>> this.x;
-      let value = 
+      // Local assignment to avoid looking up too many times
+      let x = this.x;
+      let mask = 0x8000 >>> x;
+      let backgroundTileSecondShiftRegister = this.backgroundTileSecondShiftRegister;
+      let backgroundTileFirstShiftRegister = this.backgroundTileFirstShiftRegister;
+      let value =
         (
-          (((this.backgroundTileSecondShiftRegister & mask) >>> (14 - this.x))) +
-          (((this.backgroundTileFirstShiftRegister & mask) >>> (15 - this.x)))
-      );
+          (((backgroundTileSecondShiftRegister & mask) >>> (14 - x))) +
+          (((backgroundTileFirstShiftRegister & mask) >>> (15 - x)))
+        );
       // Now right shift both registers
       this.backgroundTileFirstShiftRegister =
-        this.backgroundTileFirstShiftRegister << 1;
+        backgroundTileFirstShiftRegister << 1;
       this.backgroundTileSecondShiftRegister =
-        this.backgroundTileSecondShiftRegister << 1;
+        backgroundTileSecondShiftRegister << 1;
       return value;
 
     },
@@ -781,7 +798,9 @@ Vue.component('ppu', {
     },
 
     // Renders a requested pixel, utilizing the scanline tile cache for sprites
-    renderPixel(x, y) {
+    renderPixel() {
+      let x = this.cycle - 1;
+      let y = this.scanline;
       // The color for the specified pixel
       // By default, it will be the universal background color
       let color = this.universalBackgroundColor;

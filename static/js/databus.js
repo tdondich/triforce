@@ -33,9 +33,12 @@ Vue.component('databus', {
     }
 
     this.get = function(address) {
+      /*
       let { min, size, bus, target } = this[address];
       // We found the memory module we need to reference, plus dealing with memory that repeats
       return target.get((address - min) % size, bus);
+      */
+     return this[address].target.get((address - this[address].min) % this[address].size, this[address].bus);
     };
 
     // Get's a value for a requested address, calling the target's get value, but translated from that target's

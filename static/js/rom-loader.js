@@ -30,6 +30,10 @@ Vue.component('rom-loader', {
             romName: "color_test"
         };
     },
+    mounted() {
+      this.mapper = this.$refs.mapper;
+
+    },
     computed: {
       // Computed characteristics of the rom after being loaded
       // See: http://wiki.nesdev.com/w/index.php/INES
@@ -80,14 +84,14 @@ Vue.component('rom-loader', {
     methods: {
      // Our getters and setters will pass through to our mapper
       get(address, bus = "prg") {
-        return this.$refs.mapper.get(address, bus);
+        return this.mapper.get(address, bus);
       },
       getRange(address, length, bus = "prg") {
-        return this.$refs.mapper.getRange(address, length, bus);
+        return this.mapper.getRange(address, length, bus);
      },
   
       set(address, value, bus = "prg") {
-        return this.$refs.mapper.set(address, value, bus);
+        return this.mapper.set(address, value, bus);
       },
       load() {
         this.loadError = this.loadSuccess = false;
@@ -126,12 +130,12 @@ Vue.component('rom-loader', {
         // Copy over trainer, if it exists
         if (this.trainerExists) {
           // Copy the source data to the target address in memory
-          copyToMemory(this.data, 16, 512, this.$refs.mapper, 0x7000, "prg");
+          copyToMemory(this.data, 16, 512, this.mapper, 0x7000, "prg");
           copyToMemory(
             this.data,
             16 + 512,
             this.prgRomSize * 16384,
-            this.$refs.mapper,
+            this.mapper,
             0x3fe0,
             "prg"
           );
@@ -140,7 +144,7 @@ Vue.component('rom-loader', {
             this.data,
             16 + 512 + this.prgRomSize * 16384,
             this.chrRomSize * 8192,
-            this.$refs.mapper,
+            this.mapper,
             0x0000,
             "chr"
           );
@@ -150,20 +154,20 @@ Vue.component('rom-loader', {
             this.data,
             16,
             this.prgRomSize * 16384,
-            this.$refs.mapper,
+            this.mapper,
             0x3fe0,
             "prg"
           );
           if (this.prgRomSize == 1 && this.mappingNumber == 0) {
             // Mirror the prg rom to 0xc000
-            copyToMemory(this.data, 16, 16384, this.$refs.mapper, 0x7fe0, "prg");
+            copyToMemory(this.data, 16, 16384, this.mapper, 0x7fe0, "prg");
           }
           // Now copy over CHR data
           copyToMemory(
             this.data,
             16 + this.prgRomSize * 16384,
             this.chrRomSize * 8192,
-            this.$refs.mapper,
+            this.mapper,
             0x0000,
             "chr"
           );

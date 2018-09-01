@@ -157,6 +157,7 @@ Vue.component('cpu2a03', {
     this.mainbus = this.$parent.$refs.mainbus;
     this.ppu = this.$parent.$refs.ppu;
     this.mem = this.mainbus;
+    this.registers = this.$refs.registers;
   },
   computed: {
     debugOutput() {
@@ -192,7 +193,7 @@ Vue.component('cpu2a03', {
     },
     // These are sets and gets for our memory mapped registers
     set(address, value) {
-      this.$refs.registers.set(address, value);
+      this.registers.set(address, value);
       // Check if we wrote to OAMDMA
       // That would map to our 0x0014
       if (!this.inDebug && address == 0x0014) {
@@ -200,7 +201,7 @@ Vue.component('cpu2a03', {
       }
     },
     get(address) {
-      return this.$refs.registers.get(address);
+      return this.registers.get(address);
     },
    setCarry(val) {
       if (val) {
