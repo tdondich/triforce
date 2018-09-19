@@ -247,7 +247,7 @@ Vue.component('ppu', {
           ++this.cycle;
           return;
         }
-      } else if (scanline === 241 && cycle === 1) {
+      } else if (scanline == 241 && cycle == 1) {
         // Fire off Vblank
         this.registers[0x02] |= 0b10000000;
         this.$parent.frameNotCompleted = false;
@@ -538,18 +538,20 @@ Vue.component('ppu', {
           newAddress = newAddress - 0x1000;
           this.readBuffer = this.vram.get(newAddress);
         }
-        if (!this.console.$refs.cpu.inDebug) {
+        // @todo Another way to check if indebug?
+        //if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
           address = (address + increase) & 0x7fff;
           this.setVariablesFromV(address);
           // @todo Handle weird behavior if during render and we change, it should
           // do a coarse y and x increment.  See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
-        }
+        //}
         return result;
       } else if (address === 0x0002) {
         // Reading of status
         let result = this.registers[address];
-        if (!this.cpu.inDebug) {
+        // @todo Check another way if indebug
+        //if (!this.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
           this.setVBlank(false);
 
@@ -559,7 +561,7 @@ Vue.component('ppu', {
 
           // Reset the w write toggle
           this.w = false;
-        }
+        //}
         return result;
       }
       return this.registers[address];
