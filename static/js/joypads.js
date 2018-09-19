@@ -137,7 +137,11 @@ Vue.component('joypads', {
                 this.one.streamPointer = 0;
                 this.two.streamPointer = 0;
             }
+            return;
         }
+        // If we're here then we're writing to 0x4017, which is APU frame counter register
+        // So let's forward this write to our apu
+        this.$parent.$refs.apu.writeToFrameCounter(value);
     },
     tick: function() {
         // Scans the gamepads for keypresses

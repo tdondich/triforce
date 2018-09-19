@@ -190,12 +190,27 @@ Vue.component('cpu2a03', {
       let blob = new Blob([this.debugDownloadLog], {type: "text/plain;charset=utf-8"});
       saveAs(blob, "debug.txt");
     },
+    /*
+    // The only set we have is for OAMDMA
+    // Any write to this address toggle OAM DMA transfer
+    // So we don't need address or value
+    set() {
+      // That would map to our 0x0014 in the main memory space
+      if (!this.inDebug) {
+        this.OAMDMAWritten = true;
+      }
+    },
+    get(address) {
+      // We only listen for OAMDATA, so if we are read, let's get it from the ppu
+      return this.ppu.fetchOAMADDRValue();
+    },
+    */
     // These are sets and gets for our memory mapped registers
     set(address, value) {
       this.$refs.registers.set(address, value);
       // Check if we wrote to OAMDMA
       // That would map to our 0x0014
-      if (!this.inDebug && address == 0x0014) {
+      if (!this.inDebug) {
         this.OAMDMAWritten = true;
       }
     },
@@ -470,10 +485,7 @@ Vue.component('cpu2a03', {
     <div v-if="debugEnabled" class="col-sm-12 debug">
       <textarea rows="5" class="form-control" v-model="debug"></textarea>
     </div>
-
-    <!-- These are memory mapped registers -->
-    <!-- See: https://wiki.nesdev.com/w/index.php/2A03 -->
-    <memory ref="registers" size="32" />
+        <memory ref="registers" size="32" />
 
   </div>
 

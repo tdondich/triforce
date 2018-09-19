@@ -36,15 +36,20 @@ var nesemu = new Vue({
     };
     this.prodTick = () => {
       this.frameNotCompleted = true;
+      let testCount = 0;
       do {
+        testCount++;
         // Our PPU runs 3x the cpu
         this.cpu.tick();
         this.ppu.tick();
         this.ppu.tick();
         this.ppu.tick();
+        // Tick the apu
+        this.apu.tick();
       } while (this.frameNotCompleted);
       this.joypads.tick();
       this.ppu.render();
+      this.apu.resetFrame();
       requestAnimationFrame(this.tick);
     };
     // Set our initial tick method
@@ -54,6 +59,7 @@ var nesemu = new Vue({
   mounted() {
     this.cpu = this.$refs.cpu;
     this.ppu = this.$refs.ppu;
+    this.apu = this.$refs.apu;
     this.joypads = this.$refs.joypads;
   },
   methods: {

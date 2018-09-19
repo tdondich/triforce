@@ -604,6 +604,11 @@ Vue.component('ppu', {
         this.setPPUStatus(this.ppustatus() & 0b10111111);
       }
     },
+    // Fetches the current value from OAMADDR, without incrementing it's address
+    fetchOAMADDRValue() {
+      let oamaddr = this.registers[0x0003];
+      return this.oam[oamaddr];
+    },
     copyToOAM(address, value) {
       // Copy the info to the requested OAM address
       let offset = this.registers[0x0003];

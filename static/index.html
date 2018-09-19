@@ -16,6 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
     <script src="js/memory.js"></script>
     <script src="js/nesppu.js"></script>
+    <script src="js/nesapu.js"></script>
     <script src="js/instructions.js"></script>
     <script src="js/opcodes/adc.js"></script>
     <script src="js/opcodes/and.js"></script>
@@ -101,6 +102,8 @@
         <!-- Our palettes -->
         <palette ref="palette" size="32"></palette>
 
+        <apu ref="apu"></apu>
+
         <!-- Now, tie it all together with an address bus for cpu -->
         <databus name="Main Databus" size="65536" ref="mainbus" :sections="[
                     {
@@ -117,10 +120,23 @@
                       size: 8
                     },
                     {
-                      ref: 'cpu',
+                      ref: 'apu',
                       min: 0x4000,
-                      max: 0x4015,
-                      size: 22
+                      max: 0x4013,
+                      size: 19,
+                    },
+                    {
+                        ref: 'cpu',
+                        min: 0x4014,
+                        max: 0x4014,
+                        size: 1
+                    },
+                    {
+                        ref: 'apu',
+                        min: 0x4015,
+                        max: 0x4015,
+                        size: 1,
+                        bus: 'snd_chn'
                     },
                     {
                       ref: 'joypads',
