@@ -17,7 +17,7 @@ var inc = {
             this.cycles = 5;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageAddress(this.pc + 1);
-                this.debugger(2, () => `INC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `INC $${fh(targetAddress)} = ${fh(this.mem.get(targetAddress))}`);
                 this.inc(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -27,7 +27,7 @@ var inc = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `INC $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `INC $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.inc(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -38,7 +38,7 @@ var inc = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `INC $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `INC $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.inc(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -48,7 +48,7 @@ var inc = {
             this.cycles = 7;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `INC $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `INC $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.inc(targetAddress);
                 this.pc = this.pc + 3;
             }

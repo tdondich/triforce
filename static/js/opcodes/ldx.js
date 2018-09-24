@@ -15,7 +15,7 @@ var ldx = {
         0xA2: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `LDX #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `LDX #$${fh(this.mem.get(this.pc + 1))}`);
                 this.ldx(this.pc + 1);
                 this.pc = this.pc + 2;
             }
@@ -24,7 +24,7 @@ var ldx = {
         0xA6: function () {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `LDX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `LDX $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.ldx(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -34,7 +34,7 @@ var ldx = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageYAddress(this.pc + 1);
-                this.debugger(2, () => `LDX $${fh(this.mem.get(this.pc + 1))},Y @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `LDX $${fh(this.mem.get(this.pc + 1))},Y @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldx(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -45,7 +45,7 @@ var ldx = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `LDX $${fh(targetAddress, 4)} = ${fh(this.mem.get(this.getAbsoluteAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(3, () => `LDX $${fh(targetAddress, 4)} = ${fh(this.mem.get(this.getAbsoluteAddress(this.pc + 1)))}`);
                 this.ldx(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -60,7 +60,7 @@ var ldx = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
-                this.debugger(3, () => `LDX $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `LDX $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldx(targetAddress);
                 this.pc = this.pc + 3;
             }

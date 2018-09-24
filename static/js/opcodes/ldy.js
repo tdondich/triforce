@@ -13,7 +13,7 @@ var ldy = {
         0xA0: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `LDY #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `LDY #$${fh(this.mem.get(this.pc + 1))}`);
                 this.ldy(this.pc + 1);
                 this.pc = this.pc + 2;
             }
@@ -23,7 +23,7 @@ var ldy = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `LDY $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `LDY $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldy(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -38,7 +38,7 @@ var ldy = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `LDY $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `LDY $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldy(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -49,7 +49,7 @@ var ldy = {
             this.cycles = 3;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageAddress(this.pc + 1);
-                this.debugger(2, () => `LDY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `LDY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldy(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -59,7 +59,7 @@ var ldy = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `LDY $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `LDY $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ldy(targetAddress);
                 this.pc = this.pc + 2;
             }

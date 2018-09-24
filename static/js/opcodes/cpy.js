@@ -19,7 +19,7 @@ var cpy = {
         0xC0: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `CPY #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `CPY #$${fh(this.mem.get(this.pc + 1))}`);
                 this.cpy(this.pc + 1);
                 this.pc = this.pc + 2;
             }
@@ -28,7 +28,7 @@ var cpy = {
         0xC4: function() {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `CPY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `CPY $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.cpy(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -38,7 +38,7 @@ var cpy = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `CPY $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `CPY $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cpy(targetAddress);
                 this.pc = this.pc + 3;
             }

@@ -15,7 +15,7 @@ var cmp = {
         0xC9: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `CMP #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `CMP #$${fh(this.mem.get(this.pc + 1))}`);
                 this.cmp(this.pc + 1);
                 this.pc = this.pc + 2;
             }
@@ -24,7 +24,7 @@ var cmp = {
         0xC5: function () {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `CMP $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `CMP $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.cmp(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -34,7 +34,7 @@ var cmp = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `CMP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `CMP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cmp(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -45,7 +45,7 @@ var cmp = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getIndexedIndirectXAddress(this.pc + 1);
-                this.debugger(2, () => `CMP ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `CMP ($${fh(this.mem.get(this.pc + 1))},X) @ ${fh((this.mem.get(this.pc + 1) + this.x) & 0xFF)} = ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cmp(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -60,7 +60,7 @@ var cmp = {
             }
             this.instruction = () => {
                let targetAddress = this.getIndirectIndexedAddress(this.pc + 1);
-                this.debugger(2, () => `CMP ($${fh(this.mem.get(this.pc + 1))}),Y = ${fh(this.getAbsoluteAddress(this.mem.get(this.pc + 1), true),4)} @ ${fh(targetAddress,4)} = ${fh(this.mem.get(targetAddress))}`);
+               if(this.inDebug) this.debugger(2, () => `CMP ($${fh(this.mem.get(this.pc + 1))}),Y = ${fh(this.getAbsoluteAddress(this.mem.get(this.pc + 1), true),4)} @ ${fh(targetAddress,4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cmp(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -72,7 +72,7 @@ var cmp = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `CMP $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `CMP $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cmp(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -87,7 +87,7 @@ var cmp = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteYAddress(this.pc + 1);
-                this.debugger(3, () => `CMP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `CMP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},Y @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cmp(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -102,7 +102,7 @@ var cmp = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `CMP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `CMP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.cmp(targetAddress);
                 this.pc = this.pc + 3;
             }

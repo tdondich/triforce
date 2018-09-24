@@ -52,7 +52,7 @@ var ror = {
         0x6A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `ROR A`);
+                if(this.inDebug) this.debugger(1, () => `ROR A`);
                 this.ror();
                 this.pc = this.pc + 1;
             }
@@ -61,7 +61,7 @@ var ror = {
         0x66: function () {
             this.cycles = 5;
             this.instruction = () => {
-                this.debugger(2, () => `ROR $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `ROR $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.ror(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -71,7 +71,7 @@ var ror = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `ROR $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `ROR $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ror(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -82,7 +82,7 @@ var ror = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `ROR $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `ROR $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ror(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -92,7 +92,7 @@ var ror = {
             this.cycles = 7;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `ROR $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `ROR $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.ror(targetAddress);
                 this.pc = this.pc + 3;
             }

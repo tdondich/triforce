@@ -37,7 +37,7 @@ var instructions = {
             this.cycles = 3;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `JMP $${fh(targetAddress, 4)}`);
+                if(this.inDebug) this.debugger(3, () => `JMP $${fh(targetAddress, 4)}`);
                 this.pc = targetAddress;
             }
         },
@@ -59,7 +59,7 @@ var instructions = {
                     // Doesn't fall on a page boundry, so let's go ahead and get the address normally
                     targetAddress = this.getIndirectAddress(this.pc + 1);
                 }
-                this.debugger(3, () => `JMP ($${fh(this.getAbsoluteAddress(this.pc + 1), 4)}) = ${fh(targetAddress, 4)}`);
+                if(this.inDebug) this.debugger(3, () => `JMP ($${fh(this.getAbsoluteAddress(this.pc + 1), 4)}) = ${fh(targetAddress, 4)}`);
                 this.pc = targetAddress;
             }
         },
@@ -68,7 +68,7 @@ var instructions = {
         0x20: function () {
             this.cycles = 6;
             this.instruction = () => {
-                this.debugger(3, () => `JSR $${fh(this.getAbsoluteAddress(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(3, () => `JSR $${fh(this.getAbsoluteAddress(this.pc + 1))}`);
 
                 let target = this.pc + 2;
                 // First pass the first half of target
@@ -83,7 +83,7 @@ var instructions = {
         0x60: function () {
             this.cycles = 6;
             this.instruction = () => {
-                this.debugger(1, () => `RTS`);
+                if(this.inDebug) this.debugger(1, () => `RTS`);
                 // First pop the second half
                 let second = this.stackPop();
                 // Now the first part
@@ -95,7 +95,7 @@ var instructions = {
         0x38: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'SEC');
+                if(this.inDebug) this.debugger(1, () => 'SEC');
                 this.p = this.p | 0b0001;
                 this.pc = this.pc + 1;
             }
@@ -110,7 +110,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BCS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BCS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (this.isCarry()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -122,7 +122,7 @@ var instructions = {
         0x18: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'CLC');
+                if(this.inDebug) this.debugger(1, () => 'CLC');
                 this.p = this.p & 0b11111110;
                 this.pc = this.pc + 1;
             }
@@ -137,7 +137,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BCC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BCC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (!this.isCarry()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -156,7 +156,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BEQ $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BEQ $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (this.isZero()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -174,7 +174,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BNE $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BNE $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (!this.isZero()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -192,7 +192,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BVS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BVS $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (this.isOverflow()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -210,7 +210,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BVC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BVC $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (!this.isOverflow()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -228,7 +228,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BPL $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BPL $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (!this.isNegative()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -240,7 +240,7 @@ var instructions = {
         0x78: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'SEI');
+                if(this.inDebug) this.debugger(1, () => 'SEI');
                 this.p = this.p | 0b0100;
                 this.pc = this.pc + 1;
             }
@@ -249,7 +249,7 @@ var instructions = {
         0xF8: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'SED');
+                if(this.inDebug) this.debugger(1, () => 'SED');
                 this.p = this.p | 0b1000;
                 this.pc = this.pc + 1;
             }
@@ -260,7 +260,7 @@ var instructions = {
         0x08: function () {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(1, () => 'PHP');
+                if(this.inDebug) this.debugger(1, () => 'PHP');
                 // Always make sure that bit 5 and 4 is set
                 this.stackPush(this.p | 0b00110000);
                 this.pc = this.pc + 1;
@@ -271,7 +271,7 @@ var instructions = {
         0x68: function () {
             this.cycles = 4;
             this.instruction = () => {
-                this.debugger(1, () => 'PLA');
+                if(this.inDebug) this.debugger(1, () => 'PLA');
                 this.a = this.stackPop();
                 // Now set the zero flag if A is 0
                 if (this.a === 0x00) {
@@ -288,7 +288,7 @@ var instructions = {
         0xD8: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'CLD');
+                if(this.inDebug) this.debugger(1, () => 'CLD');
                 this.p = this.p & 0b11110111;
                 this.pc = this.pc + 1;
             }
@@ -297,7 +297,7 @@ var instructions = {
         0x48: function () {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(1, () => 'PHA');
+                if(this.inDebug) this.debugger(1, () => 'PHA');
                 this.stackPush(this.a);
                 this.pc = this.pc + 1;
             }
@@ -306,7 +306,7 @@ var instructions = {
         0x28: function () {
             this.cycles = 4;
             this.instruction = () => {
-                this.debugger(1, () => 'PLP');
+                if(this.inDebug) this.debugger(1, () => 'PLP');
                 // Be sure to ignore bits 4 and always set 5 
                 this.p = (this.stackPop() & 0b11101111) | 0b00100000;
                 this.pc = this.pc + 1;
@@ -322,7 +322,7 @@ var instructions = {
                 }
             }
             this.instruction = () => {
-                this.debugger(2, () => `BMI $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
+                if(this.inDebug) this.debugger(2, () => `BMI $${fh(this.getRelativeAddress(this.pc + 1) + 2)}`);
                 if (this.isNegative()) {
                     this.pc = this.getRelativeAddress(this.pc + 1) + 2;
                 } else {
@@ -334,7 +334,7 @@ var instructions = {
         0xb8: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'CLV');
+                if(this.inDebug) this.debugger(1, () => 'CLV');
                 this.p = this.p & 0b10111111;
                 this.pc = this.pc + 1;
             }
@@ -343,7 +343,7 @@ var instructions = {
         0xC8: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'INY');
+                if(this.inDebug) this.debugger(1, () => 'INY');
 
                 // Increment, but mask to a 8 bit value
                 this.y = (this.y + 1) & 0xFF;
@@ -359,7 +359,7 @@ var instructions = {
         0xE8: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'INX');
+                if(this.inDebug) this.debugger(1, () => 'INX');
 
                 // Increment, but mask to a 8 bit value
                 this.x = (this.x + 1) & 0xFF;
@@ -375,7 +375,7 @@ var instructions = {
         0xCA: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'DEX');
+                if(this.inDebug) this.debugger(1, () => 'DEX');
 
                 // Increment, but mask to a 8 bit value
                 this.x = (this.x - 1) & 0xFF;
@@ -391,7 +391,7 @@ var instructions = {
         0x88: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'DEY');
+                if(this.inDebug) this.debugger(1, () => 'DEY');
 
                 // Increment, but mask to a 8 bit value
                 this.y = (this.y - 1) & 0xFF;
@@ -407,7 +407,7 @@ var instructions = {
         0xA8: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'TAY');
+                if(this.inDebug) this.debugger(1, () => 'TAY');
 
                 this.y = this.a;
 
@@ -422,7 +422,7 @@ var instructions = {
         0xAA: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'TAX');
+                if(this.inDebug) this.debugger(1, () => 'TAX');
 
                 this.x = this.a;
 
@@ -437,7 +437,7 @@ var instructions = {
         0x98: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'TYA');
+                if(this.inDebug) this.debugger(1, () => 'TYA');
 
                 this.a = this.y;
 
@@ -452,7 +452,7 @@ var instructions = {
         0x8A: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'TXA');
+                if(this.inDebug) this.debugger(1, () => 'TXA');
 
                 this.a = this.x;
 
@@ -467,7 +467,7 @@ var instructions = {
         0xBA: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'TSX');
+                if(this.inDebug) this.debugger(1, () => 'TSX');
 
                 this.x = this.sp;
 
@@ -482,7 +482,7 @@ var instructions = {
         0x9A: function () {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => 'TXS');
+                if(this.inDebug) this.debugger(1, () => 'TXS');
 
                 this.sp = this.x;
 
@@ -493,7 +493,7 @@ var instructions = {
         0x40: function () {
             this.cycles = 6;
             this.instruction = () => {
-                this.debugger(1, () => 'RTI');
+                if(this.inDebug) this.debugger(1, () => 'RTI');
 
                 // Be sure to ignore bits 4 and 5
                 this.p = (this.stackPop() & 0b11101111) | 0b00100000;

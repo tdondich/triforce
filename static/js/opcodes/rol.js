@@ -52,7 +52,7 @@ var rol = {
         0x2A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `ROL A`);
+                if(this.inDebug) this.debugger(1, () => `ROL A`);
                 this.rol();
                 this.pc = this.pc + 1;
             }
@@ -61,7 +61,7 @@ var rol = {
         0x26: function () {
             this.cycles = 5;
             this.instruction = () => {
-                this.debugger(2, () => `ROL $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `ROL $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.rol(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -71,7 +71,7 @@ var rol = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `ROL $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `ROL $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.rol(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -82,7 +82,7 @@ var rol = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `ROL $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `ROL $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.rol(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -92,7 +92,7 @@ var rol = {
             this.cycles = 7;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `ROL $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `ROL $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.rol(targetAddress);
                 this.pc = this.pc + 3;
             }

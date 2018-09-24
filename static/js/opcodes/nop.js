@@ -3,7 +3,7 @@ var nop = {
        0xEA: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `NOP`);
+                if(this.inDebug) this.debugger(1, () => `NOP`);
                 this.pc = this.pc + 1;
             }
         },
@@ -12,42 +12,42 @@ var nop = {
        0x1A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `*NOP`);
+                if(this.inDebug) this.debugger(1, () => `*NOP`);
                 this.pc = this.pc + 1;
             }
         },
         0x3A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `*NOP`);
+                if(this.inDebug) this.debugger(1, () => `*NOP`);
                 this.pc = this.pc + 1;
             }
         },
         0x5A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `*NOP`);
+                if(this.inDebug) this.debugger(1, () => `*NOP`);
                 this.pc = this.pc + 1;
             }
         },
         0x7A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `*NOP`);
+                if(this.inDebug) this.debugger(1, () => `*NOP`);
                 this.pc = this.pc + 1;
             }
         },
         0xDA: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `*NOP`);
+                if(this.inDebug) this.debugger(1, () => `*NOP`);
                 this.pc = this.pc + 1;
             }
         },
         0xFA: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `*NOP`);
+                if(this.inDebug) this.debugger(1, () => `*NOP`);
                 this.pc = this.pc + 1;
             }
         },
@@ -57,28 +57,28 @@ var nop = {
         0x04: function() {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1), 2)} = ${fh(this.mem.get(this.mem.get(this.pc + 1)), 2)}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1), 2)} = ${fh(this.mem.get(this.mem.get(this.pc + 1)), 2)}`);
                 this.pc = this.pc + 2;
             }
         },
         0x44: function() {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1), 2)} = ${fh(this.mem.get(this.mem.get(this.pc + 1)), 2)}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1), 2)} = ${fh(this.mem.get(this.mem.get(this.pc + 1)), 2)}`);
                 this.pc = this.pc + 2;
             }
         },
         0x64: function() {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1), 2)} = ${fh(this.mem.get(this.mem.get(this.pc + 1)), 2)}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1), 2)} = ${fh(this.mem.get(this.mem.get(this.pc + 1)), 2)}`);
                 this.pc = this.pc + 2;
             }
         },
         0x0C: function() {
             this.cycles = 4;
             this.instruction = () => {
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 2)} = ${fh(this.mem.get(this.getAbsoluteAddress(this.pc + 1)), 2)}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 2)} = ${fh(this.mem.get(this.getAbsoluteAddress(this.pc + 1)), 2)}`);
                 this.pc = this.pc + 3;
             }
         },
@@ -86,7 +86,7 @@ var nop = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -94,7 +94,7 @@ var nop = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -102,7 +102,7 @@ var nop = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -110,7 +110,7 @@ var nop = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -118,7 +118,7 @@ var nop = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -126,7 +126,7 @@ var nop = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -134,35 +134,35 @@ var nop = {
         0x80: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
                 this.pc = this.pc + 2;
             }
         },
          0x82: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
                 this.pc = this.pc + 2;
             }
         },
          0x89: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
                 this.pc = this.pc + 2;
             }
         },
          0xC2: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
                 this.pc = this.pc + 2;
             }
         },
          0xE2: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
+                if(this.inDebug) this.debugger(2, () => `*NOP #$${fh(this.mem.get(this.pc + 1))}`);
                 this.pc = this.pc + 2;
             }
         },
@@ -176,7 +176,7 @@ var nop = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 3;
             }
         },
@@ -188,7 +188,7 @@ var nop = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 3;
             }
         },
@@ -201,7 +201,7 @@ var nop = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 3;
             }
         },
@@ -214,7 +214,7 @@ var nop = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 3;
             }
         },
@@ -227,7 +227,7 @@ var nop = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 3;
             }
         },
@@ -240,7 +240,7 @@ var nop = {
             }
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `*NOP $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.pc = this.pc + 3;
             }
         },

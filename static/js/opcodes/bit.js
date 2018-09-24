@@ -22,7 +22,7 @@ var bit = {
         0x24: function () {
             this.cycles = 3;
             this.instruction = () => {
-                this.debugger(2, () => `BIT $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `BIT $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.bit(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -32,7 +32,7 @@ var bit = {
             this.cycles = 4;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `BIT $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `BIT $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.bit(targetAddress);
                 this.pc = this.pc + 3;
             }

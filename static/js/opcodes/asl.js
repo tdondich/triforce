@@ -39,7 +39,7 @@ var asl = {
         0x0A: function() {
             this.cycles = 2;
             this.instruction = () => {
-                this.debugger(1, () => `ASL A`);
+                if(this.inDebug) this.debugger(1, () => `ASL A`);
                 this.asl();
                 this.pc = this.pc + 1;
             }
@@ -48,7 +48,7 @@ var asl = {
         0x06: function () {
             this.cycles = 5;
             this.instruction = () => {
-                this.debugger(2, () => `ASL $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
+                if(this.inDebug) this.debugger(2, () => `ASL $${fh(this.mem.get(this.pc + 1))} = ${fh(this.mem.get(this.getZeroPageAddress(this.pc + 1)))}`);
                 this.asl(this.getZeroPageAddress(this.pc + 1));
                 this.pc = this.pc + 2;
             }
@@ -58,7 +58,7 @@ var asl = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getZeroPageXAddress(this.pc + 1);
-                this.debugger(2, () => `ASL $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(2, () => `ASL $${fh(this.mem.get(this.pc + 1))},X @ ${fh(targetAddress, 2)} = ${fh(this.mem.get(targetAddress))}`);
                 this.asl(targetAddress);
                 this.pc = this.pc + 2;
             }
@@ -70,7 +70,7 @@ var asl = {
             this.cycles = 6;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteAddress(this.pc + 1);
-                this.debugger(3, () => `ASL $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `ASL $${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.asl(targetAddress);
                 this.pc = this.pc + 3;
             }
@@ -80,7 +80,7 @@ var asl = {
             this.cycles = 7;
             this.instruction = () => {
                 let targetAddress = this.getAbsoluteXAddress(this.pc + 1);
-                this.debugger(3, () => `ASL $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
+                if(this.inDebug) this.debugger(3, () => `ASL $${fh(this.getAbsoluteAddress(this.pc + 1), 4)},X @ ${fh(targetAddress, 4)} = ${fh(this.mem.get(targetAddress))}`);
                 this.asl(targetAddress);
                 this.pc = this.pc + 3;
             }
