@@ -351,6 +351,7 @@ Vue.component('ppu', {
     };
   },
   mounted() {
+    this.console = this.$parent;
     this.vram = this.console.$refs.ppumainbus;
     this.cpu = this.console.$refs.cpu;
 
@@ -539,13 +540,13 @@ Vue.component('ppu', {
           this.readBuffer = this.vram.get(newAddress);
         }
         // @todo Another way to check if indebug?
-        //if (!this.console.$refs.cpu.inDebug) {
+        if (!this.console.$refs.cpu.inDebug) {
           let increase = (this.ppuctrl() & 0b00000100) === 0b00000100 ? 32 : 1;
           address = (address + increase) & 0x7fff;
           this.setVariablesFromV(address);
           // @todo Handle weird behavior if during render and we change, it should
           // do a coarse y and x increment.  See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
-        //}
+        }
         return result;
       } else if (address === 0x0002) {
         // Reading of status
