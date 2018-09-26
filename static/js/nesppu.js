@@ -557,13 +557,13 @@ Vue.component('ppu', {
           this.setVariablesFromV(address);
           // @todo Handle weird behavior if during render and we change, it should
           // do a coarse y and x increment.  See: https://wiki.nesdev.com/w/index.php/PPU_scrolling#Wrapping_around
-        //}
+        }
         return result;
       } else if (address === 0x0002) {
         // Reading of status
         let result = this.registers[address];
         // @todo Check another way if indebug
-        //if (!this.cpu.inDebug) {
+        if (!this.cpu.inDebug) {
           // This is reading the PPU status register so be sure to clear vblank.
           this.setVBlank(false);
 
@@ -573,7 +573,7 @@ Vue.component('ppu', {
 
           // Reset the w write toggle
           this.w = false;
-        //}
+        }
         return result;
       }
       return this.registers[address];
