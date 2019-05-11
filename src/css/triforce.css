@@ -1,0 +1,37 @@
+@tailwind preflight;
+@tailwind components;
+@tailwind utilities;
+
+.btn {
+    @apply px-4 py-2 rounded border-grey border text-sm font-bold bg-white border-b-2;
+
+}
+
+.btn:hover {
+    @apply bg-grey-light;
+}
+
+.video-bg {
+    background-color: #000;
+}
+
+input {
+    @apply px-4 py-2 rounded border border-grey;
+}
+
+.ppu .screen-container.fullscreen {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 500;
+    justify-content: center;
+    background-color: black;
+    top: 0px;
+    left: 0px;
+  }
+  
+  .ppu .screen-container.fullscreen .screen {
+    height: 100%;
+  }
+  
