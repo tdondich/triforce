@@ -166,6 +166,9 @@ export default {
     };
   },
   created() {
+    // Set initial breakpoint to nothing
+    this.breakpoint = null;
+
     this.debugDownloadLog = "";
 
     // For registers, see: http://wiki.nesdev.com/w/index.php/CPU_registers
@@ -280,6 +283,9 @@ export default {
   },
 
   methods: {
+    setBreakpoint(addr) {
+      this.breakpoint = addr;
+    },
     toggleDebug() {
       this.debugEnabled = !this.debugEnabled;
       if (this.debugEnabled) {
@@ -487,13 +493,11 @@ export default {
       // Check to see if we actually need to fetch an operation
       if (this.nmi < 2 && this.cycles == 0 && this.instruction == null) {
         // @Note: This checks for a position in code and set console to debug (BREAKPOINT)
-        /*
-        if(this.pc == 0xe05e) {
+
+        if(this.breakpoint && this.pc == this.breakpoint) {
           // Halt before the next cycle
-          this.$parent.toggleStep();
-          console.log("Breakpoint reached");
+          this.$emit('breakpoint-reached');
         }
-        */
 
         let instr = this.mem.get(this.pc);
         if (typeof this[instr] == "undefined") {
@@ -501,6 +505,9 @@ export default {
             "Failed to find instruction handler for " + instr.toString(16);
           throw this.error;
         } else {
+
+
+
           // Run the opcode. This will set the cycles counter and the instruction handler
           this[instr]();
         }
