@@ -139,6 +139,9 @@ export default {
     }
   },
   methods: {
+    setRom(rom) {
+      this.romName = rom;
+    },
     // Our getters and setters will pass through to our mapper
     get(address, bus = "prg") {
       return this.mapper.get(address, bus);
@@ -173,8 +176,8 @@ export default {
           // Modify nametable databus to do appropriate mirroring
           this.$parent.$refs.nametablebus.setMirroring(this.mirroring);
 
-          // Tell the console to turn on
-          setTimeout(this.$parent.power, 1000);
+          // Emit a message that states the ROM is loaded
+          this.$emit('loaded');
           this.loadSuccess = "Loaded " + this.romName + " ROM";
         })
         .catch(error => {

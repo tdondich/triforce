@@ -168,6 +168,8 @@ export default {
   created() {
     // Set initial breakpoint to nothing
     this.breakpoint = null;
+    // Empty handler
+    this.breakpointHandler = () => {};
 
     this.debugDownloadLog = "";
 
@@ -283,8 +285,14 @@ export default {
   },
 
   methods: {
-    setBreakpoint(addr) {
+    // Programatically set the force vector to a set memory address
+    setForceVector(addr) {
+      this.forceResetVector = addr;
+    },
+    // Programatically set the breakpoint to a set memory address
+    setBreakpoint(addr, cb) {
       this.breakpoint = addr;
+      this.breakpointHandler = cb;
     },
     toggleDebug() {
       this.debugEnabled = !this.debugEnabled;
@@ -496,7 +504,7 @@ export default {
 
         if(this.breakpoint && this.pc == this.breakpoint) {
           // Halt before the next cycle
-          this.$emit('breakpoint-reached');
+          (this.breakpointHandler)();
         }
 
         let instr = this.mem.get(this.pc);
@@ -528,10 +536,6 @@ export default {
         this.cycles = this.cycles - 1;
       }
 
-      /*
-
-    // Now check to see if we really need to run the instruction because all the cycles have been met
-     */
     },
     // Pushes to the top of the stack then modified the stack pointer
     stackPush(val) {

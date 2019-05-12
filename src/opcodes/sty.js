@@ -1,3 +1,4 @@
+import {fh} from '../util'
 export default {
     methods: {
         // STY - Store Y Register

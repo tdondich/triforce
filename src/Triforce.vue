@@ -41,7 +41,7 @@
         <div class="bg-grey-dark rounded border border-grey p-4 mb-4">
 
           <h2 class="mb-1">ROM Loader</h2>
-          <rom-loader ref="loader"></rom-loader>
+          <rom-loader @loaded="power" ref="loader"></rom-loader>
         </div>
 
         <div class="bg-grey-dark rounded border border-grey p-4 mb-4">
