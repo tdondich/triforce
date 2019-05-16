@@ -67,7 +67,6 @@
         <div class="bg-grey-dark rounded border border-grey p-4 mb-4">
 
           <h2 class="mb-1">2A03 CPU Emulator</h2>
-          <cpu ref="cpu"></cpu>
         </div>
 
         <!-- 2KB internal RAM -->
@@ -304,6 +303,10 @@ export default {
     this.cpu = this.$refs.cpu;
     this.ppu = this.$refs.ppu;
     this.joypads = this.$refs.joypads;
+
+    /**
+     * @TODO LISTEN TO LOADER LOADED AND SET NAMETABLE MIRRORING
+     */
   },
   methods: {
     toggleStep() {

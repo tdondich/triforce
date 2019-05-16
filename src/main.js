@@ -2,7 +2,6 @@ import Vue from 'vue'
 import Triforce from './Triforce.vue'
 
 // Bring in our components
-import cpu from './components/cpu';
 import memory from './components/memory';
 import romLoader from './components/rom-loader';
 import mapper0 from './components/mappers/mapper-0';
@@ -17,7 +16,6 @@ import '@/css/triforce.css'
 
 Vue.config.productionTip = false
 
-Vue.component('cpu', cpu);
 Vue.component('memory', memory);
 Vue.component('rom-loader', romLoader);
 Vue.component('mapper-0', mapper0);
